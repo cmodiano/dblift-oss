@@ -1,0 +1,138 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+tests/
+coverage.xml
+.pytest_cache
+pytest.ini
+conftest.py
+
+# Documentation (keep README.md only)
+docs/
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (HUGE - 225MB!)
+logs/
+*.log
+
+# Reports (8MB)
+reports/
+
+# Build artifacts (3.5MB)
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+target_dir/
+
+# CI/CD (don't need in image)
+.github/
+.gitlab-ci.yml
+.gitlab-ci-example.yml
+.travis.yml
+
+# Example files
+examples/
+samples/
+*-example.*
+migrations/
+sample-data/
+
+# Node modules (169MB!)
+node_modules/
+package.json
+package-lock.json
+
+# Virtual environments (95MB!)
+venv/
+ENV/
+env/
+.venv/
+
+# Bundled JRE (41MB - we build our own with jlink!)
+jre/
+
+# Development files
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+setup.cfg
+pyproject.toml
+requirements-dev.txt
+cliff.toml
+
+# IDE
+.vscode/
+.idea/
+
+# Scripts (keep only what's needed)
+scripts/
+!scripts/docker/
+!scripts/docker/run_validation.py
+find_unused.sh
+install_dblift_dev.sh
+create-demo-repo.sh
+
+# Other
+LICENSE
+CHANGELOG.md
+ARCHITECTURE.md
+DEVELOPMENT.md
+BRANCHING.md
+*.sh
+*.bat

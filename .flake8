@@ -1,0 +1,56 @@
+[flake8]
+max-line-length = 100
+jobs = 1
+exclude =
+    .git,
+    __pycache__,
+    */__pycache__/*,
+    build,
+    dist,
+    venv,
+    .venv,
+    tests/,
+    scripts/
+# Ignore policy:
+#   - E203,W503: intentional, kept for black compatibility (PEP 8 disagreement)
+#   - Other entries: deferred violations with open work. Each line documents the
+#     current count and plan. Do NOT add new ignores without also filing a
+#     cleanup ticket.
+#
+# Cleared by PR-A2 (autoflake + targeted scripts):
+#   F401  was 124, now 0  — fully enforced
+#   F541  was 134, now 0  — fully enforced
+#   F841  was 44,  now 0  — fully enforced
+#   W291  was 39,  now 0  — fully enforced
+#
+# Deferred (to be tightened in follow-up PRs):
+#   E402  (68)   module-level import not at top        — needs case-by-case review
+#   E501  (1052) line too long                         — needs black re-run + manual splits
+ignore = E203,W503,E402,E501
+
+# --- Layered architecture: cli/ must not import db/ ----------------------
+# Provided by flake8-tidy-imports. ``cli`` orchestrates user-facing flow
+# and should reach into the database layer only through ``api/`` or via
+# already-baselined exemptions below. New violations fail CI.
+banned-modules =
+    db = cli/* must not import db.* directly. Go through api.* (see .lint-patterns-baseline.txt for grandfathered call sites).
+    db.provider_registry = use api.* instead.
+    db.jvm_manager = use api.* instead.
+    db.provider_capabilities = use api.* instead.
+    db.provider_interfaces = use api.* instead.
+
+# The banned-modules check above is enforced on cli/ only: the db/, core/,
+# config/, api/, example/ layers themselves legitimately import from db.*
+# and are silenced here. There are no longer any grandfathered cli/*
+# exemptions — every cli/ access to db.* now goes through api/_cli_support.
+per-file-ignores =
+    db/*:I250,I251
+    db/**/*:I250,I251
+    core/*:I250,I251
+    core/**/*:I250,I251
+    config/*:I250,I251
+    config/**/*:I250,I251
+    api/*:I250,I251
+    api/**/*:I250,I251
+    example/*:I250,I251
+    example/**/*:I250,I251

@@ -1,0 +1,12 @@
+database:
+  type: mysql
+  url: ${DBLIFT_MYSQL_URL:-mysql+pymysql://root:root@127.0.0.1:3306/mysql}
+  username: ${DBLIFT_MYSQL_USERNAME:-root}
+  password: ${MYSQL_ROOT_PASSWORD:-root}
+  schema: ${DBLIFT_MYSQL_SCHEMA:-store_app}
+logging:
+  level: INFO
+  file: dblift.log
+migrations:
+  directory: ./migrations/samples/mysql
+  table: schema_version

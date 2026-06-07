@@ -1,0 +1,129 @@
+# Example GitLab CI configuration for SQL validation
+# Copy this to .gitlab-ci.yml and adjust as needed
+
+stages:
+  - validate
+
+validate-sql:
+  stage: validate
+  # Use pre-built Docker image
+  image: ghcr.io/yourusername/dblift:validation-latest
+  # Or build from Dockerfile:
+  # image: docker:latest
+  # services:
+  #   - docker:dind
+
+  script:
+    - |
+      echo "Validating SQL migrations..."
+      dblift validate-sql migrations/ \
+        --dialect postgresql \
+        --rules-file .dblift_rules.yaml \
+        --format compact \
+        --fail-on-violations
+
+  # Only run on merge requests and main branch
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - migrations/**/*.sql
+        - .dblift_rules.yaml
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - migrations/**/*.sql
+        - .dblift_rules.yaml
+
+  # Allow failure for info/warning violations
+  allow_failure:
+    exit_codes: 0
+
+# Alternative: Build from Dockerfile in repository
+validate-sql-build-from-source:
+  stage: validate
+  image: docker:latest
+  services:
+    - docker:dind
+
+  script:
+    - |
+      echo "Building DBLift validation image..."
+      docker build -f Dockerfile.validation -t dblift-validate .
+
+      echo "Validating SQL migrations..."
+      docker run --rm \
+        -v $(pwd)/migrations:/workspace/migrations \
+        -v $(pwd)/.dblift_rules.yaml:/workspace/.dblift_rules.yaml \
+        dblift-validate \
+        migrations/ \
+        --dialect postgresql \
+        --rules-file .dblift_rules.yaml \
+        --format compact \
+        --fail-on-violations
+
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - migrations/**/*.sql
+        - .dblift_rules.yaml
+        - Dockerfile.validation
+
+validate-sql-with-report:
+  stage: validate
+  image: ghcr.io/yourusername/dblift:validation-latest
+
+  script:
+    - |
+      echo "Generating SQL validation report..."
+      dblift validate-sql migrations/ \
+        --dialect postgresql \
+        --rules-file .dblift_rules.yaml \
+        --format json > validation-report.json
+
+  artifacts:
+    reports:
+      # GitLab can parse SAST format (compatible with SARIF)
+      sast: validation-report.json
+    paths:
+      - validation-report.json
+    expire_in: 30 days
+
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# Example: Validate only changed files
+validate-changed-files:
+  stage: validate
+  image: python:3.11
+
+  before_script:
+    - pip install dblift
+    - apt-get update && apt-get install -y git
+
+  script:
+    - |
+      # Get list of changed SQL files
+      CHANGED_FILES=$(git diff --name-only $CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD | grep '\.sql$' || true)
+
+      if [ -z "$CHANGED_FILES" ]; then
+        echo "No SQL files changed"
+        exit 0
+      fi
+
+      echo "Validating changed SQL files:"
+      echo "$CHANGED_FILES"
+
+      # Validate each changed file
+      for file in $CHANGED_FILES; do
+        echo "Validating $file..."
+        dblift validate-sql "$file" \
+          --dialect postgresql \
+          --rules-file .dblift_rules.yaml \
+          --format compact \
+          --fail-on-violations
+      done
+
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - migrations/**/*.sql

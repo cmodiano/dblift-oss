@@ -1,0 +1,57 @@
+name: Complexity
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  xenon:
+    name: Cyclomatic complexity (xenon)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install radon / xenon
+        run: python -m pip install --upgrade pip radon xenon
+      - name: Report complexity (informational)
+        run: |
+          echo "=== Cyclomatic complexity (C rank and worse) ==="
+          radon cc api/ cli/ config/ core/ db/ -a -s -nC || true
+          echo ""
+          echo "=== Maintainability index (C rank and worse) ==="
+          radon mi api/ cli/ config/ core/ db/ -s -nC || true
+      - name: Enforce ratchet
+        run: |
+          # Cyclomatic-complexity ratchet. One floor lifted per PR.
+          #
+          # Current floors (PR-A3):
+          #   --max-average  A  ← locked at current codebase state (avg 4.77,
+          #                       comfortably inside rank A 1-5). Prevents
+          #                       regression of overall complexity.
+          #   --max-modules  F  ← deferred. 3 modules currently at rank F
+          #                       (cli/main.py, core/comparison/_table_property_comparator.py,
+          #                       core/migration/commands/undo_command.py).
+          #                       Tightens after the matching refactors land
+          #                       (PR-D1 splits undo_command per the SRP-05
+          #                       roadmap).
+          #   --max-absolute F  ← deferred. 39 functions currently at rank F.
+          #                       The full list lives at
+          #                       https://github.com/cmodiano/dblift/issues/...
+          #                       Tightens to E once those 39 are refactored
+          #                       to D or better; then E→D after the next batch.
+          #
+          # Phase 2 target:        --max-absolute C --max-modules B --max-average B
+          # End-of-Oracle target:  --max-absolute B --max-modules A --max-average A
+          # See docs/stabilization-plan.md.
+          xenon --max-absolute F --max-modules F --max-average A \
+                api/ cli/ config/ core/ db/

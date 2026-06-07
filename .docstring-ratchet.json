@@ -1,0 +1,8 @@
+{
+  "_comment": "Per-root cap on missing-docstring violations (scripts/check_api_docstrings.py --ratchet). Roadmap action #4. The counts can only stay flat or decrease: any PR that grows a count fails the lint job. When a contributor adds docstrings or annotations and the script reports 'you can lower the cap by N', commit a tighter cap here in the same PR. The goal is to drive every root to zero.",
+  "_policy": "api/ stays at zero. cli/ stays at zero (kept tight after the private-class heuristic eliminated the residual false positives). core/ baseline is 127 (initial measurement on commit a999773 of develop, 2026-05-14); driven to 78 in core-docstrings PR 1 (2026-05-15) by adding docstrings to every site in the 35 small files (≤5 violations each). Remaining 78 are concentrated in 7 big files — core/logger/results.py (24), core/migration/snapshots/schema_snapshot.py (12), core/logger/_multi.py (11), core/logger/log.py (10), core/migration/state/migration_state_manager.py (8), core/migration/snapshots/schema_snapshot_repository.py (7), core/migration/migration.py (6) — to be cleared in PR 2. db/ baseline was 119 (post-quick-wins after action #15 PR 1) — driven to 85 in action #15 PR 2 (2026-05-15) by adding docstrings to the non-quirks-override sites (db/base_quirks.py, db/data_access.py, db/dummy_jdbc_provider.py, db/error.py, db/introspection/extractors/*, db/jvm_manager.py, db/plugins/db2/quirks.py). Remaining 85 are all *Quirks method overrides across 6 plugin dirs (sqlserver, postgresql, oracle, mysql, cosmosdb, sqlite); future PR drives those to zero. Driven to 0 in PR 3 (action #15) on 2026-05-15 — all *Quirks overrides documented. Driven to 0 in PR 2 of 2 (2026-05-15) — campaign complete.",
+  "api": 0,
+  "cli": 0,
+  "core": 0,
+  "db": 0
+}

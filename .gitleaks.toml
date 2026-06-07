@@ -1,0 +1,124 @@
+# Gitleaks configuration for dblift.
+#
+# Extends the default ruleset. Adds path-based and content-based
+# allowlists for known-safe occurrences that gitleaks' generic-api-key
+# and curl-auth-header rules flag as secrets.
+#
+# Rule of thumb:
+#   - If a match is REAL: rotate, remove from HEAD, rewrite history if
+#     the leak is post-publication, and do NOT add it here.
+#   - If a match is PLACEHOLDER or PUBLIC-CONSTANT: document the
+#     category below and allowlist via path, regex, or exact value.
+#
+# Every allowlist entry must be attributable to a category with a link
+# or reference.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for false-positive-prone paths and values"
+
+# ---- Paths ----
+#
+# Vendored / generated / shipped content we do not author:
+#   - jre/**                       : bundled JRE (Oracle), ships as-is
+#   - core/migration/antlr/**      : ANTLR-generated parsers (historical
+#     only — the directory was removed from HEAD in commit e9f92b9 but
+#     the generated Java/Python sources survive in older commits).
+#     gitleaks runs with ``fetch-depth: 0`` and scans every past commit,
+#     so this allowlist is required to skip false positives such as
+#     ``PASSWORD || _la==UNENCRYPTED`` (SQL grammar token-handling
+#     rules, not a real credential) at PostgreSQLParser.java:2516.
+#   - **/*.pyc, **/*.class         : compiled artefacts
+#
+# Intentional test fixtures that use the public Azure Cosmos DB
+# emulator key (see content allowlist below):
+#   - tests/**/conftest.py
+#   - tests/fixtures/conftest.py
+#
+# Documentation with the public Cosmos DB emulator key or other
+# well-known public constants:
+#   - README.md
+#   - docs/**/*.md
+paths = [
+    '''(^|/)jre/''',
+    '''(^|/)core/migration/antlr/''',
+    '''\.class$''',
+    '''\.pyc$''',
+    # Secrets-subsystem unit tests contain deliberate fake credential-like values
+    # (e.g. mocked Vault/AWS/Azure responses with "password" keys) that are not
+    # real secrets. All values are obviously synthetic and provider SDKs are mocked.
+    '''(^|/)tests/unit/config/test_secrets/''',
+]
+
+# ---- Exact-value allowlist ----
+#
+# These strings are public constants, not secrets:
+#
+#   * Azure Cosmos DB emulator master key: a fixed key that Microsoft
+#     publishes in the emulator documentation. Every developer who runs
+#     the Cosmos DB emulator locally uses this exact 88-char base64
+#     key. It grants access only to the local emulator, never to a
+#     real Azure Cosmos account.
+#     Ref: https://learn.microsoft.com/en-us/azure/cosmos-db/emulator
+#
+regexes = [
+    # Cosmos DB emulator key (exact match).
+    '''C2y6yDjf5/R\+ob0N8A7Cgv30VRDJIWEHLM\+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==''',
+]
+
+# ---- Allowlisted commits ----
+#
+# Historical commits that leaked a credential since rotated and whose
+# remediation is tracked. Kept here for auditability: the commits are
+# not rewritten out of history because (a) the IP is a private LAN
+# address (RFC 1918 192.168.1.20), not internet-accessible, and
+# (b) rewriting history would break every existing clone and reviewer
+# reference while providing only cosmetic value.
+#
+# Incident log:
+#
+#   1b70f8325e, d460101e3f, c203082514, d1169b919c —
+#     scripts/setup_mysql_remote.sh
+#     DBLIFT_MYSQL_PASSWORD was hardcoded to a real value targeting a
+#     developer LAN MySQL instance at 192.168.1.20. HEAD was refactored
+#     in commit <next> to require DBLIFT_MYSQL_PASSWORD from the
+#     environment. The compromised password MUST BE ROTATED on the
+#     target database by the owner of the instance.
+#     Rotation status: PENDING — see docs/security-incidents.md
+#
+#     The four SHAs above all contain the same hard-coded value at
+#     ``scripts/setup_mysql_remote.sh:13``:
+#       - 1b70f8325e, d460101e3f: the original incident commits.
+#       - c203082514 (sec: remove license generator script) and
+#         d1169b919c (Claude/reduce main file size, PR #142): later
+#         commits in April 2026 that touched the same file with the
+#         password still in place. Surfaced once branch
+#         ``claude/analyze-codebase-architecture-HddoM`` was merged with
+#         ``origin/develop`` and the security workflow re-scanned with
+#         ``fetch-depth: 0``.
+commits = [
+    "1b70f8325e27bf6ac75dc4ba1aecac578604df06",
+    "d460101e3f8621eb9423920f44b0b7a181ef5558",
+    "c203082514737fa252805d8cf889a5ad72a11e35",
+    "d1169b919c1f926d2f71740af42fe0470db8680c",
+]
+
+# ---- Stopwords ----
+#
+# Tokens whose presence inside a matched "secret" means it is a
+# placeholder and should be ignored. Extends gitleaks' built-in stop
+# list with project-specific placeholders.
+stopwords = [
+    "your_token",
+    "your_key",
+    "your_password",
+    "yourtoken",
+    "yourkey",
+    "changeme",
+    "placeholder",
+    "example",
+    "replace_me",
+    "insert_here",
+]

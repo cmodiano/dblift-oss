@@ -1,0 +1,13 @@
+database:
+  type: oracle
+  url: oracle+oracledb://localhost:1521?service_name=XEPDB1
+  username: system
+  password: oracle
+  schema: SYSTEM
+logging:
+  file: dblift.log
+  level: INFO
+migrations:
+  directory: ./migrations/samples/oracle
+  table: schema_version
+

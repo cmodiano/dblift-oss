@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/cmodiano/dblift/tree/develop/docs
+    about: Usage questions, configuration help, dialect setup — start here.
+  - name: Stabilization plan
+    url: https://github.com/cmodiano/dblift/blob/develop/docs/stabilization-plan.md
+    about: New features are frozen during the v1.3.x → v2.0 stabilization. Read the plan before opening a feature request.

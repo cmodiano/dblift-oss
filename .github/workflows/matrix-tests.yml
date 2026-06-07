@@ -1,0 +1,65 @@
+name: Matrix tests
+
+# Runs ONLY the regression-pattern tests in tests/integration/matrix/.
+#
+# These tests are intentionally database-free (SQLite in tmp_path) and
+# finish in under a minute. They encode the cross-cutting invariants
+# (stdout JSON contract, dry-run purity, argparse global-flag
+# preservation, dialect capability matrix, etc.) surfaced by the
+# stabilization program.
+#
+# They MUST run on every pull_request as a blocking check. They are
+# deliberately NOT combined with the full integration suite
+# (integration-tests-new.yml) which boots Docker containers and takes
+# ~20 minutes — that suite stays on workflow_dispatch to respect
+# GitHub Actions minutes budget.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Test license key from secrets — required by the
+  # tests/integration/conftest.py `require_license_key` fixture.
+  DBLIFT_LICENSE_KEY: ${{ secrets.DBLIFT_LICENSE_KEY }}
+
+jobs:
+  matrix:
+    name: Regression matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run matrix tests
+        run: |
+          # Scope to tests/integration/matrix/ only — no Docker, no real DB.
+          #
+          # --deselect test_schema_sql_fanout.py: this module requires a
+          #   live PostgreSQL container (db_container fixture). It belongs
+          #   to the full integration suite, not this lightweight gate.
+          # -p no:cacheprovider keeps CI deterministic.
+          # --tb=short keeps failure output concise.
+          pytest tests/integration/matrix/ \
+            --deselect tests/integration/matrix/test_schema_sql_fanout.py \
+            -p no:cacheprovider \
+            --tb=short \
+            -v

@@ -1,0 +1,33 @@
+# DBLift Configuration
+
+database:
+  # Recommended: supply a full native SQLAlchemy URL so DBLift can derive the database type automatically.
+  url: mssql+pymssql://localhost:1433/mydatabase?encrypt=false
+  schema: dbo
+  username: username
+  password: password
+
+migrations:
+  # Primary directory that contains versioned and repeatable migrations.
+  directory: ./migrations
+  # Set to false if you do not want DBLift to walk subdirectories.
+  recursive: true
+  
+  # Alternative: Use 'directories' for multiple directories
+  # directories:
+  #   - ./migrations/core
+  #   - ./migrations/features
+  # 
+  # Per-directory recursive settings:
+  # directories:
+  #   - path: ./migrations/core
+  #     recursive: true    # Search subdirectories
+  #   - path: ./migrations/features
+  #     recursive: false   # Only top-level files
+
+logging:
+  # Valid levels: DEBUG, INFO, WARN, ERROR
+  level: INFO
+
+# Optional CLI overrides
+log_format: text  # text, json, or html

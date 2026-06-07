@@ -1,0 +1,95 @@
+name: Code Quality
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+    
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install dev dependencies first to ensure consistent versions
+        python -m pip install -r requirements-dev.txt
+        # Install the project and its dependencies
+        python -m pip install -e ".[dev]"
+        
+    - name: Check formatting with black
+      run: |
+        black --check --diff api/ cli/ config/ core/ db/ tests/ scripts/
+        
+    - name: Check imports with isort
+      run: |
+        isort --check --diff api/ cli/ config/ core/ db/ tests/ scripts/
+        
+    - name: Lint with flake8
+      run: |
+        # Print flake8 version for debugging
+        flake8 --version
+        
+        # Use the same directories as the local check_code_quality.sh script
+        # Note: .flake8 config excludes tests/ and scripts/, so we only check source directories
+        flake8 --config=.flake8 api/ cli/ config/ core/ db/
+        
+    - name: Type check with mypy
+      run: |
+        # Use project configuration and check the same directories as local script
+        mypy --config-file pyproject.toml --show-error-codes api/ cli/ config/ core/ db/
+
+    - name: AST lint patterns (cli-print-stdout, enum-str-conversion, dialect-string-literal)
+      run: |
+        # Ratchet lint. Compares current violations against
+        # .lint-patterns-baseline.txt and fails on NEW entries only.
+        # Legitimate existing cases are either inline-annotated
+        # (# lint: allow-*) or listed in the baseline with a link to
+        # the PR that will remove them (see PR-06 for enum-str-conversion,
+        # Epic 26 for dialect-string-literal).
+        python scripts/lint_patterns.py
+
+    - name: Public-API docstring linter (api/, cli/, core/)
+      run: |
+        # Enforce module/class/function docstrings on the documented
+        # public surface. api/ + cli/ are strict (zero violations).
+        # core/ and db/ are gated by a count-based ratchet at
+        # .docstring-ratchet.json — new violations push the count
+        # above the cap and fail; removed violations are rewarded with
+        # an informational nudge to commit a tighter cap. Inner
+        # closures (functools.wraps), stub bodies (.../pass), methods
+        # on private classes, and inline-annotated lines
+        # (`# lint: allow-missing-docstring: <reason>`) are auto-exempt.
+        # Roadmap actions #4 (core) and #15 (db).
+        python scripts/check_api_docstrings.py \
+          --paths api cli core db \
+          --ratchet .docstring-ratchet.json
+
+    - name: Line-length ratchet (flake8 E501)
+      run: |
+        # Count-based cap on lines > 100 characters per source root.
+        # E501 is still globally ignored in .flake8 because there is too
+        # much legacy debt to make every flake8 run fail; this gate runs
+        # flake8 --isolated --select=E501 alongside, and fails only on
+        # NET growth vs .flake8-e501-ratchet.json (initial caps:
+        # api=1, cli=20, config=13, core=550, db=400). Trajectory is
+        # monotonic — each PR that lowers a count gets a "lower the cap
+        # by N" nudge to commit the tighter value in the same PR.
+        # Roadmap action #5: docs/quality-roadmap/priorities.md.
+        python scripts/check_line_length.py

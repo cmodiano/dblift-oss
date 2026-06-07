@@ -1,0 +1,125 @@
+site_name: DBLift Documentation
+site_description: Database migration tool for PostgreSQL, MySQL, SQL Server, Oracle, DB2, SQLite, and Cosmos DB
+site_url: https://cmodiano.github.io/dblift
+site_author: DBLift Contributors
+
+repo_name: cmodiano/dblift
+repo_url: https://github.com/cmodiano/dblift
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+  logo: logo/dblift_logo.png
+  favicon: logo/dblift_logo.png
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - i18n:
+      default_language: en
+      languages:
+        en: English
+        fr: Français
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_if_no_docstring: false
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 100
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - user-guide/getting-started.md
+    - user-guide/configuration.md
+    - user-guide/commands.md
+    - user-guide/best-practices.md
+    - user-guide/troubleshooting.md
+  - API Reference:
+    - api-reference/api.md
+    - api-reference/events.md
+    - api-reference/cli.md
+    - api-reference/core.md
+    - api-reference/db.md
+  - Architecture:
+    - architecture/overview.md
+    - architecture/migration-engine.md
+    - architecture/database-providers.md
+    - architecture/sql-parsing.md
+    - architecture/tokenization_parser_architecture.md
+    - architecture/configuration.md
+  - Development:
+    - development/setup.md
+    - development/testing.md
+    - development/contributing.md
+    - development/adding-database-support.md
+  - Release:
+    - release/offline-delivery.md
+  - Operations:
+    - operations/recovery/index.md
+    - operations/recovery/oracle-lock-timeout.md
+    - operations/recovery/schema-history-corruption.md
+    - operations/recovery/partial-ddl-mysql.md
+    - operations/recovery/network-split.md
+  - Examples:
+    - examples/basic-migrations.md
+    - examples/advanced-scenarios.md
+
+
+extra:
+  alternate:
+    - name: English
+      link: /
+      lang: en
+    - name: Français
+      link: /fr/
+      lang: fr

@@ -1,0 +1,93 @@
+name: Refactor proposal
+description: Propose a structural change aligned with the v1.3.x → v2.0 stabilization plan.
+title: "[refactor] "
+labels: ["refactor", "stabilization"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for refactoring proposals (file splits, abstraction
+        extractions, complexity reductions, dialect-isolation work, etc.).
+
+        New features are frozen during stabilization — see
+        [docs/stabilization-plan.md](https://github.com/cmodiano/dblift/blob/develop/docs/stabilization-plan.md).
+        If your proposal is a feature, open a discussion instead.
+
+  - type: textarea
+    id: pain
+    attributes:
+      label: Current pain
+      description: |
+        What's wrong with the code today? Be concrete: file paths, line
+        counts, complexity numbers, links to past PRs that struggled
+        with this area.
+      placeholder: |
+        `core/sql_parser/hybrid_parser.py` is 1608 lines with a D-rank
+        method (`_build_or_update_trigger`, complexity 28). Every recent
+        PR touching the parser has triggered Bugbot threads about
+        un-tested branches in the trigger handling.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Which files / modules / packages does this touch?
+      placeholder: |
+        - `core/sql_parser/hybrid_parser.py` (split target)
+        - `core/sql_parser/_sqlglot_builders.py` (new mixin)
+        - 3 existing tests under `tests/unit/core/sql_parser/`
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: |
+        How would you implement it? Mention the project conventions you'd
+        follow (mixin pattern à la `_UndoExtractorsMixin`, baseline
+        ratchet à la `lint_patterns.py`, etc.).
+    validations:
+      required: true
+
+  - type: dropdown
+    id: blast_radius
+    attributes:
+      label: Blast radius
+      description: How risky is this change?
+      options:
+        - "Low — single file, no public API change"
+        - "Medium — multiple files, internal API change, public API stable"
+        - "High — public API change or behavior change"
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Test plan
+      description: |
+        How will we know nothing broke? Existing tests that already
+        cover the area count — list them. New tests needed? List them too.
+    validations:
+      required: true
+
+  - type: input
+    id: stabilization_ref
+    attributes:
+      label: Stabilization-plan reference
+      description: |
+        Section/PR identifier from `docs/stabilization-plan.md` this aligns
+        with. Use `out-of-plan` if you're proposing a new entry.
+      placeholder: "Phase D PR-D5 / out-of-plan"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+    validations:
+      required: false

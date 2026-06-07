@@ -1,0 +1,461 @@
+{
+  "benchmarks": [
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestChecksum::test_small_content",
+      "group": null,
+      "name": "test_small_content",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 4.899993655271828e-08,
+        "max": 0.00041401799990126165,
+        "mean": 1.979716849224141e-06,
+        "median": 1.8519999684940558e-06,
+        "min": 1.7809998098528013e-06,
+        "ops": 505122.74035143165,
+        "rounds": 39025,
+        "stddev": 2.2369176030594233e-06,
+        "total": 0.0772584500409721
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestChecksum::test_large_content",
+      "group": null,
+      "name": "test_large_content",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 6.918999588378938e-06,
+        "max": 0.0005652329996337357,
+        "mean": 0.00015321491942889726,
+        "median": 0.00014794449998589698,
+        "min": 0.00014523200024996186,
+        "ops": 6526.779531180526,
+        "rounds": 5362,
+        "stddev": 1.521103773984944e-05,
+        "total": 0.8215383979777471
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestFilenameParsing::test_versioned_filename",
+      "group": null,
+      "name": "test_versioned_filename",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 2.445000291118049e-07,
+        "max": 4.5758999931422295e-05,
+        "mean": 1.1072438992904087e-05,
+        "median": 1.0003999705077149e-05,
+        "min": 9.712000064610038e-06,
+        "ops": 90314.33820866952,
+        "rounds": 2303,
+        "stddev": 3.020423858783183e-06,
+        "total": 0.025499827000658115
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestFilenameParsing::test_repeatable_filename",
+      "group": null,
+      "name": "test_repeatable_filename",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 2.632502855703933e-07,
+        "max": 4.17169999309408e-05,
+        "mean": 1.168415542399432e-05,
+        "median": 1.0586999906081473e-05,
+        "min": 1.0242999906040495e-05,
+        "ops": 85585.98920606812,
+        "rounds": 3037,
+        "stddev": 3.107352479123221e-06,
+        "total": 0.03548478002267075
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestFilenameParsing::test_undo_filename",
+      "group": null,
+      "name": "test_undo_filename",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.5299974620575085e-07,
+        "max": 4.277600010027527e-05,
+        "mean": 1.1259406818272525e-05,
+        "median": 1.0445000043546315e-05,
+        "min": 1.0169999768550042e-05,
+        "ops": 88814.62550736975,
+        "rounds": 12878,
+        "stddev": 2.6662775904968797e-06,
+        "total": 0.14499864100571358
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestFilenameParsing::test_tagged_filename",
+      "group": null,
+      "name": "test_tagged_filename",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 3.440000000409782e-07,
+        "max": 0.0005386990001170489,
+        "mean": 1.2707494153756443e-05,
+        "median": 1.1286000244581373e-05,
+        "min": 1.0897000265686074e-05,
+        "ops": 78693.72103581818,
+        "rounds": 11452,
+        "stddev": 6.097064412923623e-06,
+        "total": 0.1455262230488188
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestPlaceholderSubstitution::test_no_placeholders",
+      "group": null,
+      "name": "test_no_placeholders",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.5200021152850325e-09,
+        "max": 1.066990002982493e-06,
+        "mean": 1.559224594075499e-07,
+        "median": 1.4412000382435508e-07,
+        "min": 1.3921000117989025e-07,
+        "ops": 6413444.245297565,
+        "rounds": 66199,
+        "stddev": 3.661389002092904e-08,
+        "total": 0.010321910890320456
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestPlaceholderSubstitution::test_few_placeholders",
+      "group": null,
+      "name": "test_few_placeholders",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 4.572500529320678e-07,
+        "max": 6.734900034643942e-05,
+        "mean": 6.173560352149311e-06,
+        "median": 6.100000064179767e-06,
+        "min": 4.828000328416238e-06,
+        "ops": 161981.08432710991,
+        "rounds": 5725,
+        "stddev": 1.4828117160050339e-06,
+        "total": 0.03534363301605481
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestPlaceholderSubstitution::test_many_placeholders",
+      "group": null,
+      "name": "test_many_placeholders",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.954300023498945e-05,
+        "max": 0.0006677960000160965,
+        "mean": 0.0003002454212438708,
+        "median": 0.0002883419999761827,
+        "min": 0.0002784389998851111,
+        "ops": 3330.608659599714,
+        "rounds": 2730,
+        "stddev": 4.3472743076832806e-05,
+        "total": 0.8196699999957673
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestTypeMatchHelpers::test_is_versioned_enum",
+      "group": null,
+      "name": "test_is_versioned_enum",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.5999830793589354e-08,
+        "max": 4.190300023765303e-05,
+        "mean": 4.327886240422996e-07,
+        "median": 3.939999260182958e-07,
+        "min": 3.680002009787131e-07,
+        "ops": 2310596.77738263,
+        "rounds": 101246,
+        "stddev": 3.7732354524135594e-07,
+        "total": 0.04381811702978666
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestTypeMatchHelpers::test_is_versioned_str",
+      "group": null,
+      "name": "test_is_versioned_str",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 7.999915396794677e-09,
+        "max": 3.139299997201306e-05,
+        "mean": 3.5347979790795295e-07,
+        "median": 3.3700007406878285e-07,
+        "min": 3.1299987313104793e-07,
+        "ops": 2829015.988801721,
+        "rounds": 152929,
+        "stddev": 2.605694803332582e-07,
+        "total": 0.054057312014265335
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestTypeMatchHelpers::test_is_migration_type_enum_vs_enum",
+      "group": null,
+      "name": "test_is_migration_type_enum_vs_enum",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.600028554094024e-08,
+        "max": 2.2111999896878842e-05,
+        "mean": 6.732120378647656e-07,
+        "median": 6.079999366193078e-07,
+        "min": 5.729998520109802e-07,
+        "ops": 1485416.100359274,
+        "rounds": 167253,
+        "stddev": 3.983871165947917e-07,
+        "total": 0.11259673296899564
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestTypeMatchHelpers::test_is_migration_type_str_vs_str",
+      "group": null,
+      "name": "test_is_migration_type_str_vs_str",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.099988367059268e-08,
+        "max": 3.0836999940220267e-05,
+        "mean": 5.502354511432424e-07,
+        "median": 4.929997885483317e-07,
+        "min": 4.61000126961153e-07,
+        "ops": 1817403.8003590407,
+        "rounds": 172414,
+        "stddev": 3.5618602648737736e-07,
+        "total": 0.09486829507341099
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestTypeMatchHelpers::test_migration_type_name_enum",
+      "group": null,
+      "name": "test_migration_type_name_enum",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 2.0999777916586132e-09,
+        "max": 4.645250010071323e-06,
+        "mean": 2.4646430497234654e-07,
+        "median": 2.3645000055694254e-07,
+        "min": 2.3049999526847386e-07,
+        "ops": 4057382.67093972,
+        "rounds": 191829,
+        "stddev": 5.7789222205057604e-08,
+        "total": 0.04727900115854022
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[postgresql]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[postgresql]",
+      "param": "postgresql",
+      "params": {
+        "dialect": "postgresql"
+      },
+      "stats": {
+        "iqr": 1.7500042304163746e-09,
+        "max": 5.662950002260914e-06,
+        "mean": 2.0888893820325064e-07,
+        "median": 1.951500053110067e-07,
+        "min": 1.9035001059819477e-07,
+        "ops": 4787232.912385956,
+        "rounds": 164096,
+        "stddev": 6.001286654517125e-08,
+        "total": 0.03427783920340207
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[oracle]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[oracle]",
+      "param": "oracle",
+      "params": {
+        "dialect": "oracle"
+      },
+      "stats": {
+        "iqr": 1.615385022327787e-09,
+        "max": 3.7560384603588877e-06,
+        "mean": 2.0712439430535204e-07,
+        "median": 1.9207693814958196e-07,
+        "min": 1.8596154824570897e-07,
+        "ops": 4828016.532546835,
+        "rounds": 197356,
+        "stddev": 5.6953743099950155e-08,
+        "total": 0.0408772419625275
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[mysql]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[mysql]",
+      "param": "mysql",
+      "params": {
+        "dialect": "mysql"
+      },
+      "stats": {
+        "iqr": 2.038457471196777e-09,
+        "max": 1.4037769233254949e-05,
+        "mean": 2.1807150771402634e-07,
+        "median": 1.9134615915670741e-07,
+        "min": 1.863846206945779e-07,
+        "ops": 4585651.791390299,
+        "rounds": 118218,
+        "stddev": 8.243078026128934e-08,
+        "total": 0.025779977498936554
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[sqlserver]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[sqlserver]",
+      "param": "sqlserver",
+      "params": {
+        "dialect": "sqlserver"
+      },
+      "stats": {
+        "iqr": 1.6538461540431786e-09,
+        "max": 3.509884611328464e-06,
+        "mean": 2.0867850567944702e-07,
+        "median": 1.941923003939267e-07,
+        "min": 1.888846292366417e-07,
+        "ops": 4792060.383718147,
+        "rounds": 196928,
+        "stddev": 5.8550117785397595e-08,
+        "total": 0.041094640766442946
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[db2]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[db2]",
+      "param": "db2",
+      "params": {
+        "dialect": "db2"
+      },
+      "stats": {
+        "iqr": 1.6296292381378334e-09,
+        "max": 3.109518527506023e-06,
+        "mean": 2.038149533404349e-07,
+        "median": 1.8896295201826701e-07,
+        "min": 1.823333251296491e-07,
+        "ops": 4906411.348188471,
+        "rounds": 193611,
+        "stddev": 5.6303028127780545e-08,
+        "total": 0.03946081693119441
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[sqlite]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[sqlite]",
+      "param": "sqlite",
+      "params": {
+        "dialect": "sqlite"
+      },
+      "stats": {
+        "iqr": 1.5384452686143406e-09,
+        "max": 3.02353847613491e-06,
+        "mean": 2.0520258766291885e-07,
+        "median": 1.9203845952758385e-07,
+        "min": 1.8549999717484192e-07,
+        "ops": 4873232.89335262,
+        "rounds": 197629,
+        "stddev": 5.253578837195595e-08,
+        "total": 0.04055398219723455
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_get_dialect_capabilities[cosmosdb]",
+      "group": null,
+      "name": "test_get_dialect_capabilities[cosmosdb]",
+      "param": "cosmosdb",
+      "params": {
+        "dialect": "cosmosdb"
+      },
+      "stats": {
+        "iqr": 1.5769413808951646e-09,
+        "max": 1.2652192306352215e-05,
+        "mean": 2.0794697463334315e-07,
+        "median": 1.9346153889133487e-07,
+        "min": 1.8819231137548252e-07,
+        "ops": 4808918.243524444,
+        "rounds": 196657,
+        "stddev": 6.397538013235507e-08,
+        "total": 0.040894228190469416
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestDialectCapabilities::test_unknown_dialect_fallback",
+      "group": null,
+      "name": "test_unknown_dialect_fallback",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 1.8888857556265557e-09,
+        "max": 8.343222227132949e-06,
+        "mean": 2.1205644583478186e-07,
+        "median": 1.8937037195967234e-07,
+        "min": 1.8344445817530396e-07,
+        "ops": 4715725.551578444,
+        "rounds": 194402,
+        "stddev": 7.030218230776e-08,
+        "total": 0.041224197183173626
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestStatementSplitting::test_split_10_statements_postgresql",
+      "group": null,
+      "name": "test_split_10_statements_postgresql",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 0.0007945884995024244,
+        "max": 0.002476650999597041,
+        "mean": 0.0016618111999378016,
+        "median": 0.0015564999998787243,
+        "min": 0.0011791590000029828,
+        "ops": 601.7530752214379,
+        "rounds": 5,
+        "stddev": 0.0005315730437009479,
+        "total": 0.008309055999689008
+      }
+    },
+    {
+      "fullname": "tests/benchmarks/test_bench_cpu_hot_paths.py::TestStatementSplitting::test_split_100_statements_postgresql",
+      "group": null,
+      "name": "test_split_100_statements_postgresql",
+      "param": null,
+      "params": null,
+      "stats": {
+        "iqr": 0.00020092700003715436,
+        "max": 0.006364353999742889,
+        "mean": 0.002890792163004241,
+        "median": 0.0028128079998168687,
+        "min": 0.0025548250000611006,
+        "ops": 345.9259412688995,
+        "rounds": 319,
+        "stddev": 0.0003692467548943661,
+        "total": 0.9221626999983528
+      }
+    }
+  ],
+  "commit_info": {
+    "branch": "stabilize/phase-3-pr-15-benchmarks",
+    "id": "fa805e10c7327aaea1f13bf0ede9c32c4b273873"
+  },
+  "datetime": "2026-04-19T23:03:04.315282+00:00",
+  "machine_info": {
+    "python_implementation": "CPython",
+    "python_version": "3.11.15",
+    "system": "Linux"
+  },
+  "version": "5.2.3"
+}

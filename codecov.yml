@@ -1,0 +1,84 @@
+# Codecov configuration for dblift
+# Ensures proper merging of coverage reports from multiple test suites
+
+codecov:
+  require_ci_to_pass: true  # Fail Codecov status when CI fails or coverage regresses
+  notify:
+    wait_for_ci: true  # Wait for all CI jobs to complete before finalizing
+
+comment:
+  behavior: default
+  layout: reach,diff,flags,tree,reach
+  show_carryforward_flags: false
+
+coverage:
+  # Precision for coverage percentage display
+  precision: 2
+  
+  # Round coverage percentages
+  round: down
+  
+  # Range of coverage values to display
+  range:
+    - 70.0
+    - 100.0
+  
+  # Status configuration
+  status:
+    changes: false
+    default_rules:
+      flag_coverage_not_uploaded_behavior: include
+    project:
+      default:
+        target: 80%  # Target 80% combined coverage
+        threshold: 1%  # Allow 1% variance
+        base: auto  # Compare against previous commit
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+        base: auto
+
+# Flag management configuration (Recommended approach per Codecov docs)
+# This automatically handles ALL uploaded flags, including those with database suffixes
+# Codecov will automatically:
+# 1. Merge all reports for the same commit into the main report (regardless of flags)
+# 2. Manage flags according to default_rules below
+# 3. Allow filtering by flag in the UI
+#
+# Flags uploaded from workflows:
+# - unit
+# - integration-commands-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
+# - integration-parsers-{database} (postgresql, mysql, sqlserver, oracle, db2, sqlite, cosmosdb)
+# - integration-features-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
+# - integration-scenarios-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
+# - integration-concurrency-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
+# - integration-introspection-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
+# - integration-validation
+# - integration-validation-sqlite
+# - integration-validation-cosmosdb
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: 80%
+        threshold: 1%
+      - type: patch
+        target: 80%
+        threshold: 1%
+
+# Ignore patterns (files that shouldn't affect coverage)
+ignore:
+  - "tests/"
+  - "docs/"
+  - "scripts/"
+  - "setup.py"
+  - "*.md"
+  - "*.yml"
+  - "*.yaml"
+  - "*.toml"
+  - "*.ini"
+  - ".github/"
+
+slack_app: true

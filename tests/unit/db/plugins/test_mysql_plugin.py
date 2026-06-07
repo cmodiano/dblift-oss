@@ -1,0 +1,553 @@
+"""Unit tests for MySQL plugin: schema_operations, query_executor, history_manager."""
+
+import unittest
+from unittest.mock import MagicMock, patch
+
+
+def _make_connection(auto_commit=True, is_closed=False):
+    conn = MagicMock()
+    conn.isClosed.return_value = is_closed
+    conn.getAutoCommit.return_value = auto_commit
+    stmt = MagicMock()
+    stmt.executeUpdate.return_value = 0
+    rs = MagicMock()
+    rs.next.side_effect = [False]
+    rs.getMetaData.return_value = MagicMock(getColumnCount=MagicMock(return_value=0))
+    stmt.executeQuery.return_value = rs
+    conn.createStatement.return_value = stmt
+    conn.prepareStatement.return_value = stmt
+    return conn, stmt, rs
+
+
+# ---------------------------------------------------------------------------
+# MySqlSchemaOperations
+# ---------------------------------------------------------------------------
+
+
+class TestMySqlSchemaOperations(unittest.TestCase):
+
+    def _make_qe(self):
+        qe = MagicMock()
+        qe.execute_query.return_value = []
+        qe.execute_statement.return_value = 0
+        qe.get_quoted_schema_name.side_effect = lambda s: f"`{s}`"
+        qe.get_schema_qualified_name.side_effect = lambda s, n: f"`{s}`.`{n}`"
+        return qe
+
+    def _make_ops(self, qe=None):
+        from db.plugins.mysql.mysql.schema_operations import MySqlSchemaOperations
+
+        if qe is None:
+            qe = self._make_qe()
+        log = MagicMock()
+        return MySqlSchemaOperations(qe, log), qe, log
+
+    # --- create_schema_if_not_exists ---
+
+    def test_create_schema_when_not_exists(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = []  # DB does not exist
+
+        ops.create_schema_if_not_exists(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("CREATE DATABASE" in c for c in calls))
+
+    def test_create_schema_when_already_exists_skips_create(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = [{"SCHEMA_NAME": "mydb"}]
+
+        ops.create_schema_if_not_exists(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertFalse(any("CREATE DATABASE" in c for c in calls))
+
+    def test_create_schema_always_calls_set_current_schema(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = []
+
+        ops.create_schema_if_not_exists(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("USE" in c for c in calls))
+
+    # --- set_current_schema ---
+
+    def test_set_current_schema_executes_use(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+
+        ops.set_current_schema(conn, "mydb")
+
+        qe.execute_statement.assert_called_once()
+        sql = qe.execute_statement.call_args[0][1]
+        self.assertIn("USE", sql)
+
+    def test_set_current_schema_raises_on_error(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_statement.side_effect = RuntimeError("unknown database")
+
+        with self.assertRaises(RuntimeError):
+            ops.set_current_schema(conn, "baddb")
+
+    # --- get_database_version ---
+
+    def test_get_database_version_returns_mysql_prefix(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = [{"version": "8.0.27"}]
+
+        result = ops.get_database_version(conn)
+
+        self.assertIn("MySQL", result)
+        self.assertIn("8.0.27", result)
+
+    def test_get_database_version_on_error_returns_unknown(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.side_effect = RuntimeError("version query failed")
+
+        result = ops.get_database_version(conn)
+
+        self.assertIn("Unknown", result)
+
+    # --- get_tables ---
+
+    def test_get_tables_returns_list(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = [{"table_name": "orders"}, {"table_name": "users"}]
+
+        tables = ops.get_tables(conn, "mydb")
+
+        self.assertEqual(["orders", "users"], tables)
+
+    def test_get_tables_returns_empty_on_error(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.side_effect = RuntimeError("query failed")
+
+        tables = ops.get_tables(conn, "mydb")
+
+        self.assertEqual([], tables)
+
+    # --- get_schemas ---
+
+    def test_get_schemas_returns_list(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = [{"schema_name": "mydb"}]
+
+        schemas = ops.get_schemas(conn)
+
+        self.assertIn("mydb", schemas)
+
+    # --- get_columns_query ---
+
+    def test_get_columns_query_contains_schema_and_table(self):
+        ops, qe, log = self._make_ops()
+        sql = ops.get_columns_query("mydb", "orders")
+        self.assertIn("mydb", sql)
+        self.assertIn("orders", sql)
+        self.assertIn("COLUMN_NAME", sql)
+
+    def test_get_columns_query_includes_column_type(self):
+        """BUG-01: COLUMN_TYPE must be included to get full ENUM member list."""
+        ops, qe, log = self._make_ops()
+        sql = ops.get_columns_query("mydb", "orders")
+        self.assertIn("COLUMN_TYPE", sql.upper())
+
+    # --- get_add_column_sql ---
+
+    def test_get_add_column_sql_uses_backtick(self):
+        ops, qe, log = self._make_ops()
+        sql = ops.get_add_column_sql("mydb", "orders", "status", "VARCHAR(50)")
+        self.assertIn("ALTER TABLE", sql)
+        self.assertIn("ADD COLUMN", sql)
+        self.assertIn("`status`", sql)
+
+    # --- get_parameter_placeholders ---
+
+    def test_get_parameter_placeholders(self):
+        ops, qe, log = self._make_ops()
+        result = ops.get_parameter_placeholders(3)
+        self.assertEqual("?, ?, ?", result)
+
+    # --- clean_schema ---
+
+    def test_clean_schema_disables_fk_checks(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = []
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("FOREIGN_KEY_CHECKS" in c for c in calls))
+
+    def test_clean_schema_re_enables_fk_checks(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = []
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        fk_calls = [c for c in calls if "FOREIGN_KEY_CHECKS" in c]
+        # Should have both SET FOREIGN_KEY_CHECKS = 0 and = 1
+        self.assertGreaterEqual(len(fk_calls), 2)
+
+    def test_clean_schema_drops_views(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+
+        def query_side_effect(c, sql, params=None, **kw):
+            if "information_schema.VIEWS" in sql:
+                return [{"TABLE_NAME": "myview"}]
+            return []
+
+        qe.execute_query.side_effect = query_side_effect
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("DROP VIEW" in c for c in calls))
+
+    def test_clean_schema_drops_tables(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+
+        def query_side_effect(c, sql, params=None, **kw):
+            if "information_schema.TABLES" in sql and "BASE TABLE" in sql:
+                return [{"TABLE_NAME": "orders"}]
+            return []
+
+        qe.execute_query.side_effect = query_side_effect
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("DROP TABLE" in c for c in calls))
+
+    def test_clean_schema_records_drops_from_lowercase_metadata_keys(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+
+        def query_side_effect(c, sql, params=None, **kw):
+            if "information_schema.TABLES" in sql and "BASE TABLE" in sql:
+                return [{"table_name": "orders"}]
+            return []
+
+        qe.execute_query.side_effect = query_side_effect
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        self.assertEqual(1, len(summary.objects))
+        self.assertEqual("orders", summary.objects[0].name)
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("DROP TABLE" in c for c in calls))
+
+    def test_clean_schema_returns_summary(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        qe.execute_query.return_value = []
+
+        from core.migration.clean_summary import CleanExecutionSummary
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        self.assertIsInstance(summary, CleanExecutionSummary)
+
+    def test_clean_schema_raises_on_fatal_error(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+
+        # set_current_schema will fail immediately
+        qe.execute_statement.side_effect = RuntimeError("fatal")
+        qe.execute_query.return_value = []
+
+        with self.assertRaises(RuntimeError):
+            ops.clean_schema(conn, "mydb")
+
+    def test_clean_schema_commits_when_autocommit_false(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection(auto_commit=False)
+        qe.execute_query.return_value = []
+
+        summary = ops.clean_schema(conn, "mydb")
+
+        conn.commit.assert_called()
+
+    # --- _drop_triggers ---
+
+    def test_drop_triggers_drops_each_trigger(self):
+        ops, qe, log = self._make_ops()
+        conn, _, _ = _make_connection()
+        from core.migration.clean_summary import CleanExecutionSummary
+
+        summary = CleanExecutionSummary()
+
+        qe.execute_query.return_value = [{"TRIGGER_NAME": "TR1"}, {"TRIGGER_NAME": "TR2"}]
+
+        ops._drop_triggers(conn, "mydb", summary)
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        drop_calls = [c for c in calls if "DROP TRIGGER" in c]
+        self.assertEqual(2, len(drop_calls))
+
+
+# ---------------------------------------------------------------------------
+# MySqlHistoryManager
+# ---------------------------------------------------------------------------
+
+
+class TestMySqlHistoryManager(unittest.TestCase):
+
+    def _make_manager(self):
+        from db.plugins.mysql.mysql.history_manager import MySqlHistoryManager
+
+        qe = MagicMock()
+        qe.execute_query.return_value = []
+        qe.execute_statement.return_value = 0
+        qe.get_schema_qualified_name.side_effect = lambda s, n: f"`{s}`.`{n}`"
+        qe.table_exists.return_value = False
+        schema_ops = MagicMock()
+        config = MagicMock()
+        log = MagicMock()
+        return MySqlHistoryManager(qe, schema_ops, config, log), qe, schema_ops, log
+
+    def _make_connection(self):
+        conn = MagicMock()
+        conn.isClosed.return_value = False
+        return conn
+
+    # --- create_migration_history_table_if_not_exists ---
+
+    def test_create_table_when_not_exists_executes_create(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        mgr.create_migration_history_table_if_not_exists(conn, "mydb")
+
+        qe.execute_statement.assert_called_once()
+        sql = qe.execute_statement.call_args[0][1]
+        self.assertIn("CREATE TABLE", sql)
+        self.assertIn("AUTO_INCREMENT", sql)
+
+    def test_create_table_skips_when_already_exists(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+
+        mgr.create_migration_history_table_if_not_exists(conn, "mydb")
+
+        qe.execute_statement.assert_not_called()
+
+    def test_create_table_creates_schema_when_flag_set(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        mgr.create_migration_history_table_if_not_exists(conn, "mydb", create_schema=True)
+
+        schema_ops.create_schema_if_not_exists.assert_called_once_with(conn, "mydb")
+
+    def test_create_table_raises_on_error(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+        qe.execute_statement.side_effect = RuntimeError("create failed")
+
+        with self.assertRaises(RuntimeError):
+            mgr.create_migration_history_table_if_not_exists(conn, "mydb")
+
+    # --- record_migration ---
+
+    def test_record_migration_inserts_record(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+
+        migration_info = {
+            "version": "1",
+            "description": "initial",
+            "type": "SQL",
+            "script": "V1__init.sql",
+            "checksum": 12345,
+            "installed_by": "testuser",
+            "execution_time": 100,
+            "success": True,
+        }
+
+        mgr.record_migration(conn, "mydb", migration_info)
+
+        qe.execute_statement.assert_called_once()
+        sql = qe.execute_statement.call_args[0][1]
+        self.assertIn("INSERT INTO", sql)
+
+    def test_record_migration_uses_bool_success(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+
+        migration_info = {"script": "V1.sql", "success": False}
+        mgr.record_migration(conn, "mydb", migration_info)
+
+        params = (
+            qe.execute_statement.call_args[1].get("params") or qe.execute_statement.call_args[0][2]
+        )
+        # success=False should become Python False (bool)
+        self.assertFalse(params[-1])
+
+    def test_record_migration_creates_table_when_not_exists(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        # table not found first time, then exists after create
+        qe.table_exists.side_effect = [False, False]
+
+        migration_info = {"script": "V1.sql", "success": True}
+        mgr.record_migration(conn, "mydb", migration_info)
+
+        calls = [str(c) for c in qe.execute_statement.call_args_list]
+        self.assertTrue(any("CREATE TABLE" in c or "INSERT INTO" in c for c in calls))
+
+    # --- get_applied_migrations ---
+
+    def test_get_applied_migrations_returns_empty_when_no_table(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        result = mgr.get_applied_migrations(conn, "mydb")
+
+        self.assertEqual([], result)
+        qe.execute_query.assert_not_called()
+
+    def test_get_applied_migrations_returns_rows(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = [{"script": "V1.sql", "success": True, "installed_rank": 1}]
+
+        result = mgr.get_applied_migrations(conn, "mydb")
+
+        self.assertEqual(1, len(result))
+
+    def test_get_applied_migrations_converts_success_to_bool(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = [
+            {"script": "V1.sql", "success": 1},
+            {"script": "V2.sql", "success": 0},
+        ]
+
+        result = mgr.get_applied_migrations(conn, "mydb")
+
+        self.assertTrue(result[0]["success"])
+        self.assertFalse(result[1]["success"])
+
+    def test_get_applied_migrations_raises_on_error(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.side_effect = RuntimeError("query error")
+
+        with self.assertRaises(RuntimeError):
+            mgr.get_applied_migrations(conn, "mydb")
+
+    # --- create_history_table SQL generation ---
+
+    def test_create_history_table_generates_innodb_sql(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        sql = mgr.create_history_table("mydb", "dblift_schema_history")
+        self.assertIn("CREATE TABLE", sql)
+        self.assertIn("AUTO_INCREMENT", sql)
+        self.assertIn("InnoDB", sql)
+
+    # --- get_current_version ---
+
+    def test_get_current_version_returns_none_when_no_table(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        result = mgr.get_current_version(conn, "mydb")
+
+        self.assertIsNone(result)
+
+    def test_get_current_version_returns_latest(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = [{"version": "3"}]
+
+        result = mgr.get_current_version(conn, "mydb")
+
+        self.assertEqual("3", result)
+
+    def test_get_current_version_returns_none_when_empty(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = []
+
+        result = mgr.get_current_version(conn, "mydb")
+
+        self.assertIsNone(result)
+
+    # --- migration_exists ---
+
+    def test_migration_exists_true(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = [{"1": 1}]
+
+        self.assertTrue(mgr.migration_exists(conn, "mydb", "1.0"))
+
+    def test_migration_exists_false_when_no_table(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        self.assertFalse(mgr.migration_exists(conn, "mydb", "1.0"))
+
+    def test_migration_exists_false_when_not_found(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = []
+
+        self.assertFalse(mgr.migration_exists(conn, "mydb", "99.0"))
+
+    # --- repair_history_table ---
+
+    def test_repair_history_table_returns_empty_when_no_table(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = False
+
+        result = mgr.repair_history_table(conn, "mydb")
+
+        self.assertEqual([], result)
+        qe.execute_query.assert_not_called()
+
+    def test_repair_history_table_returns_empty_when_no_duplicates(self):
+        mgr, qe, schema_ops, log = self._make_manager()
+        conn = self._make_connection()
+        qe.table_exists.return_value = True
+        qe.execute_query.return_value = []  # no duplicates
+
+        result = mgr.repair_history_table(conn, "mydb")
+
+        self.assertEqual([], result)
+
+
+if __name__ == "__main__":
+    unittest.main()

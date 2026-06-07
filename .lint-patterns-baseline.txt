@@ -1,0 +1,26 @@
+# Lint-patterns baseline — INTENTIONALLY EMPTY (zero-baseline policy, PR-A4).
+#
+# This file used to grandfather AST-rule violations recorded once and
+# carried forward across PRs. As of PR-A4 the policy is:
+#
+#   The baseline file MUST contain zero non-comment entries.
+#   Any deferred violation lives as an inline annotation next to the
+#   offending code, never here.
+#
+# Allowed annotations (placed at end of the offending line):
+#   # lint: allow-print                          — intentional stdout write
+#   # lint: allow-enum-str: <ticket>             — see PR-06 for str(MigrationType)
+#   # lint: allow-dialect-string: <reason>       — Epic 26 dialect-plugin isolation
+#
+# scripts/lint_patterns.py refuses to run if this file ever grows a
+# non-comment, non-blank line — so re-grandfathering by hand-editing
+# is rejected at CI. To migrate the baseline approach back, change the
+# zero-baseline check in scripts/lint_patterns.py.
+#
+# Counts of inline annotations (informational, as of PR-A4):
+#   158 # lint: allow-dialect-string  → tracked by Epic 26 (PR-C1, C2, C3)
+#    16 # lint: allow-enum-str        → tracked by PR-06
+#     7 # lint: allow-print           → intentional JSON / machine-readable stdout
+#
+# The plan reduces the dialect-string count to zero through PR-C1 / C2 / C3
+# and the enum-str count through PR-06 (see docs/stabilization-plan.md).

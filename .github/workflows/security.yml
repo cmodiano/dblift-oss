@@ -1,0 +1,127 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  schedule:
+    # Weekly dependency scan (Monday 06:00 UTC) catches new CVEs even
+    # when the codebase is idle.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  bandit:
+    name: Static security (bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install bandit
+        run: python -m pip install --upgrade pip bandit
+      - name: Report all findings (informational)
+        run: |
+          # Full inventory of LOW/MEDIUM/HIGH for the job log. This step
+          # never fails; it's the baseline record.
+          bandit -c pyproject.toml -r api/ cli/ config/ core/ db/ || true
+      - name: Enforce HIGH severity (blocking)
+        run: |
+          # Only HIGH findings fail the gate. MEDIUM (e.g. B608 from
+          # intentional SQL string building) is tracked, not blocking.
+          bandit -c pyproject.toml -r api/ cli/ config/ core/ db/ --severity-level high
+
+  pip-audit:
+    name: Dependency vulnerabilities (pip-audit)
+    runs-on: ubuntu-latest
+    # On pull_request we require the job to pass; on schedule we let it
+    # be informational (failing CVE scan shouldn't block unrelated work
+    # when no PR introduced the change).
+    continue-on-error: ${{ github.event_name == 'schedule' }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pip-audit
+          python -m pip install -e ".[dev]"
+      - name: Audit dependencies
+        run: |
+          # --skip-editable skips the package itself; we audit its deps.
+          #
+          # The --ignore-vuln list covers advisories in `pip` itself that
+          # cannot be closed via `pyproject.toml` (pip is the user's
+          # package manager, not a pinnable dependency). The install
+          # step above already upgrades pip to latest; these flags are
+          # a belt-and-braces to tolerate stale runner metadata.
+          #
+          # PYSEC-2025-183 (CVE-2025-45768): PyJWT advisory about weak key
+          # length selection on RS256. Disputed by upstream, no patched
+          # version available (PyJWT 2.12.1 is current). dblift uses
+          # ``jwt.decode(token, self._public_key, algorithms=["RS256"])``
+          # in core/licensing/license_manager.py — verification only, with
+          # an embedded public key controlled by dblift's signing
+          # infrastructure (not by end users), so the vulnerability's
+          # threat model (attacker-controlled key length at generation)
+          # does not apply. Re-evaluate when PyJWT ships a fix.
+          #
+          # Revisit this list when a release of dblift requires newer
+          # deps that cannot co-install with modern pip.
+          pip-audit --skip-editable \
+            --ignore-vuln CVE-2025-8869 \
+            --ignore-vuln CVE-2026-1703 \
+            --ignore-vuln CVE-2026-3219 \
+            --ignore-vuln GHSA-4xh5-x5gv-qwph \
+            --ignore-vuln ECHO-ffe1-1d3c-d9bc \
+            --ignore-vuln ECHO-7db2-03aa-5591 \
+            --ignore-vuln PYSEC-2025-183
+
+  gitleaks:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history so gitleaks can scan every past commit.
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          # Pin the binary version. Bump deliberately when a newer rule
+          # set is desired. Running the binary directly (rather than
+          # gitleaks/gitleaks-action@v2) avoids the action's GitHub API
+          # calls — which require `pull-requests: read` and count
+          # against rate limits — and removes an external dependency on
+          # the action's behaviour.
+          VERSION=8.24.3
+          curl -sL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: Scan repository
+        run: |
+          # --config .gitleaks.toml: project-specific allowlist for the
+          #   Cosmos DB emulator public key, ANTLR
+          #   generated parsers, and documented historical commits.
+          #   See docs/security-incidents.md for the incident log.
+          # --redact: don't print secrets to logs even on finding.
+          # --exit-code 1: fail the job if any leak is found.
+          gitleaks detect \
+            --source . \
+            --config .gitleaks.toml \
+            --redact \
+            --no-banner \
+            --exit-code 1

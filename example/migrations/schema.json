@@ -1,0 +1,1504 @@
+{
+  "tables": [
+    {
+      "name": "order_items",
+      "schema": "dblift",
+      "object_type": "TABLE",
+      "dialect": "postgresql",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "serial",
+          "nullable": false,
+          "default_value": "nextval('order_items_id_seq'::regclass)",
+          "is_identity": true,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 1,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "order_id",
+          "data_type": "int4",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 2,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "product_id",
+          "data_type": "int4",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 3,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "quantity",
+          "data_type": "int4",
+          "nullable": false,
+          "default_value": "1",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 4,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "unit_price",
+          "data_type": "numeric(10, 2)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 5,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "total_price",
+          "data_type": "numeric(10, 2)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 6,
+          "collation": null,
+          "explicit_properties": {}
+        }
+      ],
+      "constraints": [
+        {
+          "name": "order_items_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "columns": [
+            "id"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "fk_order_items_order_id",
+          "constraint_type": "FOREIGN KEY",
+          "columns": [
+            "order_id"
+          ],
+          "reference_table": "orders",
+          "reference_schema": "dblift",
+          "reference_columns": [
+            "id"
+          ],
+          "check_expression": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "fk_order_items_product_id",
+          "constraint_type": "FOREIGN KEY",
+          "columns": [
+            "product_id"
+          ],
+          "reference_table": "products",
+          "reference_schema": "dblift",
+          "reference_columns": [
+            "id"
+          ],
+          "check_expression": null,
+          "explicit_properties": {}
+        }
+      ],
+      "temporary": false,
+      "tablespace": null,
+      "comment": "Order line items table",
+      "storage_engine": null,
+      "row_format": null,
+      "table_collation": null,
+      "next_auto_increment": null,
+      "create_options": null,
+      "filegroup": null,
+      "memory_optimized": false,
+      "system_versioned": false,
+      "history_table": null,
+      "history_schema": null,
+      "period_start_column": null,
+      "period_end_column": null,
+      "partition_method": null,
+      "partition_columns": null,
+      "partitions": [],
+      "export_partitions": [],
+      "derived_from": null,
+      "explicit_properties": {},
+      "row_security": false,
+      "force_row_security": false,
+      "policies": [],
+      "pctfree": null,
+      "pctused": null,
+      "initial": null,
+      "next": null,
+      "inherits": []
+    },
+    {
+      "name": "orders",
+      "schema": "dblift",
+      "object_type": "TABLE",
+      "dialect": "postgresql",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "serial",
+          "nullable": false,
+          "default_value": "nextval('orders_id_seq'::regclass)",
+          "is_identity": true,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 1,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "user_id",
+          "data_type": "int4",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 2,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "order_date",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 3,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "status",
+          "data_type": "varchar(20)",
+          "nullable": true,
+          "default_value": "'pending'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 4,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "total_amount",
+          "data_type": "numeric(10, 2)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 5,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "shipping_address",
+          "data_type": "text",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 6,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "notes",
+          "data_type": "text",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 7,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 8,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 9,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "created_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 10,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 11,
+          "collation": null,
+          "explicit_properties": {}
+        }
+      ],
+      "constraints": [
+        {
+          "name": "orders_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "columns": [
+            "id"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "fk_orders_user_id",
+          "constraint_type": "FOREIGN KEY",
+          "columns": [
+            "user_id"
+          ],
+          "reference_table": "users",
+          "reference_schema": "dblift",
+          "reference_columns": [
+            "id"
+          ],
+          "check_expression": null,
+          "explicit_properties": {}
+        }
+      ],
+      "temporary": false,
+      "tablespace": null,
+      "comment": "Customer orders table",
+      "storage_engine": null,
+      "row_format": null,
+      "table_collation": null,
+      "next_auto_increment": null,
+      "create_options": null,
+      "filegroup": null,
+      "memory_optimized": false,
+      "system_versioned": false,
+      "history_table": null,
+      "history_schema": null,
+      "period_start_column": null,
+      "period_end_column": null,
+      "partition_method": null,
+      "partition_columns": null,
+      "partitions": [],
+      "export_partitions": [],
+      "derived_from": null,
+      "explicit_properties": {},
+      "row_security": false,
+      "force_row_security": false,
+      "policies": [],
+      "pctfree": null,
+      "pctused": null,
+      "initial": null,
+      "next": null,
+      "inherits": []
+    },
+    {
+      "name": "products",
+      "schema": "dblift",
+      "object_type": "TABLE",
+      "dialect": "postgresql",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "serial",
+          "nullable": false,
+          "default_value": "nextval('products_id_seq'::regclass)",
+          "is_identity": true,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 1,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "name",
+          "data_type": "varchar(100)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 2,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "description",
+          "data_type": "text",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 3,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "price",
+          "data_type": "numeric(10, 2)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 4,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "category",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 5,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "stock_quantity",
+          "data_type": "int4",
+          "nullable": true,
+          "default_value": "0",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 6,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "is_active",
+          "data_type": "bool",
+          "nullable": true,
+          "default_value": "true",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 7,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 8,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "created_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 9,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 10,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "is_deleted",
+          "data_type": "bool",
+          "nullable": true,
+          "default_value": "false",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 11,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 12,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "deleted_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 13,
+          "collation": null,
+          "explicit_properties": {}
+        }
+      ],
+      "constraints": [
+        {
+          "name": "products_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "columns": [
+            "id"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        }
+      ],
+      "temporary": false,
+      "tablespace": null,
+      "comment": "Product catalog table",
+      "storage_engine": null,
+      "row_format": null,
+      "table_collation": null,
+      "next_auto_increment": null,
+      "create_options": null,
+      "filegroup": null,
+      "memory_optimized": false,
+      "system_versioned": false,
+      "history_table": null,
+      "history_schema": null,
+      "period_start_column": null,
+      "period_end_column": null,
+      "partition_method": null,
+      "partition_columns": null,
+      "partitions": [],
+      "export_partitions": [],
+      "derived_from": null,
+      "explicit_properties": {},
+      "row_security": false,
+      "force_row_security": false,
+      "policies": [],
+      "pctfree": null,
+      "pctused": null,
+      "initial": null,
+      "next": null,
+      "inherits": []
+    },
+    {
+      "name": "users",
+      "schema": "dblift",
+      "object_type": "TABLE",
+      "dialect": "postgresql",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "serial",
+          "nullable": false,
+          "default_value": "nextval('users_id_seq'::regclass)",
+          "is_identity": true,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 1,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "username",
+          "data_type": "varchar(40)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 2,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "email",
+          "data_type": "varchar(100)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 3,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "password_hash",
+          "data_type": "varchar(255)",
+          "nullable": false,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 4,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 5,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": "CURRENT_TIMESTAMP",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 6,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "created_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 7,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "updated_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": "'system'::character varying",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 8,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "is_deleted",
+          "data_type": "bool",
+          "nullable": true,
+          "default_value": "false",
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 9,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "deleted_at",
+          "data_type": "timestamp(6)",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 10,
+          "collation": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "deleted_by",
+          "data_type": "varchar(50)",
+          "nullable": true,
+          "default_value": null,
+          "is_identity": false,
+          "identity_generation": null,
+          "identity_seed": null,
+          "identity_increment": null,
+          "is_computed": false,
+          "computed_expression": null,
+          "computed_stored": false,
+          "comment": null,
+          "ordinal_position": 11,
+          "collation": null,
+          "explicit_properties": {}
+        }
+      ],
+      "constraints": [
+        {
+          "name": "users_pkey",
+          "constraint_type": "PRIMARY KEY",
+          "columns": [
+            "id"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "users_email_key",
+          "constraint_type": "UNIQUE",
+          "columns": [
+            "email"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        },
+        {
+          "name": "users_username_key",
+          "constraint_type": "UNIQUE",
+          "columns": [
+            "username"
+          ],
+          "reference_table": null,
+          "reference_schema": null,
+          "reference_columns": [],
+          "check_expression": null,
+          "explicit_properties": {}
+        }
+      ],
+      "temporary": false,
+      "tablespace": null,
+      "comment": "Application users table",
+      "storage_engine": null,
+      "row_format": null,
+      "table_collation": null,
+      "next_auto_increment": null,
+      "create_options": null,
+      "filegroup": null,
+      "memory_optimized": false,
+      "system_versioned": false,
+      "history_table": null,
+      "history_schema": null,
+      "period_start_column": null,
+      "period_end_column": null,
+      "partition_method": null,
+      "partition_columns": null,
+      "partitions": [],
+      "export_partitions": [],
+      "derived_from": null,
+      "explicit_properties": {},
+      "row_security": false,
+      "force_row_security": false,
+      "policies": [],
+      "pctfree": null,
+      "pctused": null,
+      "initial": null,
+      "next": null,
+      "inherits": []
+    }
+  ],
+  "views": [
+    {
+      "name": "v_active_products",
+      "schema": "dblift",
+      "object_type": "VIEW",
+      "dialect": "postgresql",
+      "query": "SELECT products.id,\n    products.name,\n    products.description,\n    products.price,\n    products.category,\n    products.stock_quantity\n   FROM products\n  WHERE products.is_active = true\n  ORDER BY products.category, products.name;",
+      "columns": [
+        "id",
+        "name",
+        "description",
+        "price",
+        "category",
+        "stock_quantity"
+      ],
+      "materialized": false,
+      "is_updatable": false
+    },
+    {
+      "name": "v_product_sales",
+      "schema": "dblift",
+      "object_type": "VIEW",
+      "dialect": "postgresql",
+      "query": "SELECT p.id AS product_id,\n    p.name,\n    p.category,\n    p.price,\n    COALESCE(sum(oi.quantity), 0::bigint) AS total_sold,\n    COALESCE(sum(oi.total_price), 0::numeric) AS total_revenue,\n    count(DISTINCT oi.order_id) AS number_of_orders\n   FROM products p\n     LEFT JOIN order_items oi ON p.id = oi.product_id\n  GROUP BY p.id, p.name, p.category, p.price;",
+      "columns": [
+        "product_id",
+        "name",
+        "category",
+        "price",
+        "total_sold",
+        "total_revenue",
+        "number_of_orders"
+      ],
+      "materialized": false,
+      "is_updatable": false
+    },
+    {
+      "name": "v_user_order_summary",
+      "schema": "dblift",
+      "object_type": "VIEW",
+      "dialect": "postgresql",
+      "query": "SELECT u.id AS user_id,\n    u.username,\n    u.email,\n    count(o.id) AS total_orders,\n    COALESCE(sum(o.total_amount), 0::numeric) AS total_spent,\n    max(o.order_date) AS last_order_date\n   FROM users u\n     LEFT JOIN orders o ON u.id = o.user_id\n  GROUP BY u.id, u.username, u.email;",
+      "columns": [
+        "user_id",
+        "username",
+        "email",
+        "total_orders",
+        "total_spent",
+        "last_order_date"
+      ],
+      "materialized": false,
+      "is_updatable": false
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_order_items_order_id",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "order_items",
+      "table_schema": "dblift",
+      "columns": [
+        "order_id"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_order_items_product_id",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "order_items",
+      "table_schema": "dblift",
+      "columns": [
+        "product_id"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_orders_date",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "orders",
+      "table_schema": "dblift",
+      "columns": [
+        "order_date"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_orders_status",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "orders",
+      "table_schema": "dblift",
+      "columns": [
+        "status"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_orders_user_id",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "orders",
+      "table_schema": "dblift",
+      "columns": [
+        "user_id"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_products_active",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "products",
+      "table_schema": "dblift",
+      "columns": [
+        "is_active"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_products_category",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "products",
+      "table_schema": "dblift",
+      "columns": [
+        "category"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_products_deleted",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "products",
+      "table_schema": "dblift",
+      "columns": [
+        "is_deleted"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_products_name",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "products",
+      "table_schema": "dblift",
+      "columns": [
+        "name"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_users_deleted",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "users",
+      "table_schema": "dblift",
+      "columns": [
+        "is_deleted"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_users_email",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "users",
+      "table_schema": "dblift",
+      "columns": [
+        "email"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    },
+    {
+      "name": "idx_users_username",
+      "schema": "dblift",
+      "object_type": "INDEX",
+      "dialect": "postgresql",
+      "table_name": "users",
+      "table_schema": "dblift",
+      "columns": [
+        "username"
+      ],
+      "unique": false,
+      "type": "BTREE",
+      "condition": null,
+      "include_columns": [],
+      "sort_directions": [
+        "ASC"
+      ],
+      "online": null,
+      "concurrently": false,
+      "tablespace": null,
+      "is_local": null,
+      "expression_flags": [
+        false
+      ],
+      "fillfactor": null,
+      "compression": null,
+      "comment": null
+    }
+  ],
+  "sequences": [],
+  "triggers": [
+    {
+      "name": "update_products_updated_at",
+      "table_name": "products",
+      "schema": "dblift",
+      "object_type": "TRIGGER",
+      "dialect": null,
+      "timing": "BEFORE",
+      "events": [
+        "UPDATE"
+      ],
+      "orientation": null,
+      "definition": "CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON dblift.products FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()",
+      "enabled": true,
+      "function_schema": "dblift",
+      "function_name": "update_updated_at_column",
+      "function_arguments": null,
+      "when_clause": null,
+      "is_constraint_trigger": false,
+      "constraint_deferrable": null,
+      "constraint_initially_deferred": null,
+      "definer": null,
+      "execution_order": null,
+      "follows_trigger": null,
+      "precedes_trigger": null
+    },
+    {
+      "name": "update_users_updated_at",
+      "table_name": "users",
+      "schema": "dblift",
+      "object_type": "TRIGGER",
+      "dialect": null,
+      "timing": "BEFORE",
+      "events": [
+        "UPDATE"
+      ],
+      "orientation": null,
+      "definition": "CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON dblift.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()",
+      "enabled": true,
+      "function_schema": "dblift",
+      "function_name": "update_updated_at_column",
+      "function_arguments": null,
+      "when_clause": null,
+      "is_constraint_trigger": false,
+      "constraint_deferrable": null,
+      "constraint_initially_deferred": null,
+      "definer": null,
+      "execution_order": null,
+      "follows_trigger": null,
+      "precedes_trigger": null
+    }
+  ],
+  "events": [],
+  "procedures": [],
+  "functions": [
+    {
+      "name": "update_updated_at_column",
+      "schema": "dblift",
+      "object_type": "FUNCTION",
+      "dialect": "postgresql",
+      "parameters": [],
+      "body": "$function$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$function$",
+      "language": "plpgsql",
+      "is_function": true,
+      "return_type": "trigger",
+      "comment": "Automatically updates updated_at timestamp",
+      "definition": "CREATE OR REPLACE FUNCTION dblift.update_updated_at_column()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    NEW.updated_at = CURRENT_TIMESTAMP;\n    RETURN NEW;\nEND;\n$function$",
+      "volatility": "VOLATILE",
+      "security_definer": false,
+      "definer": null,
+      "data_access": null
+    }
+  ],
+  "packages": [],
+  "synonyms": [],
+  "user_defined_types": [],
+  "extensions": [],
+  "foreign_data_wrappers": [],
+  "foreign_servers": [],
+  "database_links": [],
+  "metadata": {
+    "dialect": "postgresql",
+    "schema": "dblift",
+    "history_table": "dblift_schema_history",
+    "migration": {
+      "last_version": "1.1.0",
+      "installed_rank": 4,
+      "applied_versions": [
+        "1.0.0",
+        "1.0.1",
+        "1.0.2",
+        "1.1.0"
+      ],
+      "repeatables": [
+        {
+          "script": "R__Create_views.sql",
+          "checksum": "b0c545d6004cb5b2a8b42498b8b295be",
+          "installed_rank": 5,
+          "installed_on": "2025-11-23T10:36:28.254000"
+        }
+      ]
+    },
+    "introspection_quality": {
+      "completeness_score": 1.0,
+      "confidence_level": "HIGH",
+      "error_count": 0,
+      "warning_count": 0
+    },
+    "validation": {
+      "overall_passed": true,
+      "confidence": {
+        "overall_score": 0.9999999999999999,
+        "confidence_level": "HIGH",
+        "breakdown": {
+          "completeness": {
+            "score": 1.0,
+            "weight": 0.4,
+            "weighted": 0.4
+          },
+          "consistency": {
+            "score": 1.0,
+            "weight": 0.3,
+            "weighted": 0.3
+          },
+          "accuracy": {
+            "score": 1.0,
+            "weight": 0.2,
+            "weighted": 0.2
+          },
+          "error_rate": {
+            "score": 1.0,
+            "weight": 0.1,
+            "weighted": 0.1
+          }
+        }
+      },
+      "total_errors": 0,
+      "total_warnings": 0
+    }
+  }
+}

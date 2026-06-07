@@ -1,0 +1,9 @@
+{
+  "_comment": "Per-root cap on flake8 E501 (line too long) violations. Roadmap action #5. The counts can only stay flat or decrease: any PR that grows a count fails the lint job. Mirrors .docstring-ratchet.json — when the script reports 'you can lower the cap by N', commit the tighter cap in the same PR.",
+  "_policy": "Initial measurement on develop a55abd9 (2026-05-14). The legacy debt is concentrated in core/ (DDL generators, comparators) and db/ (per-dialect provider files); api/ + cli/ + config/ are already close to zero.",
+  "api": 1,
+  "cli": 20,
+  "config": 13,
+  "core": 587,
+  "db": 316
+}

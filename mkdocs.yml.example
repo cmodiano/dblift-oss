@@ -1,0 +1,120 @@
+site_name: DBLift Documentation
+site_description: Database migration tool for PostgreSQL, MySQL, SQL Server, Oracle, DB2, SQLite, and Cosmos DB
+site_url: https://github.com/cmodiano/dblift
+
+theme:
+  name: material
+  logo: logo/dblift_logo.png
+  favicon: logo/dblift_logo.png
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.tabs.link
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+          options:
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_if_no_docstring: false
+            show_signature_annotations: true
+            separate_signature: true
+            line_length: 100
+            docstring_style: google
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Getting Started: user-guide/getting-started.md
+    - Configuration: user-guide/configuration.md
+    - Commands: user-guide/commands.md
+    - Best Practices: user-guide/best-practices.md
+    - Troubleshooting: user-guide/troubleshooting.md
+  - API Reference:
+    - API Client:
+      - api-reference/api/client.md
+      - api-reference/api/events.md
+    - CLI:
+      - api-reference/cli/main.md
+      - api-reference/cli/commands.md
+    - Core:
+      - Migration Engine:
+        - api-reference/core/migration/migration.md
+        - api-reference/core/migration/executor.md
+        - api-reference/core/migration/commands.md
+      - SQL Parser:
+        - api-reference/core/sql_parser/parser.md
+      - Logger:
+        - api-reference/core/logger/logger.md
+    - Database:
+      - api-reference/db/providers.md
+      - api-reference/db/introspection.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Migration Engine: architecture/migration-engine.md
+    - Database Providers: architecture/database-providers.md
+    - SQL Parsing: architecture/sql-parsing.md
+    - Schema Management: architecture/schema-management.md
+  - Development:
+    - Setup: development/setup.md
+    - Testing: development/testing.md
+    - Contributing: development/contributing.md
+    - Adding Database Support: development/adding-database-support.md
+  - Examples:
+    - Basic Migrations: examples/basic-migrations.md
+    - Advanced Scenarios: examples/advanced-scenarios.md
+    - CosmosDB: examples/cosmosdb-examples.md
+  - Advanced Topics:
+    - NoSQL Migrations: advanced/nosql-migrations.md
+    - Migration Formats: advanced/migration-formats.md
+    - Declarative Rules: advanced/declarative-rules.md
+
+extra:
+  version:
+    provider: mike
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/cmodiano/dblift

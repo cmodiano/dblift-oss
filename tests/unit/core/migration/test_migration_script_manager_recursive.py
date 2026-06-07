@@ -1,0 +1,166 @@
+"""Unit tests for MigrationScriptManager per-directory recursive functionality."""
+
+import tempfile
+from pathlib import Path
+
+import pytest
+
+from core.logger import DbliftLogger, LogFormat
+from core.migration.scripting.migration_script_manager import MigrationScriptManager
+
+pytestmark = [pytest.mark.unit]
+
+
+class TestMigrationScriptManagerPerDirectoryRecursive:
+    """Test per-directory recursive settings in MigrationScriptManager."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.primary_dir = self.temp_dir / "primary"
+        self.additional_dir1 = self.temp_dir / "additional1"
+        self.additional_dir2 = self.temp_dir / "additional2"
+
+        # Create directories
+        self.primary_dir.mkdir()
+        self.additional_dir1.mkdir()
+        self.additional_dir2.mkdir()
+
+        # Create subdirectories
+        (self.primary_dir / "subdir").mkdir()
+        (self.additional_dir1 / "subdir").mkdir()
+        (self.additional_dir2 / "subdir").mkdir()
+
+        # Create logger
+        logger = DbliftLogger("test", LogFormat.TEXT)
+        self.script_manager = MigrationScriptManager(logger)
+
+    def teardown_method(self):
+        """Clean up test fixtures."""
+        import shutil
+
+        shutil.rmtree(self.temp_dir)
+
+    def test_get_all_scripts_with_per_directory_recursive(self):
+        """Test get_all_scripts with per-directory recursive settings."""
+        # Create files in primary directory and subdirectory
+        (self.primary_dir / "V1_0_0__primary.sql").write_text("CREATE TABLE primary;")
+        (self.primary_dir / "subdir" / "V1_0_1__primary_sub.sql").write_text(
+            "CREATE TABLE primary_sub;"
+        )
+
+        # Create files in additional directories
+        (self.additional_dir1 / "V1_0_2__add1.sql").write_text("CREATE TABLE add1;")
+        (self.additional_dir1 / "subdir" / "V1_0_3__add1_sub.sql").write_text(
+            "CREATE TABLE add1_sub;"
+        )
+
+        (self.additional_dir2 / "V1_0_4__add2.sql").write_text("CREATE TABLE add2;")
+        (self.additional_dir2 / "subdir" / "V1_0_5__add2_sub.sql").write_text(
+            "CREATE TABLE add2_sub;"
+        )
+
+        # Test with recursive=True for all (default)
+        scripts = self.script_manager.get_all_scripts(
+            self.primary_dir,
+            recursive=True,
+            additional_dirs=[self.additional_dir1, self.additional_dir2],
+        )
+        assert len(scripts) == 6  # All files including subdirectories
+
+        # Test with recursive=False for all
+        scripts = self.script_manager.get_all_scripts(
+            self.primary_dir,
+            recursive=False,
+            additional_dirs=[self.additional_dir1, self.additional_dir2],
+        )
+        assert len(scripts) == 3  # Only top-level files
+
+        # Test with per-directory recursive settings
+        dir_recursive_map = {
+            self.primary_dir: True,  # Recursive
+            self.additional_dir1: False,  # Not recursive
+            self.additional_dir2: True,  # Recursive
+        }
+        scripts = self.script_manager.get_all_scripts(
+            self.primary_dir,
+            recursive=True,  # Default for directories not in map
+            additional_dirs=[self.additional_dir1, self.additional_dir2],
+            dir_recursive_map=dir_recursive_map,
+        )
+        # Should get: primary (2 files), add1 (1 file, no subdir), add2 (2 files)
+        assert len(scripts) == 5
+        script_names = [Path(s).name if "/" not in s else s.split("/")[-1] for s in scripts]
+        assert "V1_0_0__primary.sql" in script_names
+        assert "V1_0_1__primary_sub.sql" in script_names
+        assert "V1_0_2__add1.sql" in script_names
+        assert "V1_0_3__add1_sub.sql" not in script_names  # Should be excluded
+        assert "V1_0_4__add2.sql" in script_names
+        assert "V1_0_5__add2_sub.sql" in script_names
+
+    def test_load_migration_scripts_with_per_directory_recursive(self):
+        """Test load_migration_scripts with per-directory recursive settings."""
+        # Create migration files
+        (self.primary_dir / "V1_0_0__primary.sql").write_text("CREATE TABLE primary;")
+        (self.primary_dir / "subdir" / "V1_0_1__primary_sub.sql").write_text(
+            "CREATE TABLE primary_sub;"
+        )
+        (self.additional_dir1 / "V1_0_2__add1.sql").write_text("CREATE TABLE add1;")
+        (self.additional_dir1 / "subdir" / "V1_0_3__add1_sub.sql").write_text(
+            "CREATE TABLE add1_sub;"
+        )
+
+        # Test with per-directory recursive settings
+        dir_recursive_map = {
+            self.primary_dir: True,
+            self.additional_dir1: False,
+        }
+        migrations = self.script_manager.load_migration_scripts(
+            self.primary_dir,
+            recursive=True,
+            additional_dirs=[self.additional_dir1],
+            dir_recursive_map=dir_recursive_map,
+        )
+
+        # Should find migrations from primary (recursive) and add1 (non-recursive)
+        all_migrations = []
+        for migration_list in migrations.values():
+            all_migrations.extend(migration_list)
+
+        assert len(all_migrations) == 3  # V1_0_0, V1_0_1, V1_0_2 (but not V1_0_3)
+        script_names = [m.script_name for m in all_migrations]
+        assert any("V1_0_0__primary.sql" in name for name in script_names)
+        assert any("V1_0_1__primary_sub.sql" in name for name in script_names)
+        assert any("V1_0_2__add1.sql" in name for name in script_names)
+        assert not any("V1_0_3__add1_sub.sql" in name for name in script_names)
+
+    def test_get_callbacks_by_event_with_per_directory_recursive(self):
+        """Test get_callbacks_by_event with per-directory recursive settings."""
+        # Create callback files
+        (self.primary_dir / "beforeMigrate__callback.sql").write_text("SELECT 1;")
+        (self.primary_dir / "subdir" / "beforeMigrate__callback_sub.sql").write_text("SELECT 2;")
+        (self.additional_dir1 / "beforeMigrate__callback_add1.sql").write_text("SELECT 3;")
+        (self.additional_dir1 / "subdir" / "beforeMigrate__callback_add1_sub.sql").write_text(
+            "SELECT 4;"
+        )
+
+        # Test with per-directory recursive settings
+        dir_recursive_map = {
+            self.primary_dir: True,
+            self.additional_dir1: False,
+        }
+        callbacks = self.script_manager.get_callbacks_by_event(
+            self.primary_dir,
+            "beforeMigrate",
+            recursive=True,
+            additional_dirs=[self.additional_dir1],
+            dir_recursive_map=dir_recursive_map,
+        )
+
+        # Should find callbacks from primary (recursive) and add1 (non-recursive)
+        assert len(callbacks) == 3  # 2 from primary, 1 from add1
+        script_names = [cb.script_name for cb in callbacks]
+        assert any("beforeMigrate__callback.sql" in name for name in script_names)
+        assert any("beforeMigrate__callback_sub.sql" in name for name in script_names)
+        assert any("beforeMigrate__callback_add1.sql" in name for name in script_names)
+        assert not any("beforeMigrate__callback_add1_sub.sql" in name for name in script_names)

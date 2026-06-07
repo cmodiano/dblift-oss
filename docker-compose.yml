@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Full DBLift image with database connectivity
+  dblift:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./migrations:/workspace/migrations
+      - ./dblift.yaml:/workspace/dblift.yaml
+      - ./.dblift_rules.yaml:/workspace/.dblift_rules.yaml
+    environment:
+      - DBLIFT_DB_URL=${DBLIFT_DB_URL}
+      - DBLIFT_DB_USERNAME=${DBLIFT_DB_USERNAME}
+      - DBLIFT_DB_PASSWORD=${DBLIFT_DB_PASSWORD}
+      - DBLIFT_DB_SCHEMA=${DBLIFT_DB_SCHEMA}
+    command: ["info"]
+
+  # Lightweight validation-only image for CI/CD
+  validate:
+    build:
+      context: .
+      dockerfile: Dockerfile.validation
+    volumes:
+      - ./migrations:/workspace/migrations
+      - ./.dblift_rules.yaml:/workspace/.dblift_rules.yaml
+    command:
+      - "migrations/"
+      - "--dialect=postgresql"
+      - "--rules-file=.dblift_rules.yaml"
+      - "--format=console"
+
+  # Example: PostgreSQL database for testing
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: dblift_user
+      POSTGRES_PASSWORD: dblift_pass
+      POSTGRES_DB: dblift_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
