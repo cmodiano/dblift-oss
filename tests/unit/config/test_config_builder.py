@@ -9,9 +9,7 @@ from config.config_builder import ConfigBuilder, ConfigurationError
 from config.database_config import (
     BaseDatabaseConfig,
     MySqlConfig,
-    OracleConfig,
     PostgreSqlConfig,
-    SqlServerConfig,
 )
 from config.dblift_config import DbliftConfig
 
@@ -70,48 +68,6 @@ class TestConfigBuilder:
         assert result.username == "newuser"
         assert result.extra_params == {"sslmode": "require"}
 
-    def test_merge_database_overrides_different_type(self):
-        """Test merge_database_overrides with URL override changing database type."""
-        base_config = BaseDatabaseConfig.create(
-            {
-                "type": "postgresql",
-                "url": "postgresql+psycopg://localhost/mydb",
-                "username": "user",
-                "password": "pass",
-                "schema": "public",
-            }
-        )
-        overrides = {"url": "mssql+pymssql://localhost/newdb", "username": "newuser"}
-
-        result = ConfigBuilder.merge_database_overrides(base_config, overrides)
-
-        assert isinstance(result, SqlServerConfig)
-        assert result.url == "mssql+pymssql://localhost/newdb"
-        assert result.username == "newuser"
-
-    def test_merge_oracle_url_override_replaces_service_name(self):
-        base_config = BaseDatabaseConfig.create(
-            {
-                "type": "oracle",
-                "url": "oracle+oracledb://db.example.com:1521/?service_name=OLD",
-                "host": "db.example.com",
-                "port": 1521,
-                "service_name": "OLD",
-                "username": "user",
-                "password": "pass",
-            }
-        )
-
-        result = ConfigBuilder.merge_database_overrides(
-            base_config,
-            {"url": "oracle+oracledb://db.example.com:1521/?service_name=NEW"},
-        )
-
-        assert isinstance(result, OracleConfig)
-        assert result.service_name == "NEW"
-        assert result.sid is None
-        assert "service_name=NEW" in result.build_database_url()
-
     def test_merge_database_overrides_url_parsing_failure(self):
         """Test merge_database_overrides when URL parsing fails."""
         base_config = BaseDatabaseConfig.create(
@@ -131,21 +87,6 @@ class TestConfigBuilder:
         assert result.username == "newuser"
         assert result.url == "invalid_url"
 
-    def test_merge_database_overrides_rejects_native_database_url(self):
-        """legacy URL overrides fail instead of keeping the old type."""
-        base_config = BaseDatabaseConfig.create(
-            {
-                "type": "sqlserver",
-                "url": "mssql+pymssql://localhost/mydb",
-                "username": "user",
-                "password": "pass",
-            }
-        )
-        overrides = {"url": "jdbc:mysql://localhost/newdb", "username": "newuser"}
-
-        with pytest.raises(ValueError, match="Legacy database URLs are no longer supported"):
-            ConfigBuilder.merge_database_overrides(base_config, overrides)
-
     def test_merge_database_overrides_config_creation_failure(self):
         """Test merge_database_overrides when config creation fails."""
         base_config = BaseDatabaseConfig.create(
@@ -158,7 +99,7 @@ class TestConfigBuilder:
             }
         )
         overrides = {
-            "url": "oracle+oracledb://localhost:1521?service_name=XE",
+            "url": "postgresql+psycopg://localhost/otherdb",
             "username": "newuser",
         }
 
@@ -254,20 +195,6 @@ class TestConfigBuilder:
         with pytest.raises(ConfigurationError, match="Database username is required"):
             ConfigBuilder.validate_required_fields(config)
 
-    def test_validate_required_fields_username_in_url(self):
-        """Test validate_required_fields with username in URL."""
-        # Use URL with credentials embedded (Oracle format)
-        config = BaseDatabaseConfig.create(
-            {
-                "type": "oracle",
-                "url": "oracle+oracledb://testuser:testpass@localhost:1521?service_name=mydb",
-                "schema": "public",
-            }
-        )
-
-        # Should not raise - username is in URL
-        ConfigBuilder.validate_required_fields(config)
-
     def test_validate_required_fields_missing_password(self):
         """Test validate_required_fields with missing password."""
         base_config = BaseDatabaseConfig.create(
@@ -285,22 +212,6 @@ class TestConfigBuilder:
 
         with pytest.raises(ConfigurationError, match="Database password is required"):
             ConfigBuilder.validate_required_fields(config)
-
-    def test_validate_required_fields_password_in_url(self):
-        """Test validate_required_fields with password in URL."""
-        # Use URL with credentials embedded (Oracle format)
-        config = BaseDatabaseConfig.create(
-            {
-                "type": "oracle",
-                "url": "oracle+oracledb://testuser:testpass@localhost:1521?service_name=mydb",
-                "username": None,
-                "password": None,
-                "schema": "public",
-            }
-        )
-
-        # Should not raise - password is in URL
-        ConfigBuilder.validate_required_fields(config)
 
     def test_validate_required_fields_missing_schema_uses_postgresql_default(self):
         """Test validate_required_fields derives a plugin default schema."""

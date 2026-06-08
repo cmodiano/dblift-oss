@@ -309,13 +309,9 @@ module = [
     "db.base_quirks",
     "db.base_provider",
     "db.provider_registry",
-    "db.plugins.cosmosdb.introspection",
-    "db.plugins.db2.introspection",
     "db.plugins.mysql.introspection",
-    "db.plugins.oracle.introspection",
     "db.plugins.postgresql.introspection",
     "db.plugins.sqlite.introspection",
-    "db.plugins.sqlserver.introspection",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -558,9 +554,7 @@ module = [
     "core.introspection.extractors.view_extractor",
     "db.plugins.postgresql.introspection.postgresql_introspector",
     "db.plugins.mysql.introspection.mysql_introspector",
-    "db.plugins.oracle.introspection.oracle_introspector",
     "db.plugins.sqlite.introspection.sqlite_introspector",
-    "db.plugins.cosmosdb.introspection.cosmosdb_introspector",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -582,8 +576,6 @@ module = [
     "core.introspection.vendor_queries_protocols",
     "core.introspection.version_detector",
     "core.introspection._utils",
-    "db.plugins.db2.introspection.db2_introspector",
-    "db.plugins.sqlserver.introspection.sqlserver_introspector",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -730,153 +722,6 @@ no_implicit_optional = true
 warn_unused_ignores = true
 strict_equality = true
 
-# PR-H9e: strict db/plugins/oracle — complete Oracle plugin (provider, quirks,
-# plugin entry, oracle/ subsystem, PL/SQL parser, generator).
-# OracleQuirks extends BaseQuirks (strict via the dialect_boundary block above);
-# the H8 manager bases (BaseHistoryManager, BaseLockingManager,
-# BaseQueryExecutor, BaseSchemaOperations) are likewise strict, so the full
-# strict flag set including disallow_subclassing_any is safe here.
-[[tool.mypy.overrides]]
-module = [
-    "db.plugins.oracle",
-    "db.plugins.oracle.plugin",
-    "db.plugins.oracle.provider",
-    "db.plugins.oracle.quirks",
-    "db.plugins.oracle.oracle",
-    "db.plugins.oracle.oracle.dbms_output",
-    "db.plugins.oracle.oracle.history_manager",
-    "db.plugins.oracle.oracle.locking_manager",
-    "db.plugins.oracle.oracle.schema_operations",
-    "db.plugins.oracle.parser",
-    "db.plugins.oracle.parser.parser_config",
-    "db.plugins.oracle.parser.oracle_parser",
-    "db.plugins.oracle.parser.oracle_statement_parser",
-    "db.plugins.oracle.parser.oracle_tokenizer",
-    "db.plugins.oracle.parser.sqlplus_context",
-    "db.plugins.oracle.parser._comments",
-    "db.plugins.oracle.parser._object_extractor",
-    "db.plugins.oracle.parser._plsql_block",
-    "db.plugins.oracle.parser._sqlplus",
-    "db.plugins.oracle.parser._statement_splitter",
-    "db.plugins.oracle.generator.alter_generator",
-    "db.plugins.oracle.generator.ddl_generator",
-]
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_unused_ignores = true
-strict_equality = true
-
-# PR-H9f: strict db/plugins/sqlserver — complete SQL Server plugin (provider, quirks,
-# plugin entry, sqlserver/ subsystem, T-SQL parser incl. GO-statement separator, generator).
-# SqlServerQuirks extends BaseQuirks (strict via the dialect_boundary block above);
-# the H8 manager bases (BaseHistoryManager, BaseLockingManager,
-# BaseQueryExecutor, BaseSchemaOperations) are likewise strict, so the full
-# strict flag set including disallow_subclassing_any is safe here.
-[[tool.mypy.overrides]]
-module = [
-    "db.plugins.sqlserver",
-    "db.plugins.sqlserver.plugin",
-    "db.plugins.sqlserver.provider",
-    "db.plugins.sqlserver.quirks",
-    "db.plugins.sqlserver.sqlserver",
-    "db.plugins.sqlserver.sqlserver.history_manager",
-    "db.plugins.sqlserver.sqlserver.locking_manager",
-    "db.plugins.sqlserver.sqlserver.schema_operations",
-    "db.plugins.sqlserver.parser.parser_config",
-    "db.plugins.sqlserver.parser.sqlserver_regex_parser",
-    "db.plugins.sqlserver.parser.sqlserver_statement_parser",
-    "db.plugins.sqlserver.parser.sqlserver_tokenizer",
-    "db.plugins.sqlserver.parser.tsql_batch_separator",
-    "db.plugins.sqlserver.generator.alter_generator",
-    "db.plugins.sqlserver.generator.ddl_generator",
-]
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_unused_ignores = true
-strict_equality = true
-
-# PR-H9g: strict db/plugins/db2 — complete DB2 plugin (provider, quirks, plugin
-# entry, db2/ subsystem, regex-based parser, generator). DB2's parser is
-# regex-based and lacks a separate tokenizer/statement parser (unlike
-# PostgreSQL/MySQL/Oracle/SQL Server), but its parser_config.py is the largest
-# single parser config in the codebase at 1,147 LOC. Db2Quirks extends
-# BaseQuirks (strict via the dialect_boundary block above); the H8 manager bases
-# (BaseHistoryManager, BaseLockingManager, BaseQueryExecutor,
-# BaseSchemaOperations) are likewise strict, so the full strict flag set
-# including disallow_subclassing_any is safe here.
-[[tool.mypy.overrides]]
-module = [
-    "db.plugins.db2",
-    "db.plugins.db2.plugin",
-    "db.plugins.db2.provider",
-    "db.plugins.db2.quirks",
-    "db.plugins.db2.db2",
-    "db.plugins.db2.db2.history_manager",
-    "db.plugins.db2.db2.locking_manager",
-    "db.plugins.db2.db2.schema_operations",
-    "db.plugins.db2.parser.parser_config",
-    "db.plugins.db2.parser.db2_regex_parser",
-    "db.plugins.db2.generator.alter_generator",
-    "db.plugins.db2.generator.ddl_generator",
-]
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_unused_ignores = true
-strict_equality = true
-
-# PR-H9h: strict db/plugins/cosmosdb — complete CosmosDB plugin (non-JDBC,
-# Azure Cosmos SDK + custom SQL→Cosmos sdk_translator subsystem).
-[[tool.mypy.overrides]]
-module = [
-    "db.plugins.cosmosdb",
-    "db.plugins.cosmosdb.plugin",
-    "db.plugins.cosmosdb.provider",
-    "db.plugins.cosmosdb.quirks",
-    "db.plugins.cosmosdb.cosmosdb",
-    "db.plugins.cosmosdb.cosmosdb._sdk",
-    "db.plugins.cosmosdb.cosmosdb.connection_manager",
-    "db.plugins.cosmosdb.cosmosdb.history_manager",
-    "db.plugins.cosmosdb.cosmosdb.locking_manager",
-    "db.plugins.cosmosdb.cosmosdb.query_executor",
-    "db.plugins.cosmosdb.cosmosdb.schema_operations",
-    "db.plugins.cosmosdb.sdk_translator",
-    "db.plugins.cosmosdb.sdk_translator._models",
-    "db.plugins.cosmosdb.sdk_translator._parsing",
-    "db.plugins.cosmosdb.sdk_translator._plan",
-    "db.plugins.cosmosdb.sdk_translator._plan_generator",
-    "db.plugins.cosmosdb.sdk_translator._translator",
-    "db.plugins.cosmosdb.sdk_translator._translators",
-    "db.plugins.cosmosdb.sdk_translator._executor",
-    "db.plugins.cosmosdb.sdk_translator._executors",
-    "db.plugins.cosmosdb.parser",
-    "db.plugins.cosmosdb.parser.cosmosdb_regex_parser",
-    "db.plugins.cosmosdb.generator.alter_generator",
-]
-disallow_any_generics = true
-disallow_subclassing_any = true
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_unused_ignores = true
-strict_equality = true
-
 # PR-H10: strict cli/handlers leaves — remaining CLI command-dispatch handlers.
 # _shared and info were added in PR-G2.
 [[tool.mypy.overrides]]
@@ -884,15 +729,11 @@ module = [
     "cli.handlers",
     "cli.handlers.baseline",
     "cli.handlers.clean",
-    "cli.handlers.diff",
-    "cli.handlers.export_schema",
     "cli.handlers.import_flyway",
     "cli.handlers.migrate",
     "cli.handlers.repair",
-    "cli.handlers.snapshot",
     "cli.handlers.undo",
     "cli.handlers.validate",
-    "cli.handlers.validate_sql",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
