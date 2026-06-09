@@ -9,15 +9,14 @@
 DBLift helps you track and apply database changes systematically. Think of it as version control for your database schema - every change is tracked, can be rolled back, and works consistently across different environments.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-[![Matrix tests](https://github.com/cmodiano/dblift/actions/workflows/matrix-tests.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/matrix-tests.yml)
-[![Unit Tests](https://github.com/cmodiano/dblift/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/unit-tests.yml)
-[![Integration Tests](https://github.com/cmodiano/dblift/actions/workflows/integration-tests-new.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/integration-tests-new.yml)
-[![Code Quality](https://github.com/cmodiano/dblift/actions/workflows/code-quality.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/code-quality.yml)
-[![Complexity](https://github.com/cmodiano/dblift/actions/workflows/complexity.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/complexity.yml)
-[![Security](https://github.com/cmodiano/dblift/actions/workflows/security.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/security.yml)
-[![codecov](https://codecov.io/gh/cmodiano/dblift/graph/badge.svg?token=QHLEQQAX3Q)](https://codecov.io/gh/cmodiano/dblift)
+[![Matrix tests](https://github.com/cmodiano/dblift-oss/actions/workflows/matrix-tests.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/matrix-tests.yml)
+[![Unit Tests](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml)
+[![Code Quality](https://github.com/cmodiano/dblift-oss/actions/workflows/code-quality.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/code-quality.yml)
+[![Complexity](https://github.com/cmodiano/dblift-oss/actions/workflows/complexity.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/complexity.yml)
+[![Security](https://github.com/cmodiano/dblift-oss/actions/workflows/security.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/security.yml)
+[![codecov](https://codecov.io/gh/cmodiano/dblift-oss/graph/badge.svg)](https://codecov.io/gh/cmodiano/dblift-oss)
 
 ---
 
@@ -50,7 +49,7 @@ DBLift helps you track and apply database changes systematically. Think of it as
 
 **Step 1: Download DBLift**
 
-Visit the [releases page](https://github.com/cmodiano/dblift/releases) and download the version for your operating system:
+Visit the [releases page](https://github.com/cmodiano/dblift-oss/releases) and download the version for your operating system:
 
 - **Windows**: `dblift-windows-x64.zip`
 - **macOS (Intel)**: `dblift-macos-x64.tar.gz`
@@ -853,10 +852,10 @@ dblift validate-sql
 ```
 
 This checks SQL syntax against your target database dialect without executing it.
-Use built-in rule profiles to apply DBLift-managed enterprise checks in CI:
+Use built-in rule profiles to enforce SQL standards in CI:
 
 ```bash
-dblift validate-sql migrations/ --profile enterprise --fail-on warning --format github-actions
+dblift validate-sql migrations/ --profile strict --fail-on warning --format github-actions
 ```
 
 ### Importing from Flyway
@@ -945,7 +944,7 @@ A: Absolutely! See [core/sql_validator/rule_packs/README.md](core/sql_validator/
 
 ## License
 
-This is proprietary software. All rights reserved. See the LICENSE file for details.
+DBLift is open-source software released under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
