@@ -109,10 +109,26 @@ class TestGetSupportedObjectTypes(unittest.TestCase):
         self.assertIn("user_defined_types", types)
         self.assertIn("materialized_views", types)
 
+    def test_oracle_includes_synonyms_and_packages(self):
+        tester, _, _ = _make_tester(dialect="oracle", test_object_types=None)
+        types = tester._get_supported_object_types()
+        self.assertIn("synonyms", types)
+        self.assertIn("packages", types)
+
     def test_mysql_includes_events(self):
         tester, _, _ = _make_tester(dialect="mysql", test_object_types=None)
         types = tester._get_supported_object_types()
         self.assertIn("events", types)
+
+    def test_sqlserver_includes_synonyms(self):
+        tester, _, _ = _make_tester(dialect="sqlserver", test_object_types=None)
+        types = tester._get_supported_object_types()
+        self.assertIn("synonyms", types)
+
+    def test_db2_includes_packages(self):
+        tester, _, _ = _make_tester(dialect="db2", test_object_types=None)
+        types = tester._get_supported_object_types()
+        self.assertIn("packages", types)
 
     def test_unknown_dialect_only_base_types(self):
         tester, _, _ = _make_tester(dialect="unknown_db", test_object_types=None)
@@ -136,6 +152,11 @@ class TestSafeRollback(unittest.TestCase):
 
     def test_rollback_called_for_mysql(self):
         tester, src, _ = _make_tester(dialect="mysql")
+        tester._safe_rollback(src, "test context")
+        src.connection.rollback.assert_called_once()
+
+    def test_rollback_called_for_db2(self):
+        tester, src, _ = _make_tester(dialect="db2")
         tester._safe_rollback(src, "test context")
         src.connection.rollback.assert_called_once()
 
@@ -228,11 +249,33 @@ class TestBuildDropSql(unittest.TestCase):
         self.assertIn("`mydb`", sql)
         self.assertIn("`orders`", sql)
 
+    def test_oracle_drop(self):
+        tester, _, _ = _make_tester(dialect="oracle")
+        sql = tester._build_drop_sql("HR", "EMPLOYEES", False, False)
+        self.assertIn("EXECUTE IMMEDIATE", sql)
+        self.assertIn("CASCADE CONSTRAINTS", sql)
+
+    def test_sqlserver_drop(self):
+        tester, _, _ = _make_tester(dialect="sqlserver")
+        sql = tester._build_drop_sql("dbo", "users", False, False)
+        self.assertIn("OBJECT_ID", sql)
+        self.assertIn("DROP TABLE", sql)
+
+    def test_db2_drop(self):
+        tester, _, _ = _make_tester(dialect="db2")
+        sql = tester._build_drop_sql("MYSCHEMA", "MYTABLE", False, False)
+        self.assertIn("DROP TABLE", sql)
+
     def test_default_dialect_drop(self):
         tester, _, _ = _make_tester(dialect="unknown")
         sql = tester._build_drop_sql("schema", "table", False, False)
         self.assertIn("DROP TABLE IF EXISTS", sql)
 
+    def test_oracle_quoted_schema_and_table(self):
+        tester, _, _ = _make_tester(dialect="oracle")
+        sql = tester._build_drop_sql("HR", "EMPLOYEES", True, True)
+        self.assertIn('"HR"', sql)
+        self.assertIn('"EMPLOYEES"', sql)
 
 
 # ---------------------------------------------------------------------------
@@ -394,6 +437,35 @@ class TestExecuteSingleStatement(unittest.TestCase):
 
 
 class TestBuildRetryDropStrategies(unittest.TestCase):
+
+    def test_oracle_queries_data_dictionary(self):
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = [{"OWNER": "HR", "TABLE_NAME": "EMP"}]
+        strategies = tester._build_retry_drop_strategies('"HR"', '"EMP"')
+        self.assertGreater(len(strategies), 0)
+        # First strategy from data dictionary
+        self.assertIn("HR", strategies[0])
+        self.assertIn("EMP", strategies[0])
+
+    def test_oracle_fallback_without_data_dictionary(self):
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = []
+        strategies = tester._build_retry_drop_strategies('"HR"', '"EMP"')
+        self.assertGreater(len(strategies), 0)
+
+    def test_db2_queries_syscat(self):
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.query_executor.execute_query.return_value = [
+            {"TABSCHEMA": "MYSCHEMA", "TABNAME": "MYTABLE"}
+        ]
+        strategies = tester._build_retry_drop_strategies('"MYSCHEMA"', '"MYTABLE"')
+        self.assertGreater(len(strategies), 0)
+
+    def test_db2_fallback_when_not_found(self):
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.query_executor.execute_query.return_value = []
+        strategies = tester._build_retry_drop_strategies('"MYSCHEMA"', '"MYTABLE"')
+        self.assertEqual(len(strategies), 1)
 
     def test_returns_generic_pair_for_non_oracle_non_db2(self):
         # Y-1: BaseQuirks.build_retry_drop_strategies returns two generic

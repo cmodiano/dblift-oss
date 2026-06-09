@@ -152,6 +152,21 @@ class TestSequence:
         assert "CREATE SEQUENCE test_seq" in result
         assert "CACHE 20" in result
 
+    def test_oracle_sequence_defaults_to_nocache(self):
+        """Oracle sequences without cache should emit NOCACHE."""
+        sequence = Sequence(name="test_seq", dialect="oracle")
+
+        result = sequence.create_statement.upper()
+        assert "NOCACHE" in result
+
+    def test_oracle_sequence_cache_one_becomes_nocache(self):
+        """Oracle sequences with cache <= 1 should emit NOCACHE."""
+        sequence = Sequence(name="test_seq", cache=1, dialect="oracle")
+
+        result = sequence.create_statement.upper()
+        assert "NOCACHE" in result
+        assert "CACHE" not in result.replace("NOCACHE", "")
+
     def test_create_statement_complex_example(self):
         """Test CREATE SEQUENCE statement with all features."""
         sequence = Sequence(

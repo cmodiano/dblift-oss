@@ -70,6 +70,31 @@ class TestShouldSkipTable(unittest.TestCase):
         e = _make_extractor()
         self.assertFalse(e._should_skip_table("users", "public", set()))
 
+    def test_oracle_skips_mlog_prefix(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertTrue(e._should_skip_table("MLOG$_ORDERS", "MYSCHEMA", set()))
+
+    def test_oracle_skips_rupd_prefix(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertTrue(e._should_skip_table("RUPD$_EMPLOYEES", "MYSCHEMA", set()))
+
+    def test_oracle_skips_snap_prefix(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertTrue(e._should_skip_table("SNAP$_CATALOG", "MYSCHEMA", set()))
+
+    def test_oracle_skips_aq_prefix(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertTrue(e._should_skip_table("AQ$_QUEUE_TABLE", "MYSCHEMA", set()))
+
+    def test_oracle_skips_materialized_view_names(self):
+        e = _make_extractor(dialect="oracle")
+        mv_names = {"MV_SALES", "MV_ORDERS"}
+        self.assertTrue(e._should_skip_table("MV_SALES", "MYSCHEMA", mv_names))
+
+    def test_oracle_regular_table_not_skipped(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertFalse(e._should_skip_table("EMPLOYEES", "MYSCHEMA", set()))
+
     def test_non_oracle_does_not_filter_mlog(self):
         e = _make_extractor(dialect="postgresql")
         self.assertFalse(e._should_skip_table("MLOG$_ORDERS", "public", set()))
@@ -98,6 +123,14 @@ class TestVerifySchemaMatch(unittest.TestCase):
     def test_case_insensitive_match(self):
         e = _make_extractor()
         self.assertTrue(e._verify_schema_match("PUBLIC", "public", "users"))
+
+    def test_oracle_mismatched_schema_fails(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertFalse(e._verify_schema_match("OTHER_SCHEMA", "MYSCHEMA", "EMPLOYEES"))
+
+    def test_oracle_matching_schema_passes(self):
+        e = _make_extractor(dialect="oracle")
+        self.assertTrue(e._verify_schema_match("MYSCHEMA", "myschema", "EMPLOYEES"))
 
 
 # --- _is_temporary_table ---
@@ -377,6 +410,17 @@ class TestShouldPreloadMaterializedViews(unittest.TestCase):
     def test_returns_false_for_mysql(self):
         e = _make_extractor(dialect="mysql")
         self.assertFalse(e._should_preload_materialized_views("mydb"))
+
+    def test_returns_true_for_oracle_with_mv_support(self):
+        vq = MagicMock()
+        vq.supports_materialized_views.return_value = True
+        e = _make_extractor(dialect="oracle", vendor_queries=vq)
+        self.assertTrue(e._should_preload_materialized_views("MYSCHEMA"))
+
+    def test_returns_false_for_oracle_without_vendor_queries(self):
+        e = _make_extractor(dialect="oracle", vendor_queries=None)
+        e.vendor_queries = None
+        self.assertFalse(e._should_preload_materialized_views("MYSCHEMA"))
 
 
 # --- _enrich_postgresql_table ---

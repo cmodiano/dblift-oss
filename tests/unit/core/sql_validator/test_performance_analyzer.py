@@ -208,8 +208,12 @@ class TestPerformanceAnalyzer:
     def test_dialect_normalization(self):
         """Test that dialects are normalized correctly via quirks."""
         test_cases = [
+            ("oracle", "oracle"),
             ("postgresql", "postgres"),
+            ("sqlserver", "tsql"),
             ("mysql", "mysql"),
+            # DB2: sqlglot has limited DB2 support; uses "db2" directly (original behaviour).
+            ("db2", "db2"),
             # Legacy DIALECT_MAP default — unknown strings must not pass through raw to sqlglot.
             ("not_a_real_dialect_xyz", "postgres"),
             ("", "postgres"),

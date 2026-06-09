@@ -605,7 +605,11 @@ class DatabaseConfig:
 # import path; they aren't the modern entry point for new dialects.
 # ---------------------------------------------------------------------------
 
+from config._subclasses.cosmosdb_config import CosmosDbConfig  # noqa: E402, F401
+from config._subclasses.db2_config import Db2Config  # noqa: E402, F401
 from config._subclasses.dummy_config import DummyDatabaseConfig  # noqa: E402, F401
 from config._subclasses.mysql_config import MySqlConfig  # noqa: E402, F401
+from config._subclasses.oracle_config import OracleConfig  # noqa: E402, F401
 from config._subclasses.postgresql_config import PostgreSqlConfig  # noqa: E402, F401
 from config._subclasses.sqlite_config import SQLiteConfig  # noqa: E402, F401
+from config._subclasses.sqlserver_config import SqlServerConfig  # noqa: E402, F401

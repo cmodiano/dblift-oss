@@ -77,16 +77,28 @@ class TestLegacyReexportsRemoved:
 
     def test_canonical_plugin_paths_still_work(self):
         """The actual import path that consumers should migrate to."""
+        from db.plugins.db2.generator.alter_generator import DB2AlterGenerator
+        from db.plugins.db2.generator.ddl_generator import DB2SqlGenerator
         from db.plugins.mysql.generator.alter_generator import MySQLAlterGenerator
         from db.plugins.mysql.generator.ddl_generator import MySQLSqlGenerator
+        from db.plugins.oracle.generator.alter_generator import OracleAlterGenerator
+        from db.plugins.oracle.generator.ddl_generator import OracleSqlGenerator
         from db.plugins.postgresql.generator.alter_generator import PostgreSQLAlterGenerator
         from db.plugins.postgresql.generator.ddl_generator import PostgreSQLSqlGenerator
+        from db.plugins.sqlserver.generator.alter_generator import SQLServerAlterGenerator
+        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
 
         # Sanity: each is a class.
         for cls in (
+            DB2AlterGenerator,
+            DB2SqlGenerator,
             MySQLAlterGenerator,
             MySQLSqlGenerator,
+            OracleAlterGenerator,
+            OracleSqlGenerator,
             PostgreSQLAlterGenerator,
             PostgreSQLSqlGenerator,
+            SQLServerAlterGenerator,
+            SQLServerSqlGenerator,
         ):
             assert isinstance(cls, type), f"{cls!r} should be a class"

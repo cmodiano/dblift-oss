@@ -74,6 +74,22 @@ class TestIndexConditionRoundTrip(unittest.TestCase):
         sql = generator._generate_index_create_statement(index)
         self.assertIn("WHERE active IS TRUE", sql)
 
+    def test_sqlserver_filtered_index_predicate_emits_where(self) -> None:
+        from core.sql_model.index import Index
+        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
+
+        index = Index(
+            name="idx_mssql_active",
+            table_name="users",
+            columns=["email"],
+            unique=False,
+            condition="active = 1",
+            dialect="sqlserver",
+        )
+        generator = SQLServerSqlGenerator.__new__(SQLServerSqlGenerator)
+        sql = generator._generate_index_create_statement(index)
+        self.assertIn("WHERE active = 1", sql)
+
     def test_index_condition_attribute_is_canonical(self) -> None:
         """Regression guard: the canonical attribute is ``condition``.
 

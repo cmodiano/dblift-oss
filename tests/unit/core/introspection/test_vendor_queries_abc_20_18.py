@@ -96,11 +96,14 @@ class TestExistingSubclassesUnchanged:
     @pytest.mark.parametrize(
         "cls_path",
         [
+            "db.plugins.db2.introspection.db2_queries.DB2MetadataQueries",
+            "db.plugins.oracle.introspection.oracle_queries.OracleMetadataQueries",
             "db.plugins.postgresql.introspection.postgresql_queries.PostgreSQLMetadataQueries",
             "db.plugins.mysql.introspection.mysql_queries.MySQLMetadataQueries",
+            "db.plugins.sqlserver.introspection.sqlserver_queries.SQLServerMetadataQueries",
             "db.plugins.sqlite.introspection.sqlite_queries.SQLiteMetadataQueries",
         ],
-        ids=["PostgreSQL", "MySQL", "SQLite"],
+        ids=["DB2", "Oracle", "PostgreSQL", "MySQL", "SqlServer", "SQLite"],
     )
     def test_dialect_subclass_instantiates(self, cls_path):
         """Smoke test — chaque sous-classe s'instancie sans TypeError."""

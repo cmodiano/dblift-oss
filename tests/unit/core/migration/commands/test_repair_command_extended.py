@@ -380,6 +380,18 @@ class TestDeleteFailedMigrationEntry(unittest.TestCase):
         call_args = provider.query_executor.execute_statement.call_args
         self.assertIn("FALSE", call_args[0][1])
 
+    def test_oracle_uses_0_literal(self):
+        cmd, provider = self._make_cmd_with_query_executor("oracle")
+        repair = {"script": "V1__a.sql", "version": "1"}
+        result = RepairResult()
+
+        with patch("core.migration.commands.repair_command.ensure_provider_connection"):
+            deleted = cmd._delete_failed_migration_entry(repair, result)
+
+        self.assertTrue(deleted)
+        call_args = provider.query_executor.execute_statement.call_args
+        self.assertIn(" 0", call_args[0][1])
+
     def test_non_transactional_ddl_repair_warns_retry_may_hit_existing_objects(self):
         provider = self._NonTransactionalDdlProvider()
 

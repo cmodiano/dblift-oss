@@ -492,6 +492,19 @@ class TestBaseSqlGeneratorHelperMethods:
         assert "idx_test" in result
         assert "Test comment" in result
 
+    def test_generate_index_comment_statement_oracle(self):
+        """Test _generate_index_comment_statement for Oracle."""
+        generator = ConcreteBaseSqlGenerator()
+        index = Index(
+            name="idx_test",
+            table_name="users",
+            columns=["id"],
+            comment="Test comment",
+            dialect="oracle",
+        )
+        result = generator._generate_index_comment_statement(index, "oracle")
+        assert "COMMENT ON INDEX" in result
+
     def test_generate_index_comment_statement_mysql(self):
         """Test _generate_index_comment_statement for MySQL."""
         generator = ConcreteBaseSqlGenerator()

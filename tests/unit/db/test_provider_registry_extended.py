@@ -126,6 +126,12 @@ class TestProviderRegistryGetProviderByUrl(unittest.TestCase):
         cls = ProviderRegistry.get_provider_by_url("mysql+pymysql://localhost/db")
         self.assertIsNotNone(cls)
 
+    def test_db2_sqlalchemy_url(self):
+        from db.provider_registry import ProviderRegistry
+
+        cls = ProviderRegistry.get_provider_by_url("ibm_db_sa://localhost:50000/testdb")
+        self.assertIsNotNone(cls)
+
     def test_unknown_url(self):
         from db.provider_registry import ProviderRegistry
 

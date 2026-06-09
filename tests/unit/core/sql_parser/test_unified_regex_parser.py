@@ -133,6 +133,17 @@ class TestRegexParser:
         statements = parser.split_statements(sql)
         assert len(statements) >= 2
 
+    def test_split_statements_with_batch_separators(self):
+        """Test split_statements with batch separators."""
+        from db.plugins.sqlserver.parser.parser_config import SqlServerConfig
+
+        config = SqlServerConfig()
+        parser = RegexParser(config)
+
+        sql = "CREATE TABLE test (id INT); GO SELECT 1;"
+        statements = parser.split_statements(sql)
+        assert len(statements) >= 1
+
     def test_split_statements_with_block_statements(self):
         """Test split_statements with block statements."""
         config = MySqlConfig()
@@ -214,10 +225,14 @@ class TestRegexParser:
         assert "CREATE TABLE" in cleaned
 
     def test_has_batch_separators(self):
-        """Test batch separator detection (MySQL has no batch separators)."""
-        config = MySqlConfig()
+        """Test batch separator detection."""
+        from db.plugins.sqlserver.parser.parser_config import SqlServerConfig
+
+        config = SqlServerConfig()
         parser = RegexParser(config)
 
+        # SQL Server uses GO as batch separator, but it needs to match the pattern
+        assert parser._has_batch_separators("CREATE TABLE test (id INT);\nGO") is True
         assert parser._has_batch_separators("CREATE TABLE test (id INT);") is False
 
     def test_has_block_statements(self):
@@ -229,11 +244,13 @@ class TestRegexParser:
         assert parser._has_block_statements("CREATE TABLE test (id INT);") is False
 
     def test_split_with_batch_separators(self):
-        """Test splitting with batch separators (MySQL, no GO separator)."""
-        config = MySqlConfig()
+        """Test splitting with batch separators."""
+        from db.plugins.sqlserver.parser.parser_config import SqlServerConfig
+
+        config = SqlServerConfig()
         parser = RegexParser(config)
 
-        sql = "CREATE TABLE test (id INT); SELECT 1;"
+        sql = "CREATE TABLE test (id INT); GO SELECT 1;"
         statements = parser._split_with_batch_separators(sql)
         assert len(statements) >= 1
 

@@ -1,0 +1,1147 @@
+"""DB2 dialect configuration for regex-based SQL parsing.
+
+This module provides DB2-specific patterns and configuration for the regex parser,
+extracted from DB2 grammar files and existing parser implementation.
+"""
+
+import re
+from typing import Any, Dict, List, Pattern, Set
+
+from core.sql_parser.dialects.base_config import DialectConfig
+
+
+class DB2Config(DialectConfig):
+    """DB2 dialect configuration with comprehensive regex patterns."""
+
+    dialect_name = "db2"  # lint: allow-dialect-string: dialect dispatch
+
+    def __init__(self) -> None:
+        """Initialize DB2 dialect configuration."""
+        super().__init__()  # type: ignore[no-untyped-call]
+        self._compile_patterns()
+
+    def _compile_patterns(self) -> None:
+        """Compile all DB2-specific regex patterns."""
+        self._ddl_patterns = self._compile_ddl_patterns()
+        self._dml_patterns = self._compile_dml_patterns()
+        self._query_patterns = self._compile_query_patterns()
+        self._object_patterns = self._compile_object_patterns()
+        self._comment_patterns = self._compile_comment_patterns()
+        self._batch_separators = self._compile_batch_separators()
+
+    def _compile_ddl_patterns(self) -> Dict[str, Pattern[str]]:
+        """Compile DB2 DDL patterns."""
+        return {
+            # CREATE statements
+            # Grammar-based: CREATE [GLOBAL TEMPORARY | AUXILIARY] TABLE
+            # Note: DB2 z/OS grammar does not have IF NOT EXISTS for tables
+            "create_table": re.compile(
+                r"\b(?:CREATE)\s+(?:GLOBAL\s+TEMPORARY\s+|AUXILIARY\s+)?TABLE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE VIEW (no OR REPLACE or IF NOT EXISTS in DB2 z/OS grammar)
+            "create_view": re.compile(
+                r"\b(?:CREATE)\s+VIEW\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE [TYPE n] [UNIQUE [WHERE NOT NULL]] INDEX
+            # DB2-specific: TYPE 1/2 (deprecated), UNIQUE WHERE NOT NULL (partial unique indexes)
+            "create_index": re.compile(
+                r"\b(?:CREATE)\s+(?:TYPE\s+\d+\s+)?(?:UNIQUE(?:\s+WHERE\s+NOT\s+NULL)?\s+)?INDEX\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)\s+ON\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE SEQUENCE (no OR REPLACE or IF NOT EXISTS)
+            "create_sequence": re.compile(
+                r"\b(?:CREATE)\s+SEQUENCE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE [OR REPLACE] PROCEDURE
+            # Supports VERSION option and WRAPPED code
+            "create_procedure": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?PROCEDURE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE FUNCTION (no OR REPLACE in DB2 z/OS)
+            # Note: Functions don't support OR REPLACE per grammar, only procedures/triggers do
+            "create_function": re.compile(
+                r"\b(?:CREATE)\s+FUNCTION\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Grammar-based: CREATE [OR REPLACE] TRIGGER
+            # Advanced triggers support OR REPLACE
+            "create_trigger": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_database": re.compile(
+                r"\b(?:CREATE)\s+DATABASE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "create_tablespace": re.compile(
+                r"\b(?:CREATE)\s+(?:LOB\s+)?TABLESPACE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "create_stogroup": re.compile(
+                r"\b(?:CREATE)\s+STOGROUP\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "create_alias": re.compile(
+                r"\b(?:CREATE)\s+ALIAS\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_role": re.compile(
+                r"\b(?:CREATE)\s+ROLE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "create_mask": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?MASK\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_permission": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?PERMISSION\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_trusted_context": re.compile(
+                r"\b(?:CREATE)\s+TRUSTED\s+CONTEXT\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "create_type": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?TYPE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_variable": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?VARIABLE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_synonym": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?(?:SYNONYM|ALIAS)\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "create_module": re.compile(
+                r"\b(?:CREATE)\s+(?:OR\s+REPLACE\s+)?MODULE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_module": re.compile(
+                r"\b(?:DROP)\s+MODULE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # ALTER statements
+            "alter_table": re.compile(
+                r"\b(?:ALTER)\s+TABLE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_view": re.compile(
+                r"\b(?:ALTER)\s+VIEW\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_index": re.compile(
+                r"\b(?:ALTER)\s+INDEX\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_sequence": re.compile(
+                r"\b(?:ALTER)\s+SEQUENCE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_procedure": re.compile(
+                r"\b(?:ALTER)\s+PROCEDURE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_function": re.compile(
+                r"\b(?:ALTER)\s+FUNCTION\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_trigger": re.compile(
+                r"\b(?:ALTER)\s+TRIGGER\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_database": re.compile(
+                r"\b(?:ALTER)\s+DATABASE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "alter_tablespace": re.compile(
+                r"\b(?:ALTER)\s+TABLESPACE\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "alter_stogroup": re.compile(
+                r"\b(?:ALTER)\s+STOGROUP\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            "alter_mask": re.compile(
+                r"\b(?:ALTER)\s+MASK\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_permission": re.compile(
+                r"\b(?:ALTER)\s+PERMISSION\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "alter_trusted_context": re.compile(
+                r"\b(?:ALTER)\s+TRUSTED\s+CONTEXT\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE
+            ),
+            # DROP statements
+            "drop_table": re.compile(
+                r"\b(?:DROP)\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_view": re.compile(
+                r"\b(?:DROP)\s+VIEW\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_index": re.compile(
+                r"\b(?:DROP)\s+INDEX\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_sequence": re.compile(
+                r"\b(?:DROP)\s+SEQUENCE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_procedure": re.compile(
+                r"\b(?:DROP)\s+PROCEDURE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_function": re.compile(
+                r"\b(?:DROP)\s+FUNCTION\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_trigger": re.compile(
+                r"\b(?:DROP)\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_database": re.compile(
+                r"\b(?:DROP)\s+DATABASE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "drop_tablespace": re.compile(
+                r"\b(?:DROP)\s+TABLESPACE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "drop_stogroup": re.compile(
+                r"\b(?:DROP)\s+STOGROUP\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "drop_alias": re.compile(
+                r"\b(?:DROP)\s+ALIAS\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_role": re.compile(
+                r"\b(?:DROP)\s+ROLE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "drop_mask": re.compile(
+                r"\b(?:DROP)\s+MASK\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_permission": re.compile(
+                r"\b(?:DROP)\s+PERMISSION\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_trusted_context": re.compile(
+                r"\b(?:DROP)\s+TRUSTED\s+CONTEXT\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)",
+                re.IGNORECASE,
+            ),
+            "drop_type": re.compile(
+                r"\b(?:DROP)\s+TYPE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_variable": re.compile(
+                r"\b(?:DROP)\s+VARIABLE\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "drop_synonym": re.compile(
+                r"\b(?:DROP)\s+SYNONYM\s+(?:IF\s+EXISTS\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            # Other DDL statements
+            "truncate_table": re.compile(
+                r"\b(?:TRUNCATE)\s+(?:TABLE\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "comment": re.compile(
+                r"\b(?:COMMENT)\s+ON\s+(?:TABLE|VIEW|COLUMN|INDEX|SEQUENCE|PROCEDURE|FUNCTION|TRIGGER)\s+",
+                re.IGNORECASE,
+            ),
+            "grant": re.compile(r"\b(?:GRANT)\s+", re.IGNORECASE),
+            "revoke": re.compile(r"\b(?:REVOKE)\s+", re.IGNORECASE),
+        }
+
+    def _compile_dml_patterns(self) -> Dict[str, Pattern[str]]:
+        """Compile DB2 DML patterns."""
+        return {
+            "insert": re.compile(
+                r"\b(?:INSERT)\s+(?:INTO\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "update": re.compile(
+                r"\b(?:UPDATE)\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "delete": re.compile(
+                r"\b(?:DELETE)\s+(?:FROM\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "merge": re.compile(
+                r"\b(?:MERGE)\s+(?:INTO\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "call": re.compile(
+                r"\b(?:CALL)\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "set": re.compile(r"\b(?:SET)\s+(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+)", re.IGNORECASE),
+            "values": re.compile(r"\b(?:VALUES)\s+", re.IGNORECASE),
+        }
+
+    def _compile_query_patterns(self) -> Dict[str, Pattern[str]]:
+        """Compile DB2 query patterns."""
+        return {
+            "select": re.compile(r"\b(?:SELECT)\s+(?:DISTINCT\s+|ALL\s+)?", re.IGNORECASE),
+            "with": re.compile(r"\b(?:WITH)\s+(?:RECURSIVE\s+)?", re.IGNORECASE),
+            "explain": re.compile(r"\b(?:EXPLAIN)\s+(?:PLAN\s+)?(?:FOR\s+)?", re.IGNORECASE),
+            "describe": re.compile(
+                r"\b(?:DESCRIBE)\s+(?:TABLE\s+)?(?:\"[^\"]+\"|[a-zA-Z0-9_$#@]+(?:\.[a-zA-Z0-9_$#@]+)?)",
+                re.IGNORECASE,
+            ),
+            "show": re.compile(r"\b(?:SHOW)\s+", re.IGNORECASE),
+        }
+
+    def _compile_object_patterns(self) -> Dict[str, Pattern[str]]:
+        """Compile DB2 object extraction patterns."""
+        return {
+            "table": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:GLOBAL\s+TEMPORARY\s+|AUXILIARY\s+)?TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "view": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?VIEW\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "index": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\s+ON\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?)?",
+                re.IGNORECASE,
+            ),
+            "sequence": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?SEQUENCE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "procedure": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?PROCEDURE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "function": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "trigger": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "database": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+DATABASE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))",
+                re.IGNORECASE,
+            ),
+            "tablespace": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:LOB\s+)?TABLESPACE\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))",
+                re.IGNORECASE,
+            ),
+            "stogroup": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+STOGROUP\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))",
+                re.IGNORECASE,
+            ),
+            "alias": re.compile(
+                r"\b(?:CREATE|DROP)\s+ALIAS\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "role": re.compile(
+                r"\b(?:CREATE|DROP)\s+ROLE\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))", re.IGNORECASE
+            ),
+            "mask": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?MASK\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "permission": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+(?:OR\s+REPLACE\s+)?PERMISSION\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "trusted_context": re.compile(
+                r"\b(?:CREATE|DROP|ALTER)\s+TRUSTED\s+CONTEXT\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))",
+                re.IGNORECASE,
+            ),
+            "type": re.compile(
+                r"\b(?:CREATE|DROP)\s+(?:OR\s+REPLACE\s+)?TYPE\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "variable": re.compile(
+                r"\b(?:CREATE|DROP)\s+(?:OR\s+REPLACE\s+)?VARIABLE\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+            "synonym": re.compile(
+                r"\b(?:CREATE|DROP)\s+(?:OR\s+REPLACE\s+)?SYNONYM\s+(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+))(?:\.(?:(?:\"([^\"]+)\")|([a-zA-Z0-9_$#@]+)))?",
+                re.IGNORECASE,
+            ),
+        }
+
+    def _compile_comment_patterns(self) -> List[Pattern[str]]:
+        """Compile DB2 comment patterns."""
+        return [
+            # Single-line comments with --
+            re.compile(r"--.*$", re.MULTILINE),
+            # Multi-line comments /* ... */
+            re.compile(r"/\*.*?\*/", re.DOTALL),
+            # SPUFI terminator comments
+            re.compile(r"--#SET\s+TERMINATOR.*$", re.MULTILINE | re.IGNORECASE),
+        ]
+
+    def _compile_batch_separators(self) -> List[Pattern[str]]:
+        """Compile DB2 batch separator patterns."""
+        return [
+            # SQL statement terminators
+            re.compile(r";\s*$", re.MULTILINE),
+            # SPUFI terminator customization
+            re.compile(r"--#SET\s+TERMINATOR\s+(\S)", re.IGNORECASE),
+            # SQL/PL statement terminators
+            re.compile(r"SQL_STATEMENT_TERMINATOR", re.IGNORECASE),
+        ]
+
+    @property
+    def name(self) -> str:
+        """Dialect name."""
+        return self.dialect_name
+
+    @property
+    def ddl_patterns(self) -> Dict[str, Pattern[str]]:
+        """DDL statement regex patterns."""
+        return self._ddl_patterns
+
+    @property
+    def dml_patterns(self) -> Dict[str, Pattern[str]]:
+        """DML statement regex patterns."""
+        return self._dml_patterns
+
+    @property
+    def query_patterns(self) -> Dict[str, Pattern[str]]:
+        """Query statement regex patterns."""
+        return self._query_patterns
+
+    @property
+    def object_patterns(self) -> Dict[str, Pattern[str]]:
+        """Object extraction regex patterns."""
+        return self._object_patterns
+
+    @property
+    def comment_patterns(self) -> List[Pattern[str]]:
+        """Regex patterns for comments."""
+        return self._comment_patterns
+
+    @property
+    def batch_separators(self) -> List[Pattern[str]]:
+        """Regex patterns for batch separators."""
+        return self._batch_separators
+
+    @property
+    def quoted_identifiers(self) -> List[Pattern[str]]:
+        """Regex patterns for quoted identifiers."""
+        return [re.compile(r"\"([^\"]+)\"")]
+
+    @property
+    def block_keywords(self) -> List[str]:
+        """Keywords that start block statements (procedures, functions, etc.)."""
+        return [
+            "BEGIN",
+            "END",
+            "DECLARE",
+            "IF",
+            "THEN",
+            "ELSE",
+            "ELSEIF",
+            "ENDIF",
+            "WHILE",
+            "FOR",
+            "LOOP",
+            "REPEAT",
+            "UNTIL",
+            "CASE",
+            "WHEN",
+            "ATOMIC",
+            "NOT ATOMIC",
+            "COMPOUND",
+            "SIGNAL",
+            "RESIGNAL",
+            "CONTINUE",
+            "EXIT",
+            "UNDO",
+            "GOTO",
+            "ITERATE",
+            "LEAVE",
+            "SQLPL",
+            "LANGUAGE SQL",
+            "WRAPPED",
+        ]
+
+    def get_default_schema(self) -> str:
+        """Get default schema name for DB2."""
+        return "SYSIBM"
+
+    def normalize_identifier(self, identifier: str, is_quoted: bool = False) -> str:
+        """Normalize DB2 identifier according to dialect rules.
+
+        Args:
+            identifier: Raw identifier string
+            is_quoted: Whether the identifier was quoted
+
+        Returns:
+            Normalized identifier
+        """
+        if not identifier:
+            return identifier
+
+        # Remove quotes if present
+        if identifier.startswith('"') and identifier.endswith('"'):
+            identifier = identifier[1:-1]
+            is_quoted = True
+
+        # DB2 identifiers are case-insensitive unless quoted
+        if not is_quoted:
+            identifier = identifier.upper()
+
+        return identifier
+
+    def extract_sqlpl_blocks(self, sql: str) -> List[Dict[str, Any]]:
+        """Extract SQL/PL blocks from SQL content.
+
+        Args:
+            sql: SQL content to parse
+
+        Returns:
+            List of SQL/PL blocks with their content
+        """
+        blocks = []
+
+        # Pattern to find the start of SQL/PL procedures and functions
+        start_pattern = re.compile(
+            r"\b(?:CREATE|ALTER)\s+(?:OR\s+REPLACE\s+)?(?:PROCEDURE|FUNCTION)\s+", re.IGNORECASE
+        )
+
+        for start_match in start_pattern.finditer(sql):
+            start_pos = start_match.start()
+
+            # Find the BEGIN keyword after the start
+            begin_match = re.search(r"\bBEGIN\b", sql[start_pos:], re.IGNORECASE)
+            if not begin_match:
+                continue
+
+            begin_pos = start_pos + begin_match.start()
+
+            # Manually count BEGIN/END pairs to find the matching END
+            i = begin_pos + 5  # Start after "BEGIN"
+            depth = 1
+            case_depth = 0  # Track CASE expressions separately
+            in_string = False
+            in_comment = False
+            string_char = None
+
+            while i < len(sql) and depth > 0:
+                # Handle string literals
+                if not in_comment:
+                    if not in_string and sql[i] in ("'", '"'):
+                        in_string = True
+                        string_char = sql[i]
+                    elif in_string and sql[i] == string_char:
+                        # Check for escaped quotes
+                        if i + 1 < len(sql) and sql[i + 1] == string_char:
+                            i += 2
+                            continue
+                        in_string = False
+                        string_char = None
+
+                # Handle comments
+                if not in_string:
+                    if sql[i : i + 2] == "--":
+                        # Line comment - skip to end of line
+                        while i < len(sql) and sql[i] not in ("\n", "\r"):
+                            i += 1
+                        continue
+                    elif sql[i : i + 2] == "/*":
+                        # Block comment
+                        in_comment = True
+                        i += 2
+                        continue
+                    elif sql[i : i + 2] == "*/" and in_comment:
+                        in_comment = False
+                        i += 2
+                        continue
+
+                # Count BEGIN/END and CASE/END pairs outside strings and comments
+                if not in_string and not in_comment:
+                    # Check for CASE keyword (starts a CASE expression)
+                    if sql[i : i + 4].upper() == "CASE":
+                        if (i == 0 or not sql[i - 1].isalnum()) and (
+                            i + 4 >= len(sql) or not sql[i + 4].isalnum()
+                        ):
+                            case_depth += 1
+                            i += 4
+                            continue
+                    # Check for BEGIN keyword
+                    elif sql[i : i + 5].upper() == "BEGIN":
+                        # Make sure it's a word boundary
+                        if (i == 0 or not sql[i - 1].isalnum()) and (
+                            i + 5 >= len(sql) or not sql[i + 5].isalnum()
+                        ):
+                            depth += 1
+                            i += 5
+                            continue
+                    elif sql[i : i + 3].upper() == "END":
+                        # Make sure it's a word boundary before END
+                        if i == 0 or not sql[i - 1].isalnum():
+                            # Check what comes after END
+                            # Skip whitespace after END
+                            j = i + 3
+                            while j < len(sql) and sql[j] in (" ", "\t"):
+                                j += 1
+
+                            # Check if this is "END IF", "END WHILE", "END FOR", "END LOOP", "END CASE", etc.
+                            # These are control structure endings, not block endings
+                            is_control_end = False
+                            if j < len(sql):
+                                next_word_upper = ""
+                                k = j
+                                while k < len(sql) and sql[k].isalpha():
+                                    next_word_upper += sql[k].upper()
+                                    k += 1
+
+                                # Control structure keywords that follow END
+                                if next_word_upper in (
+                                    "IF",
+                                    "WHILE",
+                                    "FOR",
+                                    "LOOP",
+                                    "CASE",
+                                    "REPEAT",
+                                ):
+                                    is_control_end = True
+                                    # Special case: END CASE decrements case_depth
+                                    if next_word_upper == "CASE":
+                                        case_depth -= 1
+
+                            # Check if this END matches a CASE expression (not END CASE)
+                            # CASE expressions have END without a following keyword
+                            is_case_expression_end = False
+                            if not is_control_end and case_depth > 0:
+                                # This END might close a CASE expression
+                                # Check if the next non-whitespace char is ; or ,
+                                if j < len(sql) and sql[j] in (";", ",", ")"):
+                                    case_depth -= 1
+                                    is_case_expression_end = True
+
+                            # Only count as block END if it's not a control structure end or CASE expression end
+                            if not is_control_end and not is_case_expression_end:
+                                depth -= 1
+                                if depth == 0:
+                                    # Found the matching END, now look for delimiter (@ or ;)
+                                    j = i + 3
+                                    while j < len(sql) and sql[j] in (" ", "\t", "\n", "\r"):
+                                        j += 1
+
+                                    # Accept either @ or ; as delimiter
+                                    if j < len(sql) and sql[j] in ("@", ";"):
+                                        end_pos = j + 1
+                                        content = sql[start_pos:end_pos].rstrip("@;").strip()
+                                    else:
+                                        # No explicit delimiter, use position after END
+                                        end_pos = j
+                                        content = sql[start_pos:end_pos].strip()
+
+                                    blocks.append(
+                                        {
+                                            "type": "sqlpl_block",
+                                            "content": content,
+                                            "start": start_pos,
+                                            "end": end_pos,
+                                        }
+                                    )
+                                    break
+                            i += 3
+                            continue
+
+                i += 1
+
+        return blocks
+
+    def extract_compound_statements(self, sql: str) -> List[Dict[str, Any]]:
+        """Extract compound statements from SQL content.
+
+        Args:
+            sql: SQL content to parse
+
+        Returns:
+            List of compound statements with their content
+        """
+        blocks = []
+
+        # Pattern to match compound statements with @ delimiter
+        compound_pattern = re.compile(
+            r"\bBEGIN\s+(?:ATOMIC|NOT\s+ATOMIC).*?\bEND\s*[@;]", re.IGNORECASE | re.DOTALL
+        )
+
+        matches = compound_pattern.finditer(sql)
+        for match in matches:
+            content = match.group(0).rstrip(";@").strip()  # Remove trailing delimiter
+            blocks.append(
+                {
+                    "type": "compound_statement",
+                    "content": content,
+                    "start": match.start(),
+                    "end": match.end(),
+                }
+            )
+
+        return blocks
+
+    def extract_trigger_blocks(self, sql: str) -> List[Dict[str, Any]]:
+        """Extract trigger blocks from SQL content.
+
+        Args:
+            sql: SQL content to parse
+
+        Returns:
+            List of trigger blocks with their content
+        """
+        blocks = []
+
+        # Pattern to find the start of a trigger statement
+        trigger_start_pattern = re.compile(
+            r"\b(?:CREATE|ALTER)\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+",
+            re.IGNORECASE,
+        )
+
+        # Find all trigger starts
+        for match in trigger_start_pattern.finditer(sql):
+            start_pos = match.start()
+
+            # Find the BEGIN ATOMIC keyword after the trigger start
+            begin_atomic_match = re.search(r"\bBEGIN\s+ATOMIC\b", sql[start_pos:], re.IGNORECASE)
+
+            if not begin_atomic_match:
+                continue
+
+            # Start counting BEGIN/END pairs from the BEGIN ATOMIC position
+            begin_pos = start_pos + begin_atomic_match.start()
+            i = begin_pos
+            depth = 0
+            in_string = False
+            in_comment = False
+            string_char = None
+
+            while i < len(sql):
+                char = sql[i]
+
+                # Handle string literals
+                if char in ("'", '"') and not in_comment:
+                    if not in_string:
+                        in_string = True
+                        string_char = char
+                    elif char == string_char:
+                        in_string = False
+                        string_char = None
+                    i += 1
+                    continue
+
+                # Handle comments
+                if not in_string:
+                    # Line comment
+                    if sql[i : i + 2] == "--":
+                        in_comment = True
+                        i += 2
+                        continue
+                    # Block comment
+                    if sql[i : i + 2] == "/*":
+                        in_comment = True
+                        i += 2
+                        continue
+                    if sql[i : i + 2] == "*/" and in_comment:
+                        in_comment = False
+                        i += 2
+                        continue
+                    # End of line comment
+                    if char == "\n" and in_comment:
+                        in_comment = False
+
+                # Count BEGIN/END pairs (only outside strings and comments)
+                if not in_string and not in_comment:
+                    # Check for BEGIN keyword
+                    if re.match(r"\bBEGIN\b", sql[i:], re.IGNORECASE):
+                        depth += 1
+                        i += 5  # len("BEGIN")
+                        continue
+
+                    # Check for END keyword
+                    if re.match(r"\bEND\b", sql[i:], re.IGNORECASE):
+                        depth -= 1
+                        i += 3  # len("END")
+
+                        # If we've closed all BEGIN blocks, look for terminator
+                        if depth == 0:
+                            # Skip whitespace
+                            while i < len(sql) and sql[i] in (" ", "\t", "\n", "\r"):
+                                i += 1
+
+                            # Check for terminator (semicolon or @)
+                            if i < len(sql) and sql[i] in (";", "@"):
+                                end_pos = i + 1
+                                content = sql[start_pos:end_pos].rstrip(";@").strip()
+                                blocks.append(
+                                    {
+                                        "type": "trigger_block",
+                                        "content": content,
+                                        "start": start_pos,
+                                        "end": end_pos,
+                                    }
+                                )
+                                break
+                            else:
+                                # No terminator found, use END position
+                                end_pos = i
+                                content = sql[start_pos:end_pos].strip()
+                                blocks.append(
+                                    {
+                                        "type": "trigger_block",
+                                        "content": content,
+                                        "start": start_pos,
+                                        "end": end_pos,
+                                    }
+                                )
+                                break
+                        continue
+
+                i += 1
+
+        return blocks
+
+    def is_db2_utility_statement(self, sql: str) -> bool:
+        """Check if SQL is a DB2 utility statement.
+
+        Args:
+            sql: SQL content to check
+
+        Returns:
+            True if it's a DB2 utility statement
+        """
+        utility_keywords = [
+            "DSNUTILX",
+            "DSNUTILU",
+            "DSNUTILC",
+            "DSNUTILP",
+            "REORG",
+            "RUNSTATS",
+            "BIND",
+            "REBIND",
+            "COPY",
+            "RECOVER",
+            "REPAIR",
+            "LOAD",
+            "UNLOAD",
+            "CHECK",
+        ]
+
+        sql_upper = sql.upper()
+        return any(keyword in sql_upper for keyword in utility_keywords)
+
+    def extract_module_blocks(self, sql: str) -> List[Dict[str, Any]]:
+        """Extract DB2 module blocks (CREATE MODULE ... END MODULE).
+
+        DB2 LUW modules are compound statements containing procedures, functions,
+        and variables. The entire module must be treated as a single statement.
+
+        Args:
+            sql: SQL content to parse
+
+        Returns:
+            List of module blocks with their content
+        """
+        blocks = []
+
+        # Pattern to find CREATE MODULE statements
+        # Modules end with "END MODULE" not just "END"
+        pattern = re.compile(
+            r"\bCREATE\s+(?:OR\s+REPLACE\s+)?MODULE\s+.*?\bEND\s+MODULE\s*;?",
+            re.IGNORECASE | re.DOTALL,
+        )
+
+        for match in pattern.finditer(sql):
+            content = match.group(0).strip()
+            blocks.append(
+                {
+                    "type": "module",
+                    "content": content,
+                    "start": match.start(),
+                    "end": match.end(),
+                }
+            )
+
+        return blocks
+
+    def extract_exec_sql_blocks(self, sql: str) -> List[Dict[str, Any]]:
+        """Extract EXEC SQL blocks from SQL content.
+
+        Args:
+            sql: SQL content to parse
+
+        Returns:
+            List of EXEC SQL blocks with their content
+        """
+        blocks = []
+
+        # Pattern to match EXEC SQL ... END-EXEC blocks
+        exec_sql_pattern = re.compile(r"\bEXEC\s+SQL\s+(.*?)\s+END-EXEC", re.IGNORECASE | re.DOTALL)
+
+        matches = exec_sql_pattern.finditer(sql)
+        for match in matches:
+            blocks.append(
+                {
+                    "type": "exec_sql_block",
+                    "content": match.group(1).strip(),
+                    "start": match.start(),
+                    "end": match.end(),
+                }
+            )
+
+        return blocks
+
+    def split_statements(self, sql: str) -> List[str]:
+        """Split SQL into individual statements, handling procedures/functions with BEGIN/END blocks.
+
+        Args:
+            sql: SQL script containing multiple statements
+
+        Returns:
+            List of individual SQL statements
+        """
+        statements = []
+
+        # Extract SQL/PL blocks (procedures and functions with BEGIN/END)
+        sqlpl_blocks = self.extract_sqlpl_blocks(sql)
+
+        # Extract trigger blocks
+        trigger_blocks = self.extract_trigger_blocks(sql)
+
+        # Extract module blocks (DB2 LUW - CREATE MODULE ... END MODULE)
+        module_blocks = self.extract_module_blocks(sql)
+
+        # Combine all blocks and sort by position
+        all_blocks = sqlpl_blocks + trigger_blocks + module_blocks
+        all_blocks.sort(key=lambda b: b["start"])
+
+        # Track which parts of the SQL have been processed
+        processed_ranges = []
+        for block in all_blocks:
+            processed_ranges.append((block["start"], block["end"]))
+            statements.append(block["content"])
+
+        # Now process the remaining SQL (non-block statements)
+        remaining_sql = ""
+        last_end = 0
+
+        for start, end in processed_ranges:
+            if start > last_end:
+                remaining_sql += sql[last_end:start]
+            last_end = end
+
+        # Add any remaining SQL after the last block
+        if last_end < len(sql):
+            remaining_sql += sql[last_end:]
+
+        # Split the remaining SQL by semicolons (simple statements)
+        if remaining_sql.strip():
+            # Split by semicolons, but be careful with strings and comments
+            remaining_statements = self._split_simple_statements(remaining_sql)
+            statements.extend(remaining_statements)
+
+        # Filter out empty statements
+        statements = [s.strip() for s in statements if s.strip()]
+
+        return statements
+
+    def _split_simple_statements(self, sql: str) -> List[str]:
+        """Split simple SQL statements by semicolons, handling strings and comments.
+
+        Args:
+            sql: SQL content without complex blocks
+
+        Returns:
+            List of individual statements
+        """
+        statements = []
+        current_statement = []
+        i = 0
+        in_string = False
+        string_char = None
+        in_line_comment = False
+        in_block_comment = False
+
+        while i < len(sql):
+            char = sql[i]
+
+            # Handle line comments
+            if not in_string and not in_block_comment and sql[i : i + 2] == "--":
+                in_line_comment = True
+                current_statement.append(char)
+                i += 1
+                continue
+
+            if in_line_comment:
+                current_statement.append(char)
+                if char in ("\n", "\r"):
+                    in_line_comment = False
+                i += 1
+                continue
+
+            # Handle block comments
+            if not in_string and not in_line_comment and sql[i : i + 2] == "/*":
+                in_block_comment = True
+                current_statement.append(char)
+                i += 1
+                continue
+
+            if in_block_comment:
+                current_statement.append(char)
+                if sql[i : i + 2] == "*/":
+                    in_block_comment = False
+                    current_statement.append(sql[i + 1])
+                    i += 2
+                    continue
+                i += 1
+                continue
+
+            # Handle strings
+            if not in_line_comment and not in_block_comment:
+                if not in_string and char in ("'", '"'):
+                    in_string = True
+                    string_char = char
+                    current_statement.append(char)
+                    i += 1
+                    continue
+
+                if in_string:
+                    current_statement.append(char)
+                    if char == string_char:
+                        # Check for escaped quote
+                        if i + 1 < len(sql) and sql[i + 1] == string_char:
+                            current_statement.append(sql[i + 1])
+                            i += 2
+                            continue
+                        in_string = False
+                        string_char = None
+                    i += 1
+                    continue
+
+            # Handle semicolon as statement separator
+            if char == ";" and not in_string and not in_line_comment and not in_block_comment:
+                # End of statement
+                stmt = "".join(current_statement).strip()
+                if stmt:
+                    statements.append(stmt)
+                current_statement = []
+                i += 1
+                continue
+
+            # Regular character
+            current_statement.append(char)
+            i += 1
+
+        # Add the last statement if there's anything left
+        stmt = "".join(current_statement).strip()
+        if stmt:
+            statements.append(stmt)
+
+        return statements
+
+    # Abstract method implementations
+    def get_ddl_keywords(self) -> Set[str]:
+        """Get DDL keywords for DB2."""
+        return {
+            "CREATE",
+            "ALTER",
+            "DROP",
+            "TRUNCATE",
+            "COMMENT",
+            "GRANT",
+            "REVOKE",
+            "TABLE",
+            "VIEW",
+            "INDEX",
+            "SEQUENCE",
+            "PROCEDURE",
+            "FUNCTION",
+            "TRIGGER",
+            "DATABASE",
+            "TABLESPACE",
+            "STOGROUP",
+            "ALIAS",
+            "ROLE",
+            "MASK",
+            "PERMISSION",
+            "TRUSTED",
+            "CONTEXT",
+            "TYPE",
+            "VARIABLE",
+            "SYNONYM",
+            "MODULE",
+            "PACKAGE",
+        }
+
+    def get_dml_keywords(self) -> Set[str]:
+        """Get DML keywords for DB2."""
+        return {"INSERT", "UPDATE", "DELETE", "MERGE", "CALL", "SET", "VALUES"}
+
+    def get_query_keywords(self) -> Set[str]:
+        """Get query keywords for DB2."""
+        return {"SELECT", "WITH", "EXPLAIN", "DESCRIBE", "SHOW"}
+
+    def get_identifier_pattern(self) -> Pattern[str]:
+        """Get regex pattern for DB2 identifiers."""
+        # DB2 supports quoted identifiers with double quotes
+        return re.compile(r'(?:"[^"]+"|[a-zA-Z_][a-zA-Z0-9_$#@]*)', re.IGNORECASE)
+
+    def get_qualified_identifier_pattern(self) -> Pattern[str]:
+        """Get regex pattern for qualified identifiers (schema.table)."""
+        identifier = r'(?:"[^"]+"|[a-zA-Z_][a-zA-Z0-9_$#@]*)'
+        return re.compile(rf"(?:{identifier}\\.)?{identifier}", re.IGNORECASE)
+
+    def get_string_literal_pattern(self) -> Pattern[str]:
+        """Get regex pattern for string literals."""
+        return re.compile(r"'([^']|'')*'", re.IGNORECASE)
+
+    def get_comment_pattern(self) -> Pattern[str]:
+        """Get regex pattern for comments."""
+        return re.compile(r"(?:--.*$|/\*.*?\*/)", re.MULTILINE | re.DOTALL)
+
+    def get_statement_separator_pattern(self) -> Pattern[str]:
+        """Get regex pattern for statement separators."""
+        return re.compile(r";\s*$", re.MULTILINE)
+
+    def is_ddl_statement(self, statement: str) -> bool:
+        """Check if statement is a DDL statement."""
+        statement_upper = statement.strip().upper()
+        ddl_keywords = self.get_ddl_keywords()
+        first_words = statement_upper.split()[:2]
+        return any(word in ddl_keywords for word in first_words if word)
+
+    def is_dml_statement(self, statement: str) -> bool:
+        """Check if statement is a DML statement."""
+        statement_upper = statement.strip().upper()
+        dml_keywords = self.get_dml_keywords()
+        words = statement_upper.split()
+        first_word = words[0] if words else ""
+        return first_word in dml_keywords
+
+    def is_query_statement(self, statement: str) -> bool:
+        """Check if statement is a query statement."""
+        statement_upper = statement.strip().upper()
+        query_keywords = self.get_query_keywords()
+        words = statement_upper.split()
+        first_word = words[0] if words else ""
+        return first_word in query_keywords
+
+    def get_batch_separator(self) -> str:
+        """Get batch separator for DB2."""
+        return ";"
+
+    def supports_block_comments(self) -> bool:
+        """Check if DB2 supports block comments."""
+        return True
+
+    def supports_line_comments(self) -> bool:
+        """Check if DB2 supports line comments."""
+        return True

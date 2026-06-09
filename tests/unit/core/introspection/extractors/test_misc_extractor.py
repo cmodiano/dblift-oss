@@ -46,6 +46,22 @@ class TestCleanOracleSourceText(unittest.TestCase):
         e = _make_extractor(dialect="oracle")
         self.assertEqual(e._clean_oracle_source_text(""), "")
 
+    def test_removes_e_tags(self):
+        e = _make_extractor(dialect="oracle")
+        result = e._clean_oracle_source_text("<E>line1</E><E>line2</E>")
+        self.assertNotIn("<E>", result)
+        self.assertNotIn("</E>", result)
+
+    def test_joins_with_newline(self):
+        e = _make_extractor(dialect="oracle")
+        result = e._clean_oracle_source_text("<E>line1</E><E>line2</E>")
+        self.assertIn("\n", result)
+
+    def test_unescapes_html_entities(self):
+        e = _make_extractor(dialect="oracle")
+        result = e._clean_oracle_source_text("<E>a &amp; b</E>")
+        self.assertIn("a & b", result)
+
 
 # --- get_events() ---
 

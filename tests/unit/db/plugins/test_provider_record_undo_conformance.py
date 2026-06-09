@@ -61,8 +61,9 @@ class TestRecordUndoStructuralContract(unittest.TestCase):
         providers = _iter_concrete_provider_classes()
         self.assertGreaterEqual(
             len(providers),
-            3,
-            "expected at least 3 provider plugins (sqlite, mysql, postgresql)",
+            5,
+            "expected at least 5 provider plugins (sqlite, cosmosdb, mysql, "
+            "oracle, postgresql, sqlserver, db2)",
         )
         for provider_cls in providers:
             with self.subTest(provider=provider_cls.__name__):

@@ -60,6 +60,18 @@ class TestNullableViaQuirks:
         stmts = conv.convert(diff, "public.t", _make_options())
         assert any("DROP NOT NULL" in s.sql for s in stmts)
 
+    def test_oracle_set_not_null_uses_modify(self):
+        conv = ColumnConverter(dialect="oracle")
+        diff = _make_column_diff(nullable_diff=(False, True))
+        stmts = conv.convert(diff, "SCHEMA.T", _make_options("oracle"))
+        assert any("MODIFY" in s.sql and "NOT NULL" in s.sql for s in stmts)
+
+    def test_sqlserver_set_not_null(self):
+        conv = ColumnConverter(dialect="sqlserver")
+        diff = _make_column_diff(nullable_diff=(False, True))
+        stmts = conv.convert(diff, "dbo.t", _make_options("sqlserver"))
+        assert any("NOT NULL" in s.sql for s in stmts)
+
     def test_no_nullable_diff_produces_no_nullable_stmt(self):
         conv = ColumnConverter(dialect="postgresql")
         diff = _make_column_diff(nullable_diff=None)
@@ -85,6 +97,12 @@ class TestDefaultViaQuirks:
         stmts = conv.convert(diff, "public.t", _make_options())
         assert any("DROP DEFAULT" in s.sql for s in stmts)
 
+    def test_oracle_set_default_uses_modify(self):
+        conv = ColumnConverter(dialect="oracle")
+        diff = _make_column_diff(default_diff=("0", None))
+        stmts = conv.convert(diff, "SCHEMA.T", _make_options("oracle"))
+        assert any("MODIFY" in s.sql and "DEFAULT 0" in s.sql for s in stmts)
+
 
 # ---------------------------------------------------------------------------
 # AC#3/AC#4 — Type changes via quirks
@@ -98,11 +116,29 @@ class TestTypeViaQuirks:
         stmts = conv.convert(diff, "public.t", _make_options())
         assert any("TYPE TEXT" in s.sql for s in stmts)
 
+    def test_oracle_type_change_uses_modify(self):
+        conv = ColumnConverter(dialect="oracle")
+        diff = _make_column_diff(data_type_diff=("CLOB", "VARCHAR2(100)"))
+        stmts = conv.convert(diff, "SCHEMA.T", _make_options("oracle"))
+        assert any("MODIFY" in s.sql and "CLOB" in s.sql for s in stmts)
+
+    def test_sqlserver_type_change(self):
+        conv = ColumnConverter(dialect="sqlserver")
+        diff = _make_column_diff(data_type_diff=("NVARCHAR(100)", "VARCHAR(50)"))
+        stmts = conv.convert(diff, "dbo.t", _make_options("sqlserver"))
+        assert any("NVARCHAR(100)" in s.sql for s in stmts)
+
     def test_mysql_type_change_uses_modify(self):
         conv = ColumnConverter(dialect="mysql")
         diff = _make_column_diff(data_type_diff=("TEXT", "VARCHAR(255)"))
         stmts = conv.convert(diff, "t", _make_options("mysql"))
         assert any("MODIFY" in s.sql and "TEXT" in s.sql for s in stmts)
+
+    def test_cosmosdb_type_change_returns_comment(self):
+        conv = ColumnConverter(dialect="cosmosdb")
+        diff = _make_column_diff(data_type_diff=("STRING", "INT"))
+        stmts = conv.convert(diff, "t", _make_options("cosmosdb"))
+        assert any("schema-less" in s.sql.lower() or s.statement_type == "COMMENT" for s in stmts)
 
 
 # ---------------------------------------------------------------------------

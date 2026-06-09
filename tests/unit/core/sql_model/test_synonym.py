@@ -143,6 +143,14 @@ class TestSynonym:
             assert "CREATE SYNONYM" in result
             assert "FOR" in result
 
+    def test_generate_basic_create_statement_oracle(self):
+        """Test basic create statement for Oracle."""
+        synonym = Synonym("synonym_name", "target_table", schema="public", dialect="oracle")
+        result = synonym._generate_basic_create_statement()
+        assert "CREATE OR REPLACE SYNONYM" in result
+        assert '"public"."synonym_name"' in result
+        assert "FOR" in result
+
     def test_generate_basic_create_statement_sqlserver(self):
         """Test basic create statement for SQL Server."""
         synonym = Synonym("synonym_name", "target_table", schema="dbo", dialect="sqlserver")
@@ -150,6 +158,14 @@ class TestSynonym:
         assert "CREATE SYNONYM" in result
         assert "dbo" in result
         assert "synonym_name" in result
+        assert "FOR" in result
+
+    def test_generate_basic_create_statement_db2(self):
+        """Test basic create statement for DB2."""
+        synonym = Synonym("synonym_name", "target_table", dialect="db2")
+        result = synonym._generate_basic_create_statement()
+        assert "CREATE ALIAS" in result
+        assert '"synonym_name"' in result
         assert "FOR" in result
 
     def test_generate_basic_create_statement_generic(self):
@@ -167,6 +183,24 @@ class TestSynonym:
         assert "CREATE SYNONYM" in result
         assert "synonym_name" in result
         assert "FOR" in result
+
+    def test_drop_statement_db2(self):
+        """Test drop statement for DB2."""
+        synonym = Synonym("synonym_name", "target_table", dialect="db2")
+        result = synonym.drop_statement
+        assert result == 'DROP ALIAS "synonym_name"'
+
+    def test_drop_statement_other_dialects(self):
+        """Test drop statement for other dialects."""
+        synonym = Synonym("synonym_name", "target_table", dialect="oracle")
+        result = synonym.drop_statement
+        assert result == 'DROP SYNONYM "synonym_name"'
+
+    def test_drop_statement_with_schema(self):
+        """Test drop statement with schema."""
+        synonym = Synonym("synonym_name", "target_table", schema="public", dialect="oracle")
+        result = synonym.drop_statement
+        assert result == 'DROP SYNONYM "public"."synonym_name"'
 
     def test_str_representation(self):
         """Test string representation."""

@@ -371,6 +371,28 @@ class TestProbeDialectKey(unittest.TestCase):
     declare the attribute, and these tests still exercise it.
     """
 
+    def test_provider_canonical_dialect_oracle(self):
+        engine = _make_engine()
+        engine.provider.canonical_dialect_key = "oracle"
+        self.assertEqual(engine._probe_dialect_key(), "oracle")
+
+    def test_provider_canonical_dialect_db2(self):
+        engine = _make_engine()
+        engine.provider.canonical_dialect_key = "db2"
+        self.assertEqual(engine._probe_dialect_key(), "db2")
+
+    def test_falls_back_to_config_type_when_provider_missing_attribute(self):
+        engine = _make_engine()
+        engine.provider.canonical_dialect_key = ""  # not declared
+        engine.sql_analyzer.dialect = None
+        engine.config.database.url = ""
+        # ``database.type`` is a plain string (real configs do this when not
+        # using the ``DatabaseType`` enum). A bare ``MagicMock`` would defeat
+        # ``_normalize``'s ``isinstance(raw, Enum)`` branch and fall through
+        # to ``str(MagicMock(...))`` — nonsense the registry can't resolve.
+        engine.config.database.type = "oracle"
+        self.assertEqual(engine._probe_dialect_key(), "oracle")
+
     def test_no_config_falls_back_to_analyzer_dialect(self):
         engine = _make_engine(with_config=False)
         engine.provider.canonical_dialect_key = ""
@@ -378,13 +400,17 @@ class TestProbeDialectKey(unittest.TestCase):
         result = engine._probe_dialect_key()
         self.assertEqual(result, "mysql")
 
-    def test_falls_back_to_config_type_when_provider_missing_attribute(self):
+    def test_mssql_alias_normalised_to_sqlserver(self):
         engine = _make_engine()
-        engine.provider.canonical_dialect_key = ""  # not declared
+        engine.provider.canonical_dialect_key = ""
         engine.sql_analyzer.dialect = None
         engine.config.database.url = ""
-        engine.config.database.type = "mysql"
-        self.assertEqual(engine._probe_dialect_key(), "mysql")
+        # See note in ``test_falls_back_to_config_type_when_provider_missing_attribute``
+        # — pass a real string so ``_normalize`` runs the registry resolution
+        # path. ``mssql`` is the SQLAlchemy alias the registry canonicalizes to
+        # ``sqlserver``.
+        engine.config.database.type = "mssql"
+        self.assertEqual(engine._probe_dialect_key(), "sqlserver")
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +425,18 @@ class TestTransactionLivenessProbeSQL(unittest.TestCase):
     ``provider.canonical_dialect_key`` (set by each plugin) instead of a
     framework-side URL-sniff.
     """
+
+    def test_oracle_returns_dual(self):
+        engine = _make_engine()
+        engine.provider.canonical_dialect_key = "oracle"
+        probe = engine._transaction_liveness_probe_sql()
+        self.assertIn("DUAL", probe)
+
+    def test_db2_returns_sysibm(self):
+        engine = _make_engine()
+        engine.provider.canonical_dialect_key = "db2"
+        probe = engine._transaction_liveness_probe_sql()
+        self.assertIn("SYSIBM", probe)
 
     def test_postgresql_returns_select_1(self):
         engine = _make_engine(dialect="postgresql")

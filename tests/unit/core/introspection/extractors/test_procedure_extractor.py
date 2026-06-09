@@ -77,6 +77,35 @@ class TestIsFullDefinition(unittest.TestCase):
         self.assertFalse(_is_full_definition(""))
 
 
+class TestCleanOracleSourceText(unittest.TestCase):
+    """Oracle source-text cleaning lives on :class:`OracleQuirks` now.
+    Tests target the canonical hook directly."""
+
+    @staticmethod
+    def _quirks():
+        from db.plugins.oracle.quirks import OracleQuirks
+
+        return OracleQuirks()
+
+    def test_none_returns_none(self):
+        self.assertIsNone(self._quirks().clean_source_text(None))
+
+    def test_removes_e_tags(self):
+        result = self._quirks().clean_source_text("<E>line1</E><E>line2</E>")
+        self.assertNotIn("<E>", result)
+        self.assertIn("line1", result)
+        self.assertIn("line2", result)
+
+    def test_replaces_e_e_with_newline(self):
+        result = self._quirks().clean_source_text("<E>line1</E><E>line2</E>")
+        self.assertIn("\n", result)
+
+    def test_unescapes_html_entities(self):
+        result = self._quirks().clean_source_text("a &amp; b &lt; c")
+        self.assertIn("&", result)
+        self.assertIn("<", result)
+
+
 class TestBuildParametersFromJson(unittest.TestCase):
     def test_empty_returns_empty(self):
         ext = _make_extractor()
@@ -738,6 +767,98 @@ class TestGetProceduresMysqlDialect(unittest.TestCase):
         tracker._track_error.assert_called_once()
 
 
+class TestGetProceduresOracleDialect(unittest.TestCase):
+    """Cover Oracle-specific branches in get_procedures (lines 450-474)."""
+
+    def _make_oracle_vq(self):
+        vq = MagicMock()
+        vq.supports_procedures.return_value = True
+        vq.get_procedures_query.return_value = ("SELECT ...", [])
+        return vq
+
+    def _base_row(self, **kwargs):
+        row = {
+            "procedure_name": "MY_PROC",
+            "definition": None,
+            "parameter_json": None,
+            "volatility": None,
+            "execute_as_principal": None,
+        }
+        row.update(kwargs)
+        return row
+
+    def test_oracle_fetches_ddl_and_sets_definition(self):
+        vq = self._make_oracle_vq()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        ddl = "CREATE OR REPLACE PROCEDURE MY_PROC AS BEGIN NULL; END;"
+        ext.provider.query_executor.execute_query.side_effect = [
+            [self._base_row()],  # main query
+            [],  # _fetch_oracle_procedure_parameters (no vendor_queries.get_procedure_arguments_query)
+            [{"definition": ddl}],  # _fetch_oracle_ddl
+        ]
+        vq.get_procedure_arguments_query = MagicMock(return_value=("SELECT ...", []))
+        # Override the parameter query to return empty
+        call_count = [0]
+        orig_side = ext.provider.query_executor.execute_query.side_effect
+
+        def multi_call(conn, sql, params):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return [
+                    (
+                        ext._base_row()
+                        if False
+                        else {
+                            "procedure_name": "MY_PROC",
+                            "definition": None,
+                            "parameter_json": None,
+                            "volatility": None,
+                            "execute_as_principal": None,
+                        }
+                    )
+                ]
+            elif call_count[0] == 2:
+                return []  # parameters
+            else:
+                return [{"definition": ddl}]  # DDL
+
+        ext.provider.query_executor.execute_query.side_effect = multi_call
+        result = ext.get_procedures("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].definition, ddl)
+
+    def test_oracle_strip_package_spec_with_none_result(self):
+        """When _strip_embedded_oracle_package_spec returns None, procedure.definition = None."""
+        vq = self._make_oracle_vq()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        # Procedure definition that is only a package spec
+        pkg_only = "CREATE OR REPLACE PACKAGE MY_PKG AS PROCEDURE helper; END MY_PKG;"
+        call_count = [0]
+
+        def multi_call(conn, sql, params):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return [
+                    {
+                        "procedure_name": "MY_PROC",
+                        "definition": None,
+                        "parameter_json": None,
+                        "volatility": None,
+                        "execute_as_principal": None,
+                    }
+                ]
+            elif call_count[0] == 2:
+                return []  # parameters
+            else:
+                return [{"definition": pkg_only}]  # DDL
+
+        vq.get_procedure_arguments_query = MagicMock(return_value=("SELECT ...", []))
+        ext.provider.query_executor.execute_query.side_effect = multi_call
+        result = ext.get_procedures("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertIsNone(result[0].definition)
+
+
 class TestGetFunctionsDialects(unittest.TestCase):
     """Cover get_functions branches (lines 545-904)."""
 
@@ -852,6 +973,46 @@ class TestGetFunctionsDialects(unittest.TestCase):
         result = ext.get_functions("mydb")
         self.assertEqual(result[0].volatility, "VOLATILE")
 
+    def test_get_functions_sqlserver_deterministic_true(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        ext.provider.query_executor.execute_query.return_value = [
+            {
+                "function_name": "fn",
+                "definition": "CREATE FUNCTION fn() RETURNS INT AS BEGIN RETURN 1 END",
+                "is_deterministic": "1",
+            },
+        ]
+        result = ext.get_functions("dbo")
+        self.assertEqual(result[0].volatility, "IMMUTABLE")
+
+    def test_get_functions_sqlserver_deterministic_false(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        ext.provider.query_executor.execute_query.return_value = [
+            {
+                "function_name": "fn",
+                "definition": "CREATE FUNCTION fn() RETURNS INT AS BEGIN RETURN 1 END",
+                "is_deterministic": "0",
+            },
+        ]
+        result = ext.get_functions("dbo")
+        self.assertEqual(result[0].volatility, "VOLATILE")
+
+    def test_get_functions_sqlserver_deterministic_none(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        ext.provider.query_executor.execute_query.return_value = [
+            {
+                "function_name": "fn",
+                "definition": "CREATE FUNCTION fn() RETURNS INT AS BEGIN RETURN 1 END",
+                "is_deterministic": None,
+            },
+        ]
+        result = ext.get_functions("dbo")
+        # volatility not set via is_deterministic branch → check no error
+        self.assertEqual(len(result), 1)
+
     def test_get_functions_explicit_volatility_overrides(self):
         vq = self._make_vq_for_functions()
         ext = _make_extractor(dialect="postgresql", vendor_queries=vq)
@@ -888,6 +1049,34 @@ class TestGetFunctionsDialects(unittest.TestCase):
         result = ext.get_functions("mydb")
         self.assertFalse(result[0].security_definer)
 
+    def test_get_functions_execute_as_principal_sets_definer(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        ext.provider.query_executor.execute_query.return_value = [
+            {
+                "function_name": "fn",
+                "definition": "CREATE FUNCTION fn() RETURNS INT AS BEGIN RETURN 1 END",
+                "execute_as_principal": "dbo",
+            },
+        ]
+        result = ext.get_functions("dbo_schema")
+        self.assertEqual(result[0].definer, "dbo")
+        self.assertTrue(result[0].security_definer)
+
+    def test_get_functions_execute_as_owner_in_definition(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        ext.provider.query_executor.execute_query.return_value = [
+            {
+                "function_name": "fn",
+                "definition": "CREATE FUNCTION fn() RETURNS INT EXECUTE AS OWNER AS BEGIN RETURN 1 END",
+                "execute_as_principal": None,
+            },
+        ]
+        result = ext.get_functions("dbo_schema")
+        self.assertEqual(result[0].definer, "OWNER")
+        self.assertTrue(result[0].security_definer)
+
     def test_get_functions_mysql_definer_set(self):
         vq = self._make_vq_for_functions()
         ext = _make_extractor(dialect="mysql", vendor_queries=vq)
@@ -919,6 +1108,62 @@ class TestGetFunctionsDialects(unittest.TestCase):
         result = ext.get_functions("mydb")
         self.assertEqual(len(result), 1)
 
+    def test_get_functions_with_function_arguments_query(self):
+        vq = self._make_vq_for_functions(has_arg_query=True)
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        vq.get_function_arguments_query.return_value = ("SELECT ...", [])
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": None}],
+            # _fetch_oracle_ddl → None
+            [],
+            # get_function_arguments_query rows
+            [
+                {"position": "0", "data_type": "NUMBER", "in_out": "OUT"},  # return type
+                {"position": "1", "argument_name": "p1", "data_type": "VARCHAR2", "in_out": "IN"},
+            ],
+            # get_function_definition_query (def_sql from vendor_queries)
+        ]
+        vq.get_function_definition_query.return_value = (None, [])
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].return_type, "NUMBER")
+        self.assertEqual(len(result[0].parameters), 1)
+
+    def test_get_functions_arg_query_skip_invalid_position(self):
+        vq = self._make_vq_for_functions(has_arg_query=True)
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        vq.get_function_arguments_query.return_value = ("SELECT ...", [])
+        vq.get_function_definition_query.return_value = (None, [])
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": None}],
+            [],  # DDL
+            [
+                {"position": None, "data_type": "NUMBER", "in_out": "IN"},  # None position → skip
+                {"position": "bad", "data_type": "INT", "in_out": "IN"},  # ValueError → skip
+                {
+                    "position": "1",
+                    "argument_name": "valid_param",
+                    "data_type": "VARCHAR2",
+                    "in_out": "IN",
+                },
+            ],
+        ]
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(result[0].parameters[0].name, "valid_param")
+
+    def test_get_functions_arg_query_exception_swallowed(self):
+        vq = self._make_vq_for_functions(has_arg_query=True)
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        vq.get_function_arguments_query.return_value = ("SELECT ...", [])
+        vq.get_function_definition_query.return_value = (None, [])
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": None}],
+            [],  # DDL
+            RuntimeError("arg query failed"),  # arg query exception
+        ]
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+
     def test_get_functions_definition_query_populates(self):
         vq = self._make_vq_for_functions(has_def_query=True)
         ext = _make_extractor(dialect="postgresql", vendor_queries=vq)
@@ -940,6 +1185,35 @@ class TestGetFunctionsDialects(unittest.TestCase):
             RuntimeError("def query failed"),
         ]
         result = ext.get_functions("public")
+        self.assertEqual(len(result), 1)
+
+    def test_get_functions_parameter_parsing_from_definition(self):
+        """Cover the regex-based fallback parameter parser."""
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        func_def = "CREATE FUNCTION MY_FN(p_id IN NUMBER, p_name IN VARCHAR2) RETURN VARCHAR2 AS BEGIN RETURN 'x'; END;"
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": func_def}],
+            [],  # DDL
+        ]
+        vq.get_function_definition_query.return_value = (None, [])
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].return_type, "VARCHAR2")
+        self.assertGreater(len(result[0].parameters), 0)
+
+    def test_get_functions_parameter_parsing_direction_first(self):
+        """Cover the branch where direction token comes first."""
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        # "IN p_id NUMBER" format — direction before name
+        func_def = "CREATE FUNCTION MY_FN(IN p_id NUMBER) RETURN INT AS BEGIN RETURN 1; END;"
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": func_def}],
+            [],  # DDL
+        ]
+        vq.get_function_definition_query.return_value = (None, [])
+        result = ext.get_functions("MYSCHEMA")
         self.assertEqual(len(result), 1)
 
     def test_get_functions_mysql_fetch_parameters_fallback(self):
@@ -1027,6 +1301,20 @@ class TestGetFunctionsDialects(unittest.TestCase):
         self.assertEqual(result, [])
         tracker._track_error.assert_called_once()
 
+    def test_get_functions_oracle_ddl_sets_definition(self):
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        ddl = "CREATE OR REPLACE FUNCTION MY_FN RETURN VARCHAR2 AS BEGIN RETURN 'x'; END;"
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": None}],
+            [{"definition": ddl}],  # _fetch_oracle_ddl
+        ]
+        vq.get_function_definition_query.return_value = (None, [])
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].definition, ddl)
+        self.assertIsNone(result[0].body)
+
     def test_get_functions_show_create_function_begin_idx(self):
         """Cover begin_idx branch in SHOW CREATE FUNCTION fallback."""
         vq = self._make_vq_for_functions()
@@ -1067,3 +1355,18 @@ class TestGetFunctionsDialects(unittest.TestCase):
         fn_status.add_property_status.assert_any_call("definition", False)
         tracker._track_warning.assert_called()
 
+    def test_get_functions_parameter_parsing_two_tokens(self):
+        """Cover the len(tokens)>=2 branch (name + data_type)."""
+        vq = self._make_vq_for_functions()
+        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
+        # Simple format: "p_name VARCHAR2"
+        func_def = "CREATE FUNCTION MY_FN(p_name VARCHAR2) RETURN NUMBER AS BEGIN RETURN 1; END;"
+        ext.provider.query_executor.execute_query.side_effect = [
+            [{"function_name": "MY_FN", "definition": func_def}],
+            [],  # DDL
+        ]
+        vq.get_function_definition_query.return_value = (None, [])
+        result = ext.get_functions("MYSCHEMA")
+        self.assertEqual(len(result), 1)
+        self.assertGreater(len(result[0].parameters), 0)
+        self.assertEqual(result[0].parameters[0].data_type, "VARCHAR2")

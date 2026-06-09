@@ -186,6 +186,12 @@ class TestSplitStatements(unittest.TestCase):
         stmts = analyzer.split_statements(sql)
         self.assertGreaterEqual(len(stmts), 1)
 
+    def test_sqlserver_go_splitting(self):
+        analyzer = SqlAnalyzer(dialect="sqlserver")
+        sql = "SELECT 1\nGO\nSELECT 2"
+        stmts = analyzer.split_statements(sql)
+        self.assertEqual(len(stmts), 2)
+
     def test_regex_fallback_splits_semicolons(self):
         analyzer = SqlAnalyzer(dialect="postgresql")
         sql = "INSERT INTO t VALUES (1);\nINSERT INTO t VALUES (2);"

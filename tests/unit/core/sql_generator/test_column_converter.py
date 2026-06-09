@@ -50,6 +50,23 @@ class TestColumnConverter:
         assert "DROP NOT NULL" in statements[0].sql
         assert statements[0].pre_check is None
 
+    def test_nullable_change_oracle(self):
+        """Test nullable change on Oracle."""
+        converter = ColumnConverter(dialect="oracle")
+        options = GenerationOptions(dialect="oracle")
+
+        column_diff = ColumnDiff(
+            object_name="test_column",
+            column_name="test_column",
+            nullable_diff=(False, True),  # Setting NOT NULL
+        )
+
+        statements = converter.convert(column_diff, "schema.test_table", options)
+
+        assert len(statements) == 1
+        assert "MODIFY" in statements[0].sql
+        assert "NOT NULL" in statements[0].sql
+
     def test_default_change_postgresql_set_default(self):
         """Test setting default value on PostgreSQL."""
         converter = ColumnConverter(dialect="postgresql")

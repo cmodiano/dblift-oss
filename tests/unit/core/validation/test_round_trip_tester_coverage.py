@@ -109,6 +109,15 @@ class TestRunRoundTripTestOracleDebug(unittest.TestCase):
         with self.assertLogs("core.validation.round_trip_tester", level="DEBUG"):
             result = tester.run_round_trip_test()
 
+    def test_db2_dialect_logs_committed_skipping_rollback(self):
+        """Lines 279-286: DB2 path also logs 'transactions already committed'."""
+        tester, _, _ = self._make_full_run_tester(dialect="db2")
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="DEBUG"):
+            result = tester.run_round_trip_test()
+
     def test_success_true_when_no_errors_or_differences(self):
         """Lines 266-274: success = not has_errors and not has_differences."""
         tester, _, _ = self._make_full_run_tester(dialect="postgresql")
@@ -206,6 +215,122 @@ class TestGenerateStatementsNoGenerator(unittest.TestCase):
 
 class TestEnsureTestSchema(unittest.TestCase):
 
+    def test_oracle_autocommit_true_sets_to_false(self):
+        """Lines 562-578: Oracle checks autocommit and sets to False."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = True
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
+            tester._ensure_test_schema()
+
+        tst.connection.setAutoCommit.assert_called_with(False)
+
+    def test_oracle_autocommit_false_skips_setautocommit(self):
+        """Lines 562-578: Oracle autocommit already False, no change."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+
+        tester._ensure_test_schema()
+        tst.connection.setAutoCommit.assert_not_called()
+
+    def test_oracle_getautocommit_exception_logged(self):
+        """Lines 575-578: Exception checking autocommit → debug log."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.side_effect = Exception("jdbc error")
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="DEBUG"):
+            tester._ensure_test_schema()
+
+    def test_oracle_commits_schema_creation(self):
+        """Lines 587-618: Oracle commits after schema creation."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.connection.isClosed.return_value = False
+
+        tester._ensure_test_schema()
+
+        tst.connection.commit.assert_called()
+
+    def test_oracle_autocommit_true_skips_commit(self):
+        """Lines 600-608: Oracle: autocommit=True → skip commit (ORA-17273)."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        # First call (pre-check) returns True (autocommit=True)
+        tst.connection.getAutoCommit.return_value = True
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="DEBUG"):
+            tester._ensure_test_schema()
+
+        tst.connection.commit.assert_not_called()
+
+    def test_db2_commits_schema_creation(self):
+        """Lines 587-618: DB2 commits after schema creation."""
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.connection.isClosed.return_value = False
+        tst.connection.getAutoCommit.return_value = False
+
+        tester._ensure_test_schema()
+
+        tst.connection.commit.assert_called()
+
+    def test_commit_closed_connection_warns(self):
+        """Lines 619-627: Commit on closed connection → warning."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.connection.isClosed.return_value = False
+        tst.connection.commit.side_effect = Exception("17008 connection closed")
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
+            tester._ensure_test_schema()
+
+    def test_commit_autocommit_error_warns(self):
+        """Lines 628-632: Oracle autocommit commit error → warning."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.connection.isClosed.return_value = False
+        tst.connection.commit.side_effect = Exception("17273 autocommit")
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
+            tester._ensure_test_schema()
+
+    def test_commit_other_error_reraises(self):
+        """Lines 634-635: Other commit error → re-raised then caught by outer except.
+
+        For Oracle, the outer except re-raises as SchemaCreationError.
+        """
+        from core.exceptions import SchemaCreationError
+
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.connection.isClosed.return_value = False
+        tst.connection.commit.side_effect = Exception("permission denied")
+
+        # Oracle: outer except re-raises as SchemaCreationError
+        with self.assertRaises(SchemaCreationError):
+            tester._ensure_test_schema()
+
+    def test_connection_closed_before_commit_warns(self):
+        """Lines 636-640: Connection closed → warning, no commit."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.connection.isClosed.return_value = True  # connection closed
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
+            tester._ensure_test_schema()
+
+        tst.connection.commit.assert_not_called()
+
     def test_schema_creation_fails_non_oracle_continues(self):
         """Lines 641-648: schema creation exception on non-Oracle → just a warning."""
         tester, _, tst = _make_tester(dialect="postgresql")
@@ -215,6 +340,18 @@ class TestEnsureTestSchema(unittest.TestCase):
 
         with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
             tester._ensure_test_schema()  # Should not raise
+
+    def test_schema_creation_fails_oracle_raises_schema_creation_error(self):
+        """Lines 641-647: schema creation exception on Oracle → SchemaCreationError."""
+        from core.exceptions import SchemaCreationError
+
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = False
+        tst.schema_operations.create_schema_if_not_exists.side_effect = Exception("ORA-01920")
+
+        with self.assertRaises(SchemaCreationError):
+            tester._ensure_test_schema()
+
 
 # ---------------------------------------------------------------------------
 # _clean_test_schema — commit/rollback before cleanup (lines 650-759)
@@ -231,6 +368,18 @@ class TestCleanTestSchema(unittest.TestCase):
         tester._clean_test_schema()
 
         tst.connection.commit.assert_called()
+
+    def test_oracle_autocommit_true_skips_pre_cleanup_commit(self):
+        """Lines 663-670: Oracle autocommit=True → skip commit before cleanup."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.connection.getAutoCommit.return_value = True
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="DEBUG"):
+            tester._clean_test_schema()
+
+        tst.connection.commit.assert_not_called()
 
     def test_oracle_getautocommit_exception_before_cleanup_logged(self):
         """Lines 671-675: Exception checking autocommit → debug log."""
@@ -433,6 +582,26 @@ class TestExecuteDDLStatements(unittest.TestCase):
 
 class TestDropPreexistingObjectsExtended(unittest.TestCase):
 
+    def test_oracle_commits_after_drop(self):
+        """Line 868-869: Oracle/DB2 commits after drop."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_statement.return_value = None
+
+        stmt = 'CREATE TABLE "HR"."EMPLOYEES" (ID INTEGER)'
+        tester._drop_preexisting_objects(stmt)
+
+        tst.connection.commit.assert_called()
+
+    def test_db2_commits_after_drop(self):
+        """Line 868-869: DB2 commits after drop."""
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.query_executor.execute_statement.return_value = None
+
+        stmt = 'CREATE TABLE "MYSCHEMA"."MYTABLE" (ID INTEGER)'
+        tester._drop_preexisting_objects(stmt)
+
+        tst.connection.commit.assert_called()
+
     def test_drop_rollback_failure_logged(self):
         """Lines 877-882: Rollback after failed drop also fails → debug log."""
         tester, _, tst = _make_tester(dialect="postgresql")
@@ -467,9 +636,95 @@ class TestRetryDropAndCreate(unittest.TestCase):
 
     def test_returns_false_when_no_table_match(self):
         """Line 1005: No CREATE TABLE match → return False."""
-        tester, _, _ = _make_tester(dialect="postgresql")
+        tester, _, _ = _make_tester(dialect="oracle")
         result = tester._retry_drop_and_create("SELECT 1")
         self.assertFalse(result)
+
+    def test_oracle_successful_drop_and_create(self):
+        """Lines 1047-1058: Drop succeeds, CREATE succeeds → True."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = [{"OWNER": "HR", "TABLE_NAME": "EMPLOYEES"}]
+        tst.query_executor.execute_statement.return_value = None
+        tst.connection.commit.return_value = None
+
+        stmt = 'CREATE TABLE "HR"."EMPLOYEES" (ID INTEGER)'
+        result = tester._retry_drop_and_create(stmt)
+        self.assertTrue(result)
+
+    def test_oracle_all_drops_fail_returns_false(self):
+        """Lines 1061-1062: All DROP strategies fail → False."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = []
+        tst.query_executor.execute_statement.side_effect = Exception("table does not exist")
+
+        stmt = 'CREATE TABLE "HR"."EMPLOYEES" (ID INTEGER)'
+        result = tester._retry_drop_and_create(stmt)
+        self.assertFalse(result)
+
+    def test_oracle_drop_succeeds_create_fails(self):
+        """Lines 1059-1060: Drop OK, CREATE fails → False."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = [{"OWNER": "HR", "TABLE_NAME": "EMPLOYEES"}]
+        execute_calls = []
+
+        def execute_side(conn, sql, params):
+            execute_calls.append(sql)
+            if "EXECUTE IMMEDIATE" in sql.upper():
+                return None  # drop succeeds
+            else:
+                raise Exception("create failed")
+
+        tst.query_executor.execute_statement.side_effect = execute_side
+
+        stmt = 'CREATE TABLE "HR"."EMPLOYEES" (ID INTEGER)'
+        result = tester._retry_drop_and_create(stmt)
+        self.assertFalse(result)
+
+    def test_db2_successful_drop_and_create(self):
+        """DB2 path: find in SYSCAT.TABLES, drop, create."""
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.query_executor.execute_query.return_value = [
+            {"TABSCHEMA": "MYSCHEMA", "TABNAME": "MYTABLE"}
+        ]
+        tst.query_executor.execute_statement.return_value = None
+        tst.connection.commit.return_value = None
+
+        stmt = 'CREATE TABLE "MYSCHEMA"."MYTABLE" (ID INTEGER)'
+        result = tester._retry_drop_and_create(stmt)
+        self.assertTrue(result)
+
+    def test_unquoted_schema_and_table(self):
+        """Lines 1015, 1022: Unquoted schema/table → uppercased."""
+        tester, _, tst = _make_tester(dialect="oracle")
+        tst.query_executor.execute_query.return_value = []
+        tst.query_executor.execute_statement.return_value = None
+        tst.connection.commit.return_value = None
+
+        stmt = "CREATE TABLE HR.EMPLOYEES (ID INTEGER)"
+        result = tester._retry_drop_and_create(stmt)
+        # Whether it succeeds depends on execution, but it shouldn't raise
+        self.assertIsInstance(result, bool)
+
+
+# ---------------------------------------------------------------------------
+# _build_retry_drop_strategies — DB2 exception path (lines 1130-1131)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildRetryDropStrategiesDB2Exception(unittest.TestCase):
+
+    def test_db2_syscat_query_exception_logs_warning(self):
+        """Lines 1130-1131: DB2 SYSCAT query fails → warning."""
+        tester, _, tst = _make_tester(dialect="db2")
+        tst.query_executor.execute_query.side_effect = Exception("SYSCAT not accessible")
+
+        import logging
+
+        with self.assertLogs("core.validation.round_trip_tester", level="WARNING"):
+            strategies = tester._build_retry_drop_strategies('"MYSCHEMA"', '"MYTABLE"')
+
+        # Still returns fallback strategies
+        self.assertGreater(len(strategies), 0)
 
 
 # ---------------------------------------------------------------------------
@@ -512,9 +767,9 @@ class TestCommitTestExecutionAdditional(unittest.TestCase):
 
     def test_commit_failure_non_mysql_tries_rollback(self):
         """Lines 1182-1190: Non-MySQL commit failure → try rollback."""
-        tester, _, tst = _make_tester(dialect="postgresql")
+        tester, _, tst = _make_tester(dialect="oracle")
         tst.connection.getAutoCommit.return_value = False  # commit path engaged
-        tst.connection.commit.side_effect = Exception("postgresql commit failed")
+        tst.connection.commit.side_effect = Exception("oracle commit failed")
 
         import logging
 
@@ -525,7 +780,7 @@ class TestCommitTestExecutionAdditional(unittest.TestCase):
 
     def test_commit_failure_rollback_also_fails(self):
         """Lines 1188-1190: commit fails, rollback also fails → debug."""
-        tester, _, tst = _make_tester(dialect="postgresql")
+        tester, _, tst = _make_tester(dialect="oracle")
         tst.connection.getAutoCommit.return_value = False  # engage commit path
         tst.connection.commit.side_effect = Exception("commit failed")
         tst.connection.rollback.side_effect = Exception("rollback failed")

@@ -166,6 +166,10 @@ class TestSqlGeneratorFactoryIsSupported:
         """Test is_supported for PostgreSQL."""
         assert SqlGeneratorFactory.is_supported("postgresql") is True
 
+    def test_is_supported_oracle(self):
+        """Test is_supported for Oracle."""
+        assert SqlGeneratorFactory.is_supported("oracle") is True
+
     def test_is_supported_mysql(self):
         """Test is_supported for MySQL."""
         assert SqlGeneratorFactory.is_supported("mysql") is True
@@ -268,7 +272,7 @@ class TestSqlGeneratorFactoryRegisterDefaults:
         map_size_after_first = len(SqlGeneratorFactory._DIALECT_MAP)
 
         # Second call should not clear the map
-        generator2 = SqlGeneratorFactory.create("mysql")
+        generator2 = SqlGeneratorFactory.create("oracle")
         map_size_after_second = len(SqlGeneratorFactory._DIALECT_MAP)
 
         # Map should be populated and not cleared
@@ -288,6 +292,12 @@ class TestSqlGeneratorFactoryRegisterDefaults:
             "postgres"
         )
 
+    def test_register_defaults_oracle_registration(self):
+        """Test Oracle registration in _register_defaults."""
+        generator = SqlGeneratorFactory.create("oracle")
+        assert generator is not None
+        assert SqlGeneratorFactory.is_supported("oracle")
+
     def test_register_defaults_mysql_registration(self):
         """Test MySQL registration in _register_defaults."""
         generator = SqlGeneratorFactory.create("mysql")
@@ -295,6 +305,20 @@ class TestSqlGeneratorFactoryRegisterDefaults:
         assert SqlGeneratorFactory.is_supported("mysql") or SqlGeneratorFactory.is_supported(
             "mariadb"
         )
+
+    def test_register_defaults_sqlserver_registration(self):
+        """Test SQL Server registration in _register_defaults."""
+        generator = SqlGeneratorFactory.create("sqlserver")
+        assert generator is not None
+        assert SqlGeneratorFactory.is_supported("sqlserver") or SqlGeneratorFactory.is_supported(
+            "mssql"
+        )
+
+    def test_register_defaults_db2_registration(self):
+        """Test DB2 registration in _register_defaults."""
+        generator = SqlGeneratorFactory.create("db2")
+        assert generator is not None
+        assert SqlGeneratorFactory.is_supported("db2")
 
     def test_register_defaults_sqlite_registration(self):
         """Test SQLite registration in _register_defaults."""

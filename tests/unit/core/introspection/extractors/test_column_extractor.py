@@ -85,6 +85,17 @@ class TestBuildDataTypeString(unittest.TestCase):
         result = e._build_data_type_string("TIMESTAMP(6)", 10, 6)
         self.assertEqual(result, "TIMESTAMP(6)")
 
+    def test_sqlserver_varchar_max(self):
+        # SQL Server uses 2147483647 for VARCHAR(MAX) — column_size must be > 0 to enter the branch
+        e = self._e(dialect="sqlserver")
+        result = e._build_data_type_string("VARCHAR", 2147483647, 0)
+        self.assertEqual(result, "VARCHAR(MAX)")
+
+    def test_sqlserver_nvarchar_max_large_size(self):
+        e = self._e(dialect="sqlserver")
+        result = e._build_data_type_string("NVARCHAR", 2147483647, 0)
+        self.assertEqual(result, "NVARCHAR(MAX)")
+
     def test_postgresql_timestamp_with_scale(self):
         e = self._e(dialect="postgresql")
         result = e._build_data_type_string("TIMESTAMP", 10, 6)
@@ -95,10 +106,20 @@ class TestBuildDataTypeString(unittest.TestCase):
         result = e._build_data_type_string("TIME", 10, 3)
         self.assertEqual(result, "TIME(3)")
 
-    def test_mysql_timestamp_with_scale(self):
-        e = self._e(dialect="mysql")
+    def test_oracle_timestamp_with_scale(self):
+        e = self._e(dialect="oracle")
         result = e._build_data_type_string("TIMESTAMP", 10, 6)
         self.assertEqual(result, "TIMESTAMP(6)")
+
+    def test_db2_timestamp_with_scale(self):
+        e = self._e(dialect="db2")
+        result = e._build_data_type_string("TIMESTAMP", 26, 6)
+        self.assertEqual(result, "TIMESTAMP(6)")
+
+    def test_sqlserver_datetime2_with_scale(self):
+        e = self._e(dialect="sqlserver")
+        result = e._build_data_type_string("DATETIME2", 10, 7)
+        self.assertEqual(result, "DATETIME2(7)")
 
     def test_non_char_type_size_not_appended_without_digits(self):
         """INTEGER with size=10, digits=0 — no parens appended."""
@@ -136,6 +157,24 @@ class TestDetectIdentity(unittest.TestCase):
         e = self._e()
         self.assertFalse(e._detect_identity(None, "id", None))
 
+    def test_db2_identity_from_catalog_set(self):
+        e = self._e(dialect="db2")
+        db2_identity_cols = {"ID", "USER_ID"}
+        self.assertTrue(e._detect_identity("NO", "ID", db2_identity_cols))
+
+    def test_db2_identity_case_insensitive(self):
+        e = self._e(dialect="db2")
+        db2_identity_cols = {"ID"}
+        self.assertTrue(e._detect_identity("NO", "id", db2_identity_cols))
+
+    def test_db2_not_in_catalog_returns_false(self):
+        e = self._e(dialect="db2")
+        db2_identity_cols = {"OTHER_COL"}
+        self.assertFalse(e._detect_identity("NO", "id", db2_identity_cols))
+
+    def test_db2_catalog_none_falls_back_to_jdbc_flag(self):
+        e = self._e(dialect="db2")
+        self.assertFalse(e._detect_identity("NO", "id", None))
 
 
 # --- _detect_computed_column ---
@@ -165,6 +204,17 @@ class TestDetectComputedColumn(unittest.TestCase):
         result = e._detect_computed_column("YES", "GENERATED ALWAYS AS (col1 + col2)", False)
         self.assertTrue(result)
 
+    def test_db2_identity_column_not_computed(self):
+        """DB2 marks IDENTITY columns as generated — should not be computed."""
+        e = self._e(dialect="db2")
+        result = e._detect_computed_column("YES", None, True)
+        self.assertFalse(result)
+
+    def test_db2_non_identity_generated_is_computed(self):
+        """DB2 non-identity generated column should remain computed."""
+        e = self._e(dialect="db2")
+        result = e._detect_computed_column("YES", None, False)
+        self.assertTrue(result)
 
 
 # --- get_columns() integration ---
@@ -256,6 +306,24 @@ class TestGetColumnsIntegration(unittest.TestCase):
 
 
 class TestEnhanceWithVendorQueries(unittest.TestCase):
+    def test_sqlserver_enhances_default_values(self):
+        vq = MagicMock()
+        vq.get_column_defaults_query.return_value = ("SELECT 1", [])
+        extractor = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+
+        # Create fake column with no default
+        from core.sql_model.base import SqlColumn
+
+        col = SqlColumn(
+            name="created_at", data_type="DATETIME2", is_nullable=True, dialect="sqlserver"
+        )
+
+        extractor.provider.query_executor.execute_query.return_value = [
+            {"column_name": "created_at", "default_value": "(getdate())"}
+        ]
+        result = extractor._enhance_with_vendor_queries("dbo", "orders", [col])
+        self.assertEqual(result[0].default_value, "getdate()")
+
     def test_non_sqlserver_returns_columns_unchanged(self):
         extractor = _make_extractor(dialect="postgresql")
         from core.sql_model.base import SqlColumn
@@ -264,3 +332,30 @@ class TestEnhanceWithVendorQueries(unittest.TestCase):
         result = extractor._enhance_with_vendor_queries("public", "t", [col])
         self.assertEqual(result, [col])
 
+    def test_sqlserver_no_vendor_queries_returns_unchanged(self):
+        extractor = _make_extractor(dialect="sqlserver", vendor_queries=None)
+        from core.sql_model.base import SqlColumn
+
+        col = SqlColumn(name="id", data_type="int", is_nullable=False, dialect="sqlserver")
+        result = extractor._enhance_with_vendor_queries("dbo", "t", [col])
+        self.assertEqual(result, [col])
+
+    def test_sqlserver_does_not_override_existing_default(self):
+        vq = MagicMock()
+        vq.get_column_defaults_query.return_value = ("SELECT 1", [])
+        extractor = _make_extractor(dialect="sqlserver", vendor_queries=vq)
+        from core.sql_model.base import SqlColumn
+
+        col = SqlColumn(
+            name="status",
+            data_type="VARCHAR(10)",
+            is_nullable=True,
+            default_value="'active'",
+            dialect="sqlserver",
+        )
+        extractor.provider.query_executor.execute_query.return_value = [
+            {"column_name": "status", "default_value": "('pending')"}
+        ]
+        result = extractor._enhance_with_vendor_queries("dbo", "orders", [col])
+        # Existing default preserved
+        self.assertEqual(result[0].default_value, "'active'")

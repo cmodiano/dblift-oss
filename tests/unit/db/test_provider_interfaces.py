@@ -128,6 +128,42 @@ class TestCannotInstantiateABCs:
 # ---------------------------------------------------------------------------
 
 
+class TestNativeProviderImplementsAllInterfaces:
+    @pytest.mark.parametrize("interface", ALL_INTERFACES, ids=lambda i: i.__name__)
+    def test_db2_implements_interface(self, interface):
+        from db.plugins.db2.provider import Db2Provider
+
+        assert issubclass(Db2Provider, interface)
+        assert issubclass(Db2Provider, NativeProvider)
+
+    @pytest.mark.parametrize("interface", ALL_INTERFACES, ids=lambda i: i.__name__)
+    def test_oracle_implements_interface(self, interface):
+        from db.plugins.oracle.provider import OracleProvider
+
+        assert issubclass(OracleProvider, interface)
+        assert issubclass(OracleProvider, NativeProvider)
+
+
+# ---------------------------------------------------------------------------
+# T5.1 (suite) — CosmosDbProvider est instanceof BaseProvider
+# ---------------------------------------------------------------------------
+
+
+class TestCosmosDbProviderInheritance:
+    def test_cosmosdb_is_subclass_of_base_provider(self):
+        from db.plugins.cosmosdb.provider import CosmosDbProvider
+
+        assert issubclass(CosmosDbProvider, BaseProvider)
+
+    def test_cosmosdb_is_subclass_of_all_interfaces(self):
+        from db.plugins.cosmosdb.provider import CosmosDbProvider
+
+        for interface in ALL_INTERFACES:
+            assert issubclass(
+                CosmosDbProvider, interface
+            ), f"CosmosDbProvider should be subclass of {interface.__name__}"
+
+
 class TestSQLiteProviderInheritance:
     def test_sqlite_is_subclass_of_base_provider(self):
         from db.plugins.sqlite.provider import SQLiteProvider
@@ -160,20 +196,50 @@ class TestMySqlProviderInheritance:
             ), f"MySqlProvider should be subclass of {interface.__name__}"
 
 
+class TestSqlServerProviderInheritance:
+    def test_sqlserver_is_subclass_of_base_provider(self):
+        from db.plugins.sqlserver.provider import SqlServerProvider
+
+        assert issubclass(SqlServerProvider, BaseProvider)
+        assert issubclass(SqlServerProvider, NativeProvider)
+
+    def test_sqlserver_is_subclass_of_all_interfaces(self):
+        from db.plugins.sqlserver.provider import SqlServerProvider
+
+        for interface in ALL_INTERFACES:
+            assert issubclass(
+                SqlServerProvider, interface
+            ), f"SqlServerProvider should be subclass of {interface.__name__}"
+
+
+# ---------------------------------------------------------------------------
+# T5.2 — CosmosDbProvider.supports_transactions() → False
+# ---------------------------------------------------------------------------
+
+
+class TestCosmosDbSupportsTransactions:
+    def test_supports_transactions_returns_false(self):
+        from db.plugins.cosmosdb.provider import CosmosDbProvider
+
+        # Use __new__ to avoid __init__ dependencies
+        provider = CosmosDbProvider.__new__(CosmosDbProvider)
+        assert provider.supports_transactions() is False
+
+
 # ---------------------------------------------------------------------------
 # T5.3 — Tests native supports_transactions() → True for relational providers
 # ---------------------------------------------------------------------------
 
 
 class TestNativeSupportsTransactions:
-    def test_postgresql_supports_transactions(self):
-        from db.plugins.postgresql.provider import PostgreSqlProvider
+    def test_db2_supports_transactions(self):
+        from db.plugins.db2.provider import Db2Provider
 
-        provider = PostgreSqlProvider.__new__(PostgreSqlProvider)
+        provider = Db2Provider.__new__(Db2Provider)
         assert provider.supports_transactions() is True
 
-    def test_mysql_supports_transactions(self):
-        from db.plugins.mysql.provider import MySqlProvider
+    def test_oracle_supports_transactions(self):
+        from db.plugins.oracle.provider import OracleProvider
 
-        provider = MySqlProvider.__new__(MySqlProvider)
+        provider = OracleProvider.__new__(OracleProvider)
         assert provider.supports_transactions() is True

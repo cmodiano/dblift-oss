@@ -166,6 +166,19 @@ class TestUserDefinedType:
         assert "attr2" in result
         assert "INTEGER" in result
 
+    def test_generate_basic_create_statement_composite_oracle_object(self):
+        """Test basic create statement for Oracle OBJECT type."""
+        udt = UserDefinedType(
+            "test_type",
+            "OBJECT",
+            attributes=[{"name": "attr1", "type": "INTEGER"}],
+            dialect="oracle",
+        )
+        result = udt._generate_basic_create_statement()
+        assert "CREATE TYPE" in result
+        assert "OBJECT" in result
+        assert "AS" in result
+
     def test_generate_basic_create_statement_enum(self):
         """Test basic create statement for enum type."""
         udt = UserDefinedType(
@@ -191,6 +204,13 @@ class TestUserDefinedType:
         assert "CREATE DOMAIN" in result
         assert "AS INTEGER" in result
         assert "CHECK" in result
+
+    def test_generate_basic_create_statement_distinct_sqlserver(self):
+        """Test basic create statement for distinct type (SQL Server)."""
+        udt = UserDefinedType("test_type", "DISTINCT", base_type="VARCHAR(50)", dialect="sqlserver")
+        result = udt._generate_basic_create_statement()
+        assert "CREATE TYPE" in result
+        assert "FROM VARCHAR(50)" in result
 
     def test_generate_basic_create_statement_distinct_other(self):
         """Test basic create statement for distinct type (non-SQL Server)."""

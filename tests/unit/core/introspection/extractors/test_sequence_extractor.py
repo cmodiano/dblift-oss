@@ -172,6 +172,33 @@ class TestSequenceExtractorCycle(unittest.TestCase):
         self.assertFalse(seqs[0].cycle)
 
 
+class TestSequenceExtractorOracleFilter(unittest.TestCase):
+    def test_oracle_iseq_sequences_are_skipped(self):
+        vq, _ = _simple_vq([])
+        extractor = _make_extractor(dialect="oracle", vendor_queries=vq)
+        extractor.provider.query_executor.execute_query.return_value = [
+            {
+                "sequence_name": "ISEQ$$_12345",
+                "last_number": "1",
+                "increment_by": "1",
+                "min_value": "1",
+                "max_value": "9999",
+                "cycle_flag": "N",
+                "cache_size": None,
+            },
+            {
+                "sequence_name": "my_seq",
+                "last_number": "1",
+                "increment_by": "1",
+                "min_value": "1",
+                "max_value": "9999",
+                "cycle_flag": "N",
+                "cache_size": None,
+            },
+        ]
+        seqs = extractor.get_sequences("myschema")
+        self.assertEqual(len(seqs), 1)
+        self.assertEqual(seqs[0].name, "my_seq")
 
 
 class TestSequenceExtractorPostgresqlTemp(unittest.TestCase):

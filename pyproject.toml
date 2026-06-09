@@ -43,6 +43,10 @@ postgresql = "db.plugins.postgresql.plugin:PLUGIN"
 mysql = "db.plugins.mysql.plugin:PLUGIN"
 mariadb = "db.plugins.mariadb.plugin:PLUGIN"
 sqlite = "db.plugins.sqlite.plugin:PLUGIN"
+oracle = "db.plugins.oracle.plugin:PLUGIN"
+sqlserver = "db.plugins.sqlserver.plugin:PLUGIN"
+db2 = "db.plugins.db2.plugin:PLUGIN"
+cosmosdb = "db.plugins.cosmosdb.plugin:PLUGIN"
 
 [project.entry-points."dblift.commands"]
 builtin = "cli.extensions:register_builtin_command_extensions"
@@ -84,7 +88,11 @@ dev = [
 postgresql = ["psycopg[binary]>=3.1"]
 mysql = ["PyMySQL>=1.1"]
 mariadb = ["PyMySQL>=1.1"]
-all = ["dblift[postgresql,mysql,mariadb]"]
+oracle = ["oracledb>=2.0"]
+sqlserver = ["pymssql>=2.2"]
+db2 = ["ibm_db>=3.2", "ibm_db_sa>=0.4"]
+cosmosdb = ["azure-cosmos>=4.5"]
+all = ["dblift[postgresql,mysql,mariadb,oracle,sqlserver,db2,cosmosdb]"]
 
 [tool.setuptools]
 # Use find directive to automatically discover all packages

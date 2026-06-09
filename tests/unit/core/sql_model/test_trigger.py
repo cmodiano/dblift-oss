@@ -7,6 +7,26 @@ from core.sql_model.trigger import Trigger
 pytestmark = [pytest.mark.unit]
 
 
+def test_oracle_trigger_body_is_wrapped_and_terminated():
+    trigger = Trigger(
+        name="TRG_CUSTOMERS_AUDIT",
+        table_name="CUSTOMERS",
+        schema="DBLIFT_TEST",
+        timing="AFTER",
+        events=["UPDATE"],
+        orientation="ROW",
+        dialect="oracle",
+        definition="INSERT INTO audit_log(customer_id) VALUES (:NEW.customer_id)",
+    )
+
+    sql = trigger.create_statement
+
+    assert "CREATE TRIGGER" in sql
+    assert "BEGIN" in sql
+    assert "END;" in sql
+    assert sql.strip().endswith("/")
+
+
 def test_mysql_trigger_definer_is_quoted():
     trigger = Trigger(
         name="trg_users_updated_at",

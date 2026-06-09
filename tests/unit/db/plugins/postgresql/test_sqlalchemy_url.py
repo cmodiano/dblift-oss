@@ -210,15 +210,10 @@ def test_postgresql_field_based_config_validates(_reset_registry) -> None:
         )
     )
 
-    valid, error = ProviderRegistry.validate_database_configuration(config)
-    # In environments where psycopg is not installed the driver check fails;
-    # what matters is that a field-based config (no URL) is not rejected on
-    # structural grounds alone.
-    psycopg_installed = importlib.util.find_spec("psycopg") is not None
-    if psycopg_installed:
-        assert valid is True and error is None
-    else:
-        assert error is None or "psycopg" in (error or "")
+    valid, msg = ProviderRegistry.validate_database_configuration(config)
+    if importlib.util.find_spec("psycopg") is None:
+        pytest.skip("psycopg not installed")
+    assert (valid, msg) == (True, None)
 
 
 def test_dblift_config_accepts_field_based_postgresql_without_url(_reset_registry) -> None:

@@ -51,19 +51,32 @@ class TestSqlParserFactory:
 
         ProviderRegistry.discover_plugins()
         for dialect in (
+            "oracle",
+            "sqlserver",
+            "db2",
             "postgresql",
             "mysql",
+            "cosmosdb",
             "sqlite",
         ):
             cls = ProviderRegistry.get_quirks(dialect).parser_class("hybrid")
             assert cls is not None, f"{dialect} hybrid parser_class is None"
+
+    def test_regex_parser_map_contains_cosmosdb(self):
+        """CosmosDB migrations use the regex parser path during validation."""
+        factory = SqlParserFactory("cosmosdb", parser_type="regex")
+
+        parser = factory.get_parser()
+
+        assert parser.__class__.__name__ == "CosmosDbRegexParser"
+        assert parser.dialect_name == "cosmosdb"
 
     def test_hybrid_parser_class_is_HybridParser_for_jdbc_dialects(self):
         """Story 26-9: most dialects route ``hybrid`` to HybridParser."""
         from core.sql_parser.hybrid_parser import HybridParser
         from db.provider_registry import ProviderRegistry
 
-        for dialect in ("postgresql", "mysql"):
+        for dialect in ("oracle", "sqlserver", "db2", "postgresql", "mysql", "cosmosdb"):
             cls = ProviderRegistry.get_quirks(dialect).parser_class("hybrid")
             assert cls is HybridParser, f"{dialect}: expected HybridParser, got {cls!r}"
 
@@ -463,13 +476,13 @@ class TestSqlParserFactory:
         factory = SqlParserFactory("postgresql")
         from db.provider_registry import ProviderRegistry
 
-        quirks = ProviderRegistry.get_quirks("postgresql")
+        quirks = ProviderRegistry.get_quirks("oracle")
         with patch.object(quirks, "parser_class", side_effect=Exception("Boom")):
             with pytest.raises(
                 ParserNotAvailableError,
-                match="No hybrid parser available for dialect postgresql",
+                match="No hybrid parser available for dialect oracle",
             ):
-                factory.get_parser("postgresql")
+                factory.get_parser("oracle")
 
     def test_get_parser_unknown_dialect_fallback(self):
         """Test get_parser for unknown dialect throws error."""
@@ -479,13 +492,13 @@ class TestSqlParserFactory:
             factory.get_parser("unknown_dialect")
 
     def test_get_parser_normalises_dialect_to_lowercase(self):
-        """``get_parser("POSTGRESQL")`` resolves the same plugin as
-        ``get_parser("postgresql")``. Case-insensitive lookup happens
+        """``get_parser("ORACLE")`` resolves the same plugin as
+        ``get_parser("oracle")``. Case-insensitive lookup happens
         inside ``ProviderRegistry.get_quirks``."""
         from core.sql_parser.hybrid_parser import HybridParser
 
         factory = SqlParserFactory("postgresql")
-        parser = factory.get_parser("POSTGRESQL")
+        parser = factory.get_parser("ORACLE")
         assert isinstance(parser, HybridParser)
 
     def test_parse_sql_error_handling_no_parser_creation(self):

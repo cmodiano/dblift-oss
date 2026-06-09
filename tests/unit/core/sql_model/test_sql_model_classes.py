@@ -83,6 +83,9 @@ class TestSqlObject:
         obj.dialect = "mysql"
         assert obj.format_identifier("column_name") == "`column_name`"
 
+        obj.dialect = "sqlserver"
+        assert obj.format_identifier("column_name") == "[column_name]"
+
     def test_property_explicit_marking(self):
         """Test marking properties as explicit."""
         obj = SqlObject("test_object", SqlObjectType.TABLE)
@@ -583,6 +586,23 @@ class TestTable:
         primary_key = table.get_primary_key()
         assert primary_key == pk_constraint
 
+    def test_table_with_storage_parameters(self):
+        """Test table with storage parameters (Oracle/DB2)."""
+        table = Table.from_options(
+            "users",
+            schema="PUBLIC",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=10, pctused=40, initial=65536, next=65536
+                )
+            ),
+        )
+
+        assert table.pctfree == 10
+        assert table.pctused == 40
+        assert table.initial == 65536
+        assert table.next == 65536
 
     def test_table_with_inheritance(self):
         """Test table with inheritance (PostgreSQL)."""
@@ -597,6 +617,30 @@ class TestTable:
 
         assert table.inherits == ["parent_table1", "parent_table2"]
 
+    def test_table_storage_parameters_serialization(self):
+        """Test table storage parameters in to_dict and from_dict."""
+        table = Table.from_options(
+            "users",
+            schema="PUBLIC",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=10, pctused=40, initial=65536, next=65536
+                )
+            ),
+        )
+        data = table.to_dict()
+
+        assert data.get("pctfree") == 10
+        assert data.get("pctused") == 40
+        assert data.get("initial") == 65536
+        assert data.get("next") == 65536
+
+        restored = Table.from_dict(data)
+        assert restored.pctfree == 10
+        assert restored.pctused == 40
+        assert restored.initial == 65536
+        assert restored.next == 65536
 
     def test_table_inheritance_serialization(self):
         """Test table inheritance in to_dict and from_dict."""
@@ -615,6 +659,24 @@ class TestTable:
         restored = Table.from_dict(data)
         assert restored.inherits == ["parent_table1", "parent_table2"]
 
+    def test_table_metadata_round_trips(self):
+        """metadata (e.g. CosmosDB partition_key) must survive to_dict/from_dict."""
+        table = Table("users", dialect="cosmosdb")
+        table.metadata = {"partition_key": "/userId"}
+
+        data = table.to_dict()
+        assert data.get("metadata") == {"partition_key": "/userId"}
+
+        restored = Table.from_dict(data)
+        assert restored.metadata == {"partition_key": "/userId"}
+
+    def test_table_metadata_empty_by_default(self):
+        """metadata defaults to empty dict — from_dict with no key returns {}."""
+        table = Table("orders", dialect="cosmosdb")
+        data = table.to_dict()
+        data.pop("metadata", None)  # simulate old snapshot without metadata key
+        restored = Table.from_dict(data)
+        assert restored.metadata == {}
 
     def test_table_foreign_key_operations(self):
         """Test foreign key operations."""
@@ -830,6 +892,28 @@ class TestSqlModelIntegration:
         assert table.get_column("data").data_type == "JSONB"
         assert table.get_column("point").data_type == "POINT"
 
+        # Test SQL Server types
+        table = Table("test_table", schema="dbo")
+        table.dialect = "sqlserver"
+        table.add_column(SqlColumn("id", "UNIQUEIDENTIFIER"))
+        table.add_column(SqlColumn("data", "NVARCHAR(MAX)"))
+        table.add_column(SqlColumn("xml_data", "XML"))
+
+        assert table.get_column("id").data_type == "UNIQUEIDENTIFIER"
+        assert table.get_column("data").data_type == "NVARCHAR(MAX)"
+        assert table.get_column("xml_data").data_type == "XML"
+
+        # Test Oracle types
+        table = Table("test_table", schema="SCHEMA")
+        table.dialect = "oracle"
+        table.add_column(SqlColumn("id", "NUMBER(19)"))
+        table.add_column(SqlColumn("data", "CLOB"))
+        table.add_column(SqlColumn("raw_data", "RAW(2000)"))
+
+        assert table.get_column("id").data_type == "NUMBER(19)"
+        assert table.get_column("data").data_type == "CLOB"
+        assert table.get_column("raw_data").data_type == "RAW(2000)"
+
     def test_dialect_specific_constraints(self):
         """Test dialect-specific constraint handling."""
         # Test PostgreSQL constraints
@@ -855,6 +939,45 @@ class TestSqlModelIntegration:
         assert len(table.constraints) == 2
         assert any(c.constraint_type == ConstraintType.EXCLUDE for c in table.constraints)
 
+        # Test SQL Server constraints
+        table = Table("test_table", schema="dbo")
+        table.dialect = "sqlserver"
+        table.add_constraint(
+            SqlConstraint(
+                ConstraintType.DEFAULT,
+                "df_created_date",
+                ["created_date"],
+                check_expression="GETDATE()",
+            )
+        )
+        table.add_constraint(
+            SqlConstraint(
+                ConstraintType.CHECK,
+                "ck_status",
+                ["status"],
+                check_expression="status IN ('Active', 'Inactive')",
+            )
+        )
+
+        assert len(table.constraints) == 2
+        assert any(c.constraint_type == ConstraintType.DEFAULT for c in table.constraints)
+
+        # Test Oracle constraints
+        table = Table("test_table", schema="SCHEMA")
+        table.dialect = "oracle"
+        table.add_constraint(
+            SqlConstraint(
+                ConstraintType.CHECK,
+                "ck_valid_date",
+                ["event_date"],
+                check_expression="event_date >= TRUNC(SYSDATE)",
+            )
+        )
+        table.add_constraint(SqlConstraint(ConstraintType.UNIQUE, "uk_code", ["code"]))
+
+        assert len(table.constraints) == 2
+        # Note: deferrable attribute was removed from SqlConstraint class
+
     def test_dialect_specific_indexes(self):
         """Test dialect-specific index handling."""
         # Test PostgreSQL indexes
@@ -868,6 +991,28 @@ class TestSqlModelIntegration:
         assert index.where_clause == "data IS NOT NULL"
         assert index.include_columns == ["id"]
 
+        # Test SQL Server indexes
+        index = Index("idx_include_cols", "test_table", ["name"], schema="dbo")
+        index.dialect = "sqlserver"
+        index.include_columns = ["created_date", "modified_date"]
+        index.where_clause = "is_deleted = 0"
+        index.with_options = "PAD_INDEX = ON, FILLFACTOR = 90"
+
+        assert len(index.include_columns) == 2
+        assert index.where_clause == "is_deleted = 0"
+        assert "FILLFACTOR = 90" in index.with_options
+
+        # Test Oracle indexes
+        index = Index("idx_bitmap", "test_table", ["status"], schema="SCHEMA")
+        index.dialect = "oracle"
+        index.index_type = "BITMAP"
+        index.tablespace = "IDX_TBS"
+        index.parallel_degree = 4
+
+        assert index.index_type == "BITMAP"
+        assert index.tablespace == "IDX_TBS"
+        assert index.parallel_degree == 4
+
     def test_dialect_specific_views(self):
         """Test dialect-specific view handling."""
         # Test PostgreSQL views
@@ -880,6 +1025,26 @@ class TestSqlModelIntegration:
         assert view.materialized is True
         assert "fillfactor=70" in view.with_options
         assert view.tablespace == "mv_tbs"
+
+        # Test SQL Server views
+        view = View("user_stats", "dbo", "SELECT * FROM users")
+        view.dialect = "sqlserver"
+        view.with_options = "WITH SCHEMABINDING, VIEW_METADATA"
+        view.check_option = "WITH CHECK OPTION"
+
+        assert "SCHEMABINDING" in view.with_options
+        assert view.check_option == "WITH CHECK OPTION"
+
+        # Test Oracle views
+        view = View("dept_summary", "SCHEMA", "SELECT * FROM departments")
+        view.dialect = "oracle"
+        view.force = True
+        view.with_read_only = True
+        view.with_check_option = "WITH CHECK OPTION CONSTRAINT ck_dept"
+
+        assert view.force is True
+        assert view.with_read_only is True
+        assert "CONSTRAINT ck_dept" in view.with_check_option
 
     def test_dialect_specific_sequences(self):
         """Test dialect-specific sequence handling."""
@@ -899,6 +1064,21 @@ class TestSqlModelIntegration:
         assert sequence.start_with == 100
         assert sequence.cache == 20
         assert sequence.cycle is True
+
+        # Test Oracle sequences
+        sequence = Sequence("order_seq", "SCHEMA")
+        sequence.dialect = "oracle"
+        sequence.increment = 5
+        sequence.start_with = 1000
+        sequence.cache = 50
+        sequence.order = True
+        sequence.cycle = False
+
+        assert sequence.increment == 5
+        assert sequence.start_with == 1000
+        assert sequence.cache == 50
+        assert sequence.order is True
+        assert sequence.cycle is False
 
 
 class TestSqlConstraintFromDictReferenceSchema:
@@ -936,4 +1116,102 @@ class TestTableEqComment:
         assert t1 != t2
 
 
+class TestTableEqOracleStorageParams:
+    """Tests for NEW-BUG-23: Table.__eq__ includes Oracle storage params."""
 
+    def test_table_eq_oracle_storage_params_differ(self):
+        """Two tables with different Oracle storage params should not be equal."""
+        t1 = Table.from_options(
+            name="orders",
+            schema="hr",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=10, pctused=40, initial=65536, next=65536
+                )
+            ),
+        )
+        t2 = Table.from_options(
+            name="orders",
+            schema="hr",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=20, pctused=50, initial=131072, next=131072
+                )
+            ),
+        )
+        assert t1 != t2
+
+    def test_table_eq_oracle_storage_params_same(self):
+        """Two tables with identical Oracle storage params should be equal."""
+        t1 = Table.from_options(
+            name="orders",
+            schema="hr",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=10, pctused=40, initial=65536, next=65536
+                )
+            ),
+        )
+        t2 = Table.from_options(
+            name="orders",
+            schema="hr",
+            dialect="oracle",
+            options=TableOptions(
+                oracle_storage=OracleStorageOptions(
+                    pctfree=10, pctused=40, initial=65536, next=65536
+                )
+            ),
+        )
+        assert t1 == t2
+
+    def test_table_eq_export_partitions_differ(self):
+        """Two tables with different export_partitions should not be equal."""
+        from core.sql_model.partition import Partition
+
+        p1 = Partition(
+            name="p1", table="sales", partition_method="RANGE", partition_description="100"
+        )
+        p2 = Partition(
+            name="p2", table="sales", partition_method="RANGE", partition_description="200"
+        )
+        t1 = Table(name="sales", schema="hr", dialect="oracle", export_partitions=[p1])
+        t2 = Table(name="sales", schema="hr", dialect="oracle", export_partitions=[p2])
+        assert t1 != t2
+
+
+class TestTableCheckExprParenStripping:
+    """Tests for NEW-BUG-18: generate_alter_table_check_constraints uses depth-based stripping."""
+
+    def _make_check_table(self, expr):
+        from core.sql_model.base import ConstraintType, SqlConstraint
+        from core.sql_model.table import Table
+
+        c = SqlConstraint(constraint_type=ConstraintType.CHECK, check_expression=expr)
+        return Table(name="t", constraints=[c], dialect="db2")
+
+    def test_simple_outer_parens_stripped_in_sql(self):
+        """(a > 0) outer parens are stripped → CHECK (a > 0) not CHECK ((a > 0))."""
+        table = self._make_check_table("(a > 0)")
+        sql_list = table.generate_alter_table_check_constraints()
+        assert len(sql_list) == 1
+        assert "CHECK (a > 0)" in sql_list[0]
+        assert "CHECK ((a > 0))" not in sql_list[0]
+
+    def test_function_call_outer_parens_stripped(self):
+        """(func(a, b) > 0) — old count()==1 would NOT strip (count=2); depth algo does."""
+        table = self._make_check_table("(func(a, b) > 0)")
+        sql_list = table.generate_alter_table_check_constraints()
+        assert len(sql_list) == 1
+        # Outer parens stripped → CHECK (func(a, b) > 0)
+        assert "CHECK (func(a, b) > 0)" in sql_list[0]
+
+    def test_separate_paren_groups_not_stripped(self):
+        """(a) + (b) must NOT be stripped — depth goes negative during inner scan."""
+        table = self._make_check_table("(a) + (b)")
+        sql_list = table.generate_alter_table_check_constraints()
+        assert len(sql_list) == 1
+        # Outer parens not stripped since inner scan reveals unbalanced depth
+        assert "CHECK ((a) + (b))" in sql_list[0]

@@ -43,6 +43,20 @@ def test_sql_insights_available_uses_self_dialect():
     )
 
 
+def test_sql_analyzer_sqlserver_dialect_recognized():
+    """Regression : le split SQL Server GO-splitting fonctionne avec dialect='sqlserver'."""
+    analyzer = SqlAnalyzer(dialect="sqlserver")
+    sql = "SELECT 1\nGO\nSELECT 2"
+    stmts = analyzer.split_statements(sql)
+    assert len(stmts) == 2, f"Expected 2 statements after GO split, got {len(stmts)}: {stmts}"
+
+
+def test_sql_insights_not_available_for_db2():
+    """Regression : db2 dialect -> available=False (self.dialect != 'db2' check)."""
+    insights = SqlInsights(dialect="db2")
+    assert not insights.available
+
+
 def test_sql_insights_available_for_supported_dialect():
     """AC#3 positif : dialect supporté -> available == SQLGLOT_AVAILABLE."""
     from core.migration.sql.sql_insights import SQLGLOT_AVAILABLE

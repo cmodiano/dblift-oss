@@ -416,6 +416,13 @@ class TestReverseInsertFromParsed:
         result = gen._reverse_insert_from_parsed(stmt)
         assert result is not None
 
+    def test_insert_with_oracle_dialect(self):
+        # Oracle dialect
+        gen = make_generator(dialect="oracle")
+        stmt = make_stmt("INSERT INTO users (id, name) VALUES (1, 'Carol');")
+        result = gen._reverse_insert_from_parsed(stmt)
+        assert result is not None
+
     def test_insert_no_where_clause_extracted(self):
         # Complex INSERT that cannot generate WHERE → warning (lines 593-598)
         gen = make_generator()
