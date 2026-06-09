@@ -37,11 +37,8 @@ class TestSqlLinter:
             patch("core.sql_validator.linting.sql_linter.Linter"),
         ):
             linter = SqlLinter(dialect="postgresql")
-            assert linter._normalize_dialect("oracle") == "oracle"
             assert linter._normalize_dialect("postgresql") == "postgres"
-            assert linter._normalize_dialect("sqlserver") == "tsql"
             assert linter._normalize_dialect("mysql") == "mysql"
-            assert linter._normalize_dialect("db2") == "db2"
             assert linter._normalize_dialect("sqlite") == "sqlite"
             assert linter._normalize_dialect("sqlite3") == "sqlite"
 

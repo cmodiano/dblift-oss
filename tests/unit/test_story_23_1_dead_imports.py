@@ -35,8 +35,6 @@ def test_cli_main_exposes_private_parser_helpers_as_reexports():
     for name in [
         "_add_baseline_options",
         "_add_diff_and_target_options",
-        "_add_validate_sql_options",
-        "_setup_export_schema_options",
     ]:
         assert hasattr(mod, name), (
             f"{name} must be accessible in cli.main namespace "

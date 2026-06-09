@@ -32,24 +32,6 @@ class TestIdentifierNormalizer:
         assert result.was_quoted is True
         assert result.case_sensitive is True
 
-    def test_normalize_oracle_unquoted(self):
-        """Test Oracle unquoted identifier normalization (uppercase)."""
-        normalizer = IdentifierNormalizer("oracle")
-
-        result = normalizer.normalize("mytable")
-        assert result.normalized == "MYTABLE"
-        assert result.original == "mytable"
-        assert result.was_quoted is False
-
-    def test_normalize_oracle_quoted(self):
-        """Test Oracle quoted identifier normalization (preserve case)."""
-        normalizer = IdentifierNormalizer("oracle")
-
-        result = normalizer.normalize('"MyTable"')
-        assert result.normalized == "MyTable"
-        assert result.original == '"MyTable"'
-        assert result.was_quoted is True
-
     def test_normalize_mysql_backticks(self):
         """Test MySQL backtick-quoted identifiers."""
         normalizer = IdentifierNormalizer("mysql")
@@ -57,15 +39,6 @@ class TestIdentifierNormalizer:
         result = normalizer.normalize("`MyTable`")
         assert result.normalized == "MyTable"
         assert result.original == "`MyTable`"
-        assert result.was_quoted is True
-
-    def test_normalize_sqlserver_brackets(self):
-        """Test SQL Server bracket-quoted identifiers."""
-        normalizer = IdentifierNormalizer("sqlserver")
-
-        result = normalizer.normalize("[MyTable]")
-        assert result.normalized == "MyTable"
-        assert result.original == "[MyTable]"
         assert result.was_quoted is True
 
     def test_normalize_qualified_name(self):
@@ -139,10 +112,7 @@ class TestIdentifierNormalizer:
     def test_get_quote_chars(self):
         """Test getting quote characters for dialects."""
         assert IdentifierNormalizer.get_quote_chars("postgresql") == ('"', '"')
-        assert IdentifierNormalizer.get_quote_chars("oracle") == ('"', '"')
         assert IdentifierNormalizer.get_quote_chars("mysql") == ("`", "`")
-        assert IdentifierNormalizer.get_quote_chars("sqlserver") == ("[", "]")
-        assert IdentifierNormalizer.get_quote_chars("db2") == ('"', '"')
 
     def test_normalized_identifier_to_sql(self):
         """Test NormalizedIdentifier.to_sql() method."""
@@ -165,4 +135,3 @@ class TestIdentifierNormalizer:
         )
         assert norm_id.to_sql("postgresql") == '"MyTable"'
         assert norm_id.to_sql("mysql") == "`MyTable`"
-        assert norm_id.to_sql("sqlserver") == "[MyTable]"

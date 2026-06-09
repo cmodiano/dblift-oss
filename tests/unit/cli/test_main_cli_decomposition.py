@@ -8,11 +8,10 @@ import pytest
 
 pytestmark = [pytest.mark.unit]
 
-from cli.main import (
-    _AVAILABLE_COMMANDS,
+from cli._command_handlers import _AVAILABLE_COMMANDS
+from cli._config_helpers import _collect_placeholders, _extract_commands_from_argv
+from cli._parser_setup import (
     _add_validate_sql_options,
-    _collect_placeholders,
-    _extract_commands_from_argv,
     _setup_export_schema_options,
     create_parser,
 )

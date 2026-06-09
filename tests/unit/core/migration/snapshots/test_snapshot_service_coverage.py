@@ -585,20 +585,6 @@ class TestBuildPayload(unittest.TestCase):
 
         svc.log.warning.assert_called()
 
-    def test_build_payload_db2_rollback_via_provider(self):
-        """Lines 421-428: DB2 dialect triggers rollback_transaction in finally."""
-        svc, config, provider = _make_service(dialect="db2")
-        svc._collect_migration_metadata = MagicMock(return_value={})
-        svc._validate_snapshot_accuracy = MagicMock()
-
-        introspector = _FakeIntrospectorBase()
-        provider.rollback_transaction = MagicMock()
-
-        with self._patch_factory(introspector):
-            svc._build_payload()
-
-        provider.rollback_transaction.assert_called_once()
-
     def test_build_payload_mysql_rollback_via_provider(self):
         """Lines 421-428: MySQL dialect triggers rollback_transaction in finally."""
         svc, config, provider = _make_service(dialect="mysql")
@@ -612,26 +598,6 @@ class TestBuildPayload(unittest.TestCase):
             svc._build_payload()
 
         provider.rollback_transaction.assert_called_once()
-
-    def test_build_payload_db2_direct_connection_rollback(self):
-        """Lines 430-441: DB2 uses direct connection rollback when no rollback_transaction."""
-        svc, config, provider = _make_service(dialect="db2")
-        svc._collect_migration_metadata = MagicMock(return_value={})
-        svc._validate_snapshot_accuracy = MagicMock()
-
-        conn = MagicMock()
-        conn.getAutoCommit.return_value = False
-
-        # provider has connection but no rollback_transaction
-        del provider.rollback_transaction
-        provider.connection = conn
-
-        introspector = _FakeIntrospectorBase()
-
-        with self._patch_factory(introspector):
-            svc._build_payload()
-
-        conn.rollback.assert_called_once()
 
     def test_build_payload_db2_autocommit_skips_rollback(self):
         """Lines 433: autocommit=True → skip direct rollback."""
@@ -1725,39 +1691,6 @@ class TestSnapshotConnectionContextExitException(unittest.TestCase):
 
         # The except branch (lines 69-70) was triggered if debug was called ≥2 times
         self.assertGreaterEqual(log.debug.call_count, 2)
-
-
-class TestBuildPayloadDirectConnectionRollbackException(unittest.TestCase):
-    """Cover lines 439-441: connection.rollback() raises in the try block."""
-
-    def _patch_factory(self, introspector):
-        return patch(
-            "core.migration.snapshots.schema_snapshot_service.IntrospectorFactory.create",
-            return_value=introspector,
-        )
-
-    def test_build_payload_db2_direct_rollback_raises(self):
-        """Lines 439-441: connection.rollback() raises → exception silently swallowed."""
-        svc, config, provider = _make_service(dialect="db2")
-        svc._collect_migration_metadata = MagicMock(return_value={})
-        svc._validate_snapshot_accuracy = MagicMock()
-
-        conn = MagicMock()
-        conn.getAutoCommit.return_value = False
-        conn.rollback.side_effect = RuntimeError("dead connection")
-
-        del provider.rollback_transaction
-        provider.connection = conn
-
-        introspector = _FakeIntrospectorBase()
-
-        with self._patch_factory(introspector):
-            payload = svc._build_payload()  # must not raise
-
-        # rollback was attempted and raised
-        conn.rollback.assert_called_once()
-        # payload was still returned
-        self.assertIsNotNone(payload)
 
 
 class TestEnsureCleanConnectionStateRollbackException(unittest.TestCase):

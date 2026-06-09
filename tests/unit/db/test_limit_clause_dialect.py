@@ -30,13 +30,6 @@ class TestBaseHistoryManagerRowLimitClause:
         result = BaseHistoryManager.get_row_limit_clause(manager, 1)
         assert result == "LIMIT 1"
 
-    def test_oracle_history_manager_row_limit_clause(self):
-        """OracleHistoryManager returns FETCH FIRST syntax."""
-        from db.plugins.oracle.oracle.history_manager import OracleHistoryManager
-
-        manager = MagicMock(spec=OracleHistoryManager)
-        result = OracleHistoryManager.get_row_limit_clause(manager, 1)
-        assert result == "FETCH FIRST 1 ROWS ONLY"
 
 
 # ---------------------------------------------------------------------------

@@ -60,6 +60,8 @@ class MysqlQuirks(BaseQuirks):
     view_supports_algorithm = True
     proc_skip_empty_comparison = True
     table_column_default_has_on_update = True
+    # MySQL TIMESTAMP/TIME takes only fractional-seconds precision (0-6), not size,scale.
+    time_type_supports_only_fractional_precision = True
     # Wave B hooks.
     native_driver_display = "pymysql"
     # Wave C hooks (story 26-9): migration engine transaction semantics.

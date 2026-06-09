@@ -22,12 +22,6 @@ class TestSqlglotDialectMapConsolidation:
     def test_postgresql_maps_to_postgres(self):
         assert get_sqlglot_dialect("postgresql") == "postgres"
 
-    def test_oracle_maps_to_oracle(self):
-        assert get_sqlglot_dialect("oracle") == "oracle"
-
-    def test_sqlserver_maps_to_tsql(self):
-        assert get_sqlglot_dialect("sqlserver") == "tsql"
-
     def test_mysql_maps_to_mysql(self):
         assert get_sqlglot_dialect("mysql") == "mysql"
 

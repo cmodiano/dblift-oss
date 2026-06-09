@@ -18,26 +18,12 @@ class TestSqlInsights:
         assert insights.dialect == "postgresql"
         assert insights.sqlglot_dialect == "postgres"
 
-    def test_initialization_oracle(self):
-        """Test SqlInsights initialization with Oracle dialect."""
-        insights = SqlInsights(dialect="oracle")
-
-        assert insights.dialect == "oracle"
-        assert insights.sqlglot_dialect == "oracle"
-
     def test_initialization_mysql(self):
         """Test SqlInsights initialization with MySQL dialect."""
         insights = SqlInsights(dialect="mysql")
 
         assert insights.dialect == "mysql"
         assert insights.sqlglot_dialect == "mysql"
-
-    def test_initialization_sqlserver(self):
-        """Test SqlInsights initialization with SQL Server dialect."""
-        insights = SqlInsights(dialect="sqlserver")
-
-        assert insights.dialect == "sqlserver"
-        assert insights.sqlglot_dialect == "tsql"
 
     def test_initialization_db2(self):
         """Test SqlInsights initialization with DB2 dialect (not supported)."""

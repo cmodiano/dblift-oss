@@ -29,7 +29,6 @@ from core.migration.migration import Migration
 # Helpers (mirroring test_execution_engine_extended.py for consistency)
 # ---------------------------------------------------------------------------
 
-
 def _make_engine(dialect="postgresql", with_history=False, with_config=True):
     """Build a minimal ExecutionEngine suitable for unit tests."""
     from db.provider_interfaces import TransactionalProvider
@@ -65,7 +64,6 @@ def _make_engine(dialect="postgresql", with_history=False, with_config=True):
     )
     return engine
 
-
 def _make_sql_migration(content="SELECT 1;", name="V1__test.sql", statements=None):
     m = MagicMock(spec=Migration)
     m.format = MigrationFormat.SQL
@@ -80,11 +78,9 @@ def _make_sql_migration(content="SELECT 1;", name="V1__test.sql", statements=Non
     m.parse_sql_statements.return_value = statements if statements is not None else ["SELECT 1"]
     return m
 
-
 # ---------------------------------------------------------------------------
 # execute_migration early-return when _parse_sql_statements returns None
 # ---------------------------------------------------------------------------
-
 
 class TestExecuteMigrationParseFailureEarlyReturn(unittest.TestCase):
     """Covers line 141: ``if statements is None: return`` after parse failure."""
@@ -105,11 +101,9 @@ class TestExecuteMigrationParseFailureEarlyReturn(unittest.TestCase):
         engine.provider.begin_transaction.assert_not_called()
         engine.provider.commit_transaction.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # _ensure_autocommit_for_policy short-circuit for non-transactional provider
 # ---------------------------------------------------------------------------
-
 
 class TestEnsureAutocommitNonTransactional(unittest.TestCase):
     """Covers line 220: early return when the provider is not
@@ -128,18 +122,15 @@ class TestEnsureAutocommitNonTransactional(unittest.TestCase):
 
         engine.provider.rollback_transaction.assert_not_called()
 
-
 # ---------------------------------------------------------------------------
 # _probe_dialect_key Enum normalisation + empty-string return-None
 # ---------------------------------------------------------------------------
-
 
 class _FakeDialectEnum(Enum):
     """Concrete Enum so ``isinstance(raw, Enum)`` is True (line 375)."""
 
     POSTGRES = "postgresql"
     MSSQL_ALIAS = "mssql"
-
 
 class TestProbeDialectKeyNormalize(unittest.TestCase):
     """Covers the legacy-fallback ``_normalize`` helper (lines 376 + 379)."""
@@ -152,13 +143,6 @@ class TestProbeDialectKeyNormalize(unittest.TestCase):
         engine.sql_analyzer.dialect = _FakeDialectEnum.POSTGRES
         # provider.dialect attribute also unset to make sure the first match wins.
         assert engine._probe_dialect_key() == "postgresql"
-
-    def test_enum_with_mssql_alias_canonicalised(self):
-        engine = _make_engine(with_config=False)
-        engine.provider.canonical_dialect_key = ""
-        engine.sql_analyzer.dialect = _FakeDialectEnum.MSSQL_ALIAS
-        # MSSQL_ALIAS.value == "mssql" → registry → "sqlserver"
-        assert engine._probe_dialect_key() == "sqlserver"
 
     def test_empty_string_input_normalises_to_none(self):
         # Force every signal to an empty string so ``_normalize`` exercises
@@ -176,47 +160,14 @@ class TestProbeDialectKeyNormalize(unittest.TestCase):
         engine.provider.dialect = "   "
         assert engine._probe_dialect_key() is None
 
-    def test_canonical_dialect_key_whitespace_falls_through(self):
-        # Cover the line-388 ``if isinstance(key, str) and key.strip(): ...``
-        # decision: a whitespace-only key should NOT short-circuit; the
-        # fallback cascade should run.
-        engine = _make_engine(with_config=False)
-        engine.provider.canonical_dialect_key = "   "
-        engine.sql_analyzer.dialect = "oracle"
-        assert engine._probe_dialect_key() == "oracle"
-
-    def test_provider_dialect_used_when_all_else_missing(self):
-        # ``sql_analyzer.dialect`` and ``config`` empty/None; provider.dialect
-        # provides the only signal. Exercises the final ``return _normalize(...)``.
-        engine = _make_engine(with_config=False)
-        engine.provider.canonical_dialect_key = ""
-        engine.sql_analyzer.dialect = None
-        engine.provider.dialect = "mssql"  # alias → canonicalises to sqlserver
-        assert engine._probe_dialect_key() == "sqlserver"
-
 
 # ---------------------------------------------------------------------------
 # _parse_sql_statements: mssql alias normalisation (preserves
 # behaviour: only "sqlserver" canonical name triggers the rewrite).
 # ---------------------------------------------------------------------------
 
-
 class TestParseSqlStatementsMssqlAlias(unittest.TestCase):
     """Covers the ``if canonical == 'sqlserver'`` branch in _parse_sql_statements."""
-
-    def test_mssql_config_type_value_rewrites_to_sqlserver(self):
-        engine = _make_engine()
-        engine.config.database.type.value = "mssql"
-        migration = _make_sql_migration(content="SELECT 1;")
-        result = MagicMock()
-
-        # Capture the dialect that ``parse_sql_statements`` is invoked with.
-        engine._parse_sql_statements(migration, result)
-
-        kwargs = migration.parse_sql_statements.call_args.kwargs
-        # The canonical name "sqlserver" should reach the parser despite the
-        # config saying "mssql".
-        assert kwargs["dialect"] == "sqlserver"
 
     def test_postgres_alias_passes_through_unchanged(self):
         # Sanity check: the alias normalisation is gated on "sqlserver" only.
@@ -234,85 +185,9 @@ class TestParseSqlStatementsMssqlAlias(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# _execute_statements: DBMS_OUTPUT enable failure (lines 438-439)
-# ---------------------------------------------------------------------------
-
-
-class TestDbmsOutputEnableFailure(unittest.TestCase):
-    """Covers lines 438-439: enable_dbms_output raises → log warning, continue."""
-
-    def test_enable_failure_logs_warning_and_continues(self):
-        engine = _make_engine(dialect="oracle")
-        migration = _make_sql_migration()
-        result = MagicMock()
-
-        # Force the Oracle SQL*Plus path with serveroutput=True so DBMS_OUTPUT
-        # is attempted. The provider.connection exists per _make_engine.
-        ctx = MagicMock()
-        ctx.wants_session_output = True
-        engine._current_sqlplus_ctx = ctx
-
-        # Make the import target raise; OracleQuirks.enable_session_output
-        # lazy-imports this symbol, so the patch path is the same.
-        with patch(
-            "db.plugins.oracle.oracle.dbms_output.enable_dbms_output",
-            side_effect=RuntimeError("dbms_output broken"),
-        ):
-            with patch.object(engine, "_transaction_liveness_probe_sql", return_value="SELECT 1"):
-                # Use an empty statements list so the per-statement loop is a no-op.
-                ok = engine._execute_statements([], migration, result, 0.0)
-
-        assert ok is True
-        engine.log.warning.assert_called()
-        warning_msgs = [str(c) for c in engine.log.warning.call_args_list]
-        assert any("Could not enable session output capture" in m for m in warning_msgs)
-
-
-# ---------------------------------------------------------------------------
-# _execute_statements: read_dbms_output post-statement failure (lines 554-555)
-# ---------------------------------------------------------------------------
-
-
-class TestDbmsOutputReadFailure(unittest.TestCase):
-    """Covers lines 554-555: read_dbms_output raises → log warning, continue."""
-
-    def test_read_failure_logs_warning(self):
-        engine = _make_engine(dialect="oracle")
-        migration = _make_sql_migration()
-        result = MagicMock()
-
-        ctx = MagicMock()
-        ctx.wants_session_output = True
-        engine._current_sqlplus_ctx = ctx
-
-        # provider.execute_statement returns 0 rows affected (DDL-ish).
-        engine.provider.execute_statement.return_value = 0
-        # Pre-check probe path: prepareStatement raises AttributeError so we
-        # fall back to provider.execute_query (which is harmless).
-        engine.provider.connection.prepareStatement.side_effect = AttributeError
-
-        with patch("db.plugins.oracle.oracle.dbms_output.enable_dbms_output"):
-            with patch(
-                "db.plugins.oracle.oracle.dbms_output.read_dbms_output",
-                side_effect=RuntimeError("read failed"),
-            ):
-                with patch.object(
-                    engine, "_transaction_liveness_probe_sql", return_value="SELECT 1"
-                ):
-                    ok = engine._execute_statements(
-                        ["CREATE TABLE t (id INT)"], migration, result, 0.0
-                    )
-
-        assert ok is True
-        warning_msgs = [str(c) for c in engine.log.warning.call_args_list]
-        assert any("Could not read session output" in m for m in warning_msgs)
-
-
-# ---------------------------------------------------------------------------
 # _execute_statements: TypeError when sql_execution_service returns wrong type
 # (line 534)
 # ---------------------------------------------------------------------------
-
 
 class TestSqlExecutionServiceTypeError(unittest.TestCase):
     """Covers line 534: non-int returned for the not-a-query branch raises
@@ -341,11 +216,9 @@ class TestSqlExecutionServiceTypeError(unittest.TestCase):
         err_text = " ".join(str(c) for c in result.set_error.call_args_list)
         assert "rows affected" in err_text or "str" in err_text
 
-
 # ---------------------------------------------------------------------------
 # _handle_statement_failure: add_migration raises → log warning (lines 621-622)
 # ---------------------------------------------------------------------------
-
 
 class TestHandleStatementFailureAddMigrationException(unittest.TestCase):
     def test_add_migration_failure_is_swallowed_and_logged(self):
@@ -360,11 +233,9 @@ class TestHandleStatementFailureAddMigrationException(unittest.TestCase):
         warning_msgs = [str(c) for c in engine.log.warning.call_args_list]
         assert any("Could not add failed migration" in m for m in warning_msgs)
 
-
 # ---------------------------------------------------------------------------
 # _commit_and_verify: invalid qualified name → break verification (line 772)
 # ---------------------------------------------------------------------------
-
 
 class TestCommitAndVerifyInvalidQualifiedName(unittest.TestCase):
     """Line 772 is defense-in-depth — the regex's ``\\w+`` capture already
@@ -408,11 +279,9 @@ class TestCommitAndVerifyInvalidQualifiedName(unittest.TestCase):
         debug_msgs = [str(c) for c in engine.log.debug.call_args_list]
         assert any("Post-commit verification query failed" in m for m in debug_msgs)
 
-
 # ---------------------------------------------------------------------------
 # _commit_and_verify: outer post-commit verification block raises (lines 810-811)
 # ---------------------------------------------------------------------------
-
 
 class TestCommitAndVerifyOuterExceptionSwallowed(unittest.TestCase):
     def test_outer_post_commit_block_exception_logged_debug(self):

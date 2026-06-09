@@ -249,23 +249,6 @@ class TestConvertTimestamp(unittest.TestCase):
         self.assertEqual(result.year, 2024)
 
 
-class TestConvertJavaObjectToPython(unittest.TestCase):
-    def test_none_returns_none(self):
-        mgr = _make_concrete()
-        self.assertIsNone(mgr._convert_java_object_to_python(None))
-
-    def test_bigdecimal_intvalue(self):
-        mgr = _make_concrete()
-        obj = MagicMock()
-        obj.intValue.return_value = 42
-        del obj.toLocalDateTime  # ensure it takes intValue path
-        self.assertEqual(mgr._convert_java_object_to_python(obj), 42)
-
-    def test_plain_python_returned_as_is(self):
-        mgr = _make_concrete()
-        self.assertEqual(mgr._convert_java_object_to_python("hello"), "hello")
-
-
 class TestBuildMigrationParams(unittest.TestCase):
     def test_builds_params_list(self):
         mgr = _make_concrete()

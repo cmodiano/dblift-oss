@@ -181,28 +181,10 @@ class TestConstraintExtractorGetUniqueConstraints(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0].name, "uq_email")
 
-    def test_sqlserver_path(self):
-        ext = _make_extractor(dialect="sqlserver")
-        ext.provider.query_executor.execute_query.return_value = [
-            {"constraint_name": "uq_email", "column_name": "email", "ordinal_position": 1}
-        ]
-        ext.get_row_value = lambda row, col: row.get(col)
-        result = ext.get_unique_constraints("dbo", "users")
-        self.assertIsInstance(result, list)
-
     def test_no_vendor_hook_returns_empty(self):
         ext = _make_extractor(dialect="mysql")
         result = ext.get_unique_constraints("db", "users")
         self.assertEqual(result, [])
-
-    def test_db2_uses_vendor_queries(self):
-        vq = MagicMock()
-        vq.get_unique_constraints_query.return_value = ("SELECT 1", [])
-        ext = _make_extractor(dialect="db2", vendor_queries=vq)
-        ext.provider.query_executor.execute_query.return_value = []
-        result = ext.get_unique_constraints("schema", "t")
-        self.assertIsInstance(result, list)
-
 
 class TestConstraintExtractorCheckConstraints(unittest.TestCase):
     def test_returns_empty_without_vendor_queries(self):
@@ -256,39 +238,6 @@ class TestSanitizeConstraintName(unittest.TestCase):
         ext = _make_extractor(dialect="postgresql")
         self.assertEqual(ext._sanitize_constraint_name("uq_email"), "uq_email")
 
-    def test_oracle_sys_c_returns_none(self):
-        ext = _make_extractor(dialect="oracle")
-        self.assertIsNone(ext._sanitize_constraint_name("SYS_C0013220"))
-
-    def test_oracle_sys_dollar_returns_none(self):
-        ext = _make_extractor(dialect="oracle")
-        self.assertIsNone(ext._sanitize_constraint_name("SYS$something"))
-
-    def test_oracle_sys_lowercase_returns_none(self):
-        ext = _make_extractor(dialect="oracle")
-        # name is uppercased internally before check
-        self.assertIsNone(ext._sanitize_constraint_name("sys_c0013220"))
-
-    def test_oracle_non_sys_passthrough(self):
-        ext = _make_extractor(dialect="oracle")
-        self.assertEqual(ext._sanitize_constraint_name("chk_age"), "chk_age")
-
-    def test_db2_sql_digits_returns_none(self):
-        ext = _make_extractor(dialect="db2")
-        self.assertIsNone(ext._sanitize_constraint_name("SQL251208171332370"))
-
-    def test_db2_sql_lowercase_digits_returns_none(self):
-        ext = _make_extractor(dialect="db2")
-        self.assertIsNone(ext._sanitize_constraint_name("sql251208171332370"))
-
-    def test_db2_non_sql_passthrough(self):
-        ext = _make_extractor(dialect="db2")
-        self.assertEqual(ext._sanitize_constraint_name("uq_col"), "uq_col")
-
-    def test_db2_sql_without_digits_passthrough(self):
-        # "SQLSERVER" does not match ^SQL\d+$ because of extra chars
-        ext = _make_extractor(dialect="db2")
-        self.assertEqual(ext._sanitize_constraint_name("SQLSPECIAL"), "SQLSPECIAL")
 
 
 class TestGetConstraintsFullPath(unittest.TestCase):
@@ -430,160 +379,6 @@ class TestGetForeignKeysCompositePath(unittest.TestCase):
         ]
         result = ext.get_foreign_keys("public", "orders")
         self.assertEqual(result[0].on_update, "SET NULL")
-
-
-class TestGetUniqueConstraintsOraclePath(unittest.TestCase):
-    """Tests for the Oracle vendor_queries path in get_unique_constraints."""
-
-    def _make_oracle(self):
-        vq = MagicMock()
-        vq.get_indexes_query.return_value = ("SELECT 1 FROM DUAL", ["MYSCHEMA", "MYTABLE"])
-        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
-        return ext, vq
-
-    def test_oracle_unique_constraint_returned(self):
-        ext, vq = self._make_oracle()
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "is_unique": "Y",
-                "index_name": "uq_email",
-                "column_name": "email",
-                "ordinal_position": 1,
-            }
-        ]
-        result = ext.get_unique_constraints("MYSCHEMA", "MYTABLE")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].name, "uq_email")
-
-    def test_oracle_pk_index_skipped(self):
-        """Index names starting with pk_ are skipped."""
-        ext, vq = self._make_oracle()
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "is_unique": "Y",
-                "index_name": "pk_mytable",
-                "column_name": "id",
-                "ordinal_position": 1,
-            }
-        ]
-        result = ext.get_unique_constraints("MYSCHEMA", "MYTABLE")
-        self.assertEqual(result, [])
-
-    def test_oracle_non_unique_index_skipped(self):
-        ext, vq = self._make_oracle()
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "is_unique": "N",
-                "index_name": "idx_name",
-                "column_name": "name",
-                "ordinal_position": 1,
-            }
-        ]
-        result = ext.get_unique_constraints("MYSCHEMA", "MYTABLE")
-        self.assertEqual(result, [])
-
-    def test_oracle_primary_in_name_skipped(self):
-        ext, vq = self._make_oracle()
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "is_unique": "Y",
-                "index_name": "primary_key_index",
-                "column_name": "id",
-                "ordinal_position": 1,
-            }
-        ]
-        result = ext.get_unique_constraints("MYSCHEMA", "MYTABLE")
-        self.assertEqual(result, [])
-
-    def test_oracle_no_column_name_skipped(self):
-        ext, vq = self._make_oracle()
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "is_unique": "Y",
-                "index_name": "uq_col",
-                "column_name": None,
-                "ordinal_position": 1,
-            }
-        ]
-        result = ext.get_unique_constraints("MYSCHEMA", "MYTABLE")
-        # Index entry created but no columns appended — returned with empty columns
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].column_names, [])
-
-
-class TestGetUniqueConstraintsViaVendorQueries(unittest.TestCase):
-    """Tests for _get_unique_constraints_via_vendor_queries covering DB2 paths."""
-
-    def _make_db2(self, query_result=None, query_side_effect=None):
-        vq = MagicMock()
-        vq.get_unique_constraints_query.return_value = ("SELECT 1", ["SCHEMA", "TABLE"])
-        ext = _make_extractor(dialect="db2", vendor_queries=vq)
-        if query_side_effect is not None:
-            ext.provider.query_executor.execute_query.side_effect = query_side_effect
-        else:
-            ext.provider.query_executor.execute_query.return_value = query_result or []
-        return ext
-
-    def test_db2_returns_empty_when_no_results(self):
-        ext = self._make_db2(query_result=[])
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(result, [])
-
-    def test_db2_returns_constraint_with_one_column(self):
-        from core.sql_model.base import ConstraintType
-
-        ext = self._make_db2(
-            query_result=[
-                {"constraint_name": "UQ_COL", "column_name": "col1", "ordinal_position": 1}
-            ]
-        )
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].constraint_type, ConstraintType.UNIQUE)
-        self.assertEqual(result[0].name, "UQ_COL")
-        self.assertIn("col1", result[0].column_names)
-
-    def test_db2_composite_constraint_two_columns(self):
-        ext = self._make_db2(
-            query_result=[
-                {"constraint_name": "UQ_MULTI", "column_name": "col1", "ordinal_position": 1},
-                {"constraint_name": "UQ_MULTI", "column_name": "col2", "ordinal_position": 2},
-            ]
-        )
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(len(result), 1)
-        self.assertIn("col1", result[0].column_names)
-        self.assertIn("col2", result[0].column_names)
-
-    def test_db2_skips_row_without_constraint_name(self):
-        ext = self._make_db2(
-            query_result=[{"constraint_name": None, "column_name": "col1", "ordinal_position": 1}]
-        )
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(result, [])
-
-    def test_db2_skips_row_without_column_name(self):
-        ext = self._make_db2(
-            query_result=[{"constraint_name": "UQ_COL", "column_name": None, "ordinal_position": 1}]
-        )
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        # constraint created but with empty columns list — still returned
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].column_names, [])
-
-    def test_db2_vendor_query_failure_returns_empty(self):
-        vq = MagicMock()
-        vq.get_unique_constraints_query.return_value = ("SELECT 1", [])
-        ext = _make_extractor(dialect="db2", vendor_queries=vq)
-        ext.provider.query_executor.execute_query.side_effect = Exception("vendor fail")
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(result, [])
-
-    def test_no_vendor_queries_returns_empty(self):
-        """If vendor_queries is None, return [] immediately."""
-        ext = _make_extractor(dialect="db2", vendor_queries=None)
-        result = ext._get_unique_constraints_via_vendor_queries("SCHEMA", "TABLE")
-        self.assertEqual(result, [])
 
 
 class TestGetCheckConstraintsBranches(unittest.TestCase):
@@ -805,53 +600,6 @@ class TestGetCheckConstraintsBranches(unittest.TestCase):
         result = ext.get_check_constraints("public", "t")
         self.assertEqual(len(result), 2)
 
-    def test_sanitized_name_applied(self):
-        """Oracle SYS_C names are sanitized to None."""
-        vq = MagicMock()
-        vq.supports_check_constraints.return_value = True
-        vq.get_check_constraints_query.return_value = ("SELECT 1", [])
-        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "constraint_name": "SYS_C0013220",
-                "constraint_definition": "age > 0",
-                "is_deferrable": None,
-                "initially_deferred": None,
-            }
-        ]
-        result = ext.get_check_constraints("HR", "EMPLOYEES")
-        self.assertEqual(len(result), 1)
-        self.assertIsNone(result[0].name)
-
-    def test_oracle_generated_not_null_check_is_skipped(self):
-        vq = MagicMock()
-        vq.supports_check_constraints.return_value = True
-        vq.get_check_constraints_query.return_value = ("SELECT 1", [])
-        ext = _make_extractor(dialect="oracle", vendor_queries=vq)
-        ext.provider.query_executor.execute_query.return_value = [
-            {
-                "constraint_name": "SYS_C0013220",
-                "constraint_definition": '"NAME" IS NOT NULL',
-                "generated": "GENERATED NAME",
-                "is_deferrable": "NO",
-                "initially_deferred": "NO",
-            },
-            {
-                "constraint_name": "CHK_NAME_LEN",
-                "constraint_definition": 'LENGTH("NAME") > 0',
-                "generated": "USER NAME",
-                "is_deferrable": "NO",
-                "initially_deferred": "NO",
-            },
-        ]
-
-        result = ext.get_check_constraints("HR", "EMPLOYEES")
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].name, "CHK_NAME_LEN")
-        self.assertEqual(result[0].check_expression, 'LENGTH("NAME") > 0')
-
-
 class TestGetUniqueConstraintsPostgresqlFallback(unittest.TestCase):
     """Tests for PostgreSQL pg_constraint path."""
 
@@ -885,45 +633,3 @@ class TestGetUniqueConstraintsPostgresqlFallback(unittest.TestCase):
         self.assertEqual(result, [])
 
 
-class TestGetUniqueConstraintsSqlServerPath(unittest.TestCase):
-    """Tests for SQL Server unique constraints path."""
-
-    def _make_ss(self):
-        ext = _make_extractor(dialect="sqlserver")
-        return ext
-
-    def test_sqlserver_unique_constraint_returned(self):
-        from core.sql_model.base import ConstraintType
-
-        ext = self._make_ss()
-        ext.provider.query_executor.execute_query.return_value = [
-            {"constraint_name": "uq_email", "column_name": "email", "ordinal_position": 1}
-        ]
-        result = ext.get_unique_constraints("dbo", "users")
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0].constraint_type, ConstraintType.UNIQUE)
-
-    def test_sqlserver_empty_when_no_rows(self):
-        ext = self._make_ss()
-        ext.provider.query_executor.execute_query.return_value = []
-        result = ext.get_unique_constraints("dbo", "users")
-        self.assertEqual(result, [])
-
-    def test_sqlserver_null_constraint_name_skipped(self):
-        ext = self._make_ss()
-        ext.provider.query_executor.execute_query.return_value = [
-            {"constraint_name": None, "column_name": "email", "ordinal_position": 1}
-        ]
-        result = ext.get_unique_constraints("dbo", "users")
-        self.assertEqual(result, [])
-
-    def test_sqlserver_composite_unique_constraint(self):
-        ext = self._make_ss()
-        ext.provider.query_executor.execute_query.return_value = [
-            {"constraint_name": "uq_multi", "column_name": "first_name", "ordinal_position": 1},
-            {"constraint_name": "uq_multi", "column_name": "last_name", "ordinal_position": 2},
-        ]
-        result = ext.get_unique_constraints("dbo", "users")
-        self.assertEqual(len(result), 1)
-        self.assertIn("first_name", result[0].column_names)
-        self.assertIn("last_name", result[0].column_names)

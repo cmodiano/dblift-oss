@@ -80,14 +80,6 @@ class TestDialectSql:
         BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("public")
         assert any("TEXT" in s and "snapshot_id" in s for s in provider.executed_sqls)
 
-    def test_oracle_uses_varchar2_and_clob(self):
-        provider = _make_provider("oracle")
-        BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("myschema")
-        sql = next(s for s in provider.executed_sqls if "CREATE TABLE" in s)
-        assert "VARCHAR2" in sql
-        assert "CLOB" in sql
-        assert "SNAPSHOT_ID" in sql  # uppercase identifiers
-
     def test_mysql_uses_longtext(self):
         provider = _make_provider("mysql")
         BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("db")
@@ -101,19 +93,6 @@ class TestDialectSql:
         sql = next(s for s in provider.executed_sqls if "CREATE TABLE" in s)
         assert "LONGTEXT" in sql
 
-    def test_sqlserver_uses_nvarchar_max(self):
-        provider = _make_provider("sqlserver")
-        BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("dbo")
-        sql = next(s for s in provider.executed_sqls if "CREATE TABLE" in s)
-        assert "NVARCHAR(MAX)" in sql
-
-    def test_db2_uses_uppercase_and_not_null_primary_key(self):
-        provider = _make_provider("db2")
-        BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("myschema")
-        sql = next(s for s in provider.executed_sqls if "CREATE TABLE" in s)
-        assert "SNAPSHOT_ID" in sql
-        assert "NOT NULL PRIMARY KEY" in sql
-        assert "CLOB" in sql
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +103,7 @@ class TestDialectSql:
 @pytest.mark.unit
 class TestShortCircuit:
     @pytest.mark.parametrize(
-        "dialect", ["postgresql", "oracle", "mysql", "mariadb", "sqlserver", "db2"]
+        "dialect", ["postgresql", "mysql", "mariadb"]
     )
     def test_skips_when_table_exists(self, dialect):
         provider = _make_provider(dialect, table_exists=True)
@@ -164,23 +143,6 @@ class TestConnectionLifecycle:
 
 @pytest.mark.unit
 class TestErrorPaths:
-    def test_oracle_ora_00955_suppressed(self):
-        def boom(sql):
-            if "CREATE TABLE" in sql:
-                raise RuntimeError("ORA-00955: name is already used by an existing object")
-
-        provider = _make_provider("oracle", execute_side_effect=boom)
-        # Should not raise
-        BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("myschema")
-
-    def test_oracle_french_already_exists_suppressed(self):
-        def boom(sql):
-            if "CREATE TABLE" in sql:
-                raise RuntimeError("L'objet existe déjà")
-
-        provider = _make_provider("oracle", execute_side_effect=boom)
-        BaseSnapshotManager(provider).create_snapshot_table_if_not_exists("myschema")
-
     def test_non_oracle_error_reraises(self):
         def boom(sql):
             if "CREATE TABLE" in sql:

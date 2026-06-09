@@ -16,9 +16,6 @@ class TestSelectSupportsLimit:
             ("postgresql", True),
             ("mysql", True),
             ("sqlite", True),
-            ("oracle", False),
-            ("db2", False),
-            ("sqlserver", False),
         ],
     )
     def test_select_supports_limit_per_dialect(self, dialect, expected):
@@ -35,9 +32,6 @@ class TestUndoDropIfExistsRoutedThroughQuirks:
             ("postgresql", True),
             ("mysql", True),
             ("sqlite", True),
-            ("sqlserver", True),
-            ("oracle", False),
-            ("db2", False),
         ],
     )
     def test_extractors_mixin_if_exists(self, dialect, expect_if_exists):
@@ -57,8 +51,6 @@ class TestUndoDropIfExistsRoutedThroughQuirks:
         [
             ("postgresql", True),
             ("mysql", True),
-            ("oracle", False),
-            ("db2", False),
         ],
     )
     def test_helpers_mixin_if_exists(self, dialect, expect_if_exists):

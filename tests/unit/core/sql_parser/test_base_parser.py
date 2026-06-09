@@ -24,9 +24,9 @@ class TestRegexBasedParser:
 
     def test_dialect_name_property(self):
         """Test dialect_name property."""
-        parser = RegexBasedParser("oracle")
+        parser = RegexBasedParser("postgresql")
 
-        assert parser.dialect_name == "oracle"
+        assert parser.dialect_name == "postgresql"
 
     def test_parse_sql_empty(self):
         """Test parse_sql with empty content."""
@@ -96,32 +96,6 @@ class TestRegexBasedParser:
         assert "CREATE TABLE t1" in statements[0]
         assert "CREATE TABLE t2" in statements[1]
 
-    def test_split_statements_sqlserver_with_go(self):
-        """Test split_statements with SQL Server GO statements."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "CREATE TABLE t1 (id INT)\nGO\nCREATE TABLE t2 (id INT)\nGO"
-        statements = parser.split_statements(sql)
-
-        assert len(statements) >= 2
-
-    def test_split_statements_sqlserver_no_go(self):
-        """Test split_statements with SQL Server but no GO statements."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "CREATE TABLE t1 (id INT); CREATE TABLE t2 (id INT);"
-        statements = parser.split_statements(sql)
-
-        assert len(statements) == 2
-
-    def test_split_statements_mssql_dialect(self):
-        """Test split_statements with mssql dialect."""
-        parser = RegexBasedParser("mssql")
-
-        sql = "CREATE TABLE t1 (id INT)\nGO\nCREATE TABLE t2 (id INT)"
-        statements = parser.split_statements(sql)
-
-        assert len(statements) >= 1
 
     def test_validate_sql(self):
         """Test validate_sql method."""
@@ -163,15 +137,6 @@ class TestRegexBasedParser:
         assert objects[0].name == "test_table"
         assert objects[0].schema == "myschema"
 
-    def test_extract_objects_create_table_default_schema_sqlserver(self):
-        """Test extract_objects with CREATE TABLE using SQL Server default schema."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "CREATE TABLE test_table (id INT)"
-        objects = parser.extract_objects(sql)
-
-        assert len(objects) == 1
-        assert objects[0].schema == "dbo"
 
     def test_extract_objects_create_table_default_schema_other(self):
         """Test extract_objects with CREATE TABLE using other dialect default schema."""
@@ -415,32 +380,6 @@ class TestRegexBasedParser:
         assert len(statements) >= 1
         assert 'CREATE TABLE "test;table"' in statements[0]
 
-    def test_split_by_semicolon_with_sqlserver_identifiers(self):
-        """Test _split_by_semicolon with SQL Server identifiers."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "CREATE TABLE [test;table] (id INT); SELECT * FROM t1;"
-        statements = parser._split_by_semicolon(sql)
-
-        assert len(statements) == 2
-
-    def test_split_sqlserver_with_go(self):
-        """Test _split_sqlserver_with_go method."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "CREATE TABLE t1 (id INT)\nGO\nCREATE TABLE t2 (id INT)"
-        statements = parser._split_sqlserver_with_go(sql)
-
-        assert len(statements) >= 1
-
-    def test_split_sqlserver_with_go_empty_batches(self):
-        """Test _split_sqlserver_with_go with empty batches."""
-        parser = RegexBasedParser("sqlserver")
-
-        sql = "GO\nGO\nCREATE TABLE t1 (id INT)\nGO"
-        statements = parser._split_sqlserver_with_go(sql)
-
-        assert len(statements) >= 1
 
     def test_get_statement_type_ddl(self):
         """Test _get_statement_type with DDL statements."""

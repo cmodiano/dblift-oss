@@ -406,51 +406,6 @@ class TestConvertTimestamp(unittest.TestCase):
         assert result == "2024-01-01"
 
 
-# ===========================================================================
-# _convert_java_object_to_python  (lines 299-315)
-# ===========================================================================
-
-
-class TestConvertJavaObjectToPython(unittest.TestCase):
-    def _m(self):
-        return _make_manager()
-
-    def test_none_returns_none(self):
-        assert self._m()._convert_java_object_to_python(None) is None
-
-    def test_int_value_method(self):
-        obj = MagicMock(spec=["intValue"])
-        obj.intValue.return_value = 99
-        result = self._m()._convert_java_object_to_python(obj)
-        assert result == 99
-
-    def test_to_local_datetime_delegates(self):
-        """Delegates to _convert_timestamp when toLocalDateTime is present."""
-        local_dt = MagicMock()
-        local_dt.getYear.return_value = 2025
-        local_dt.getMonthValue.return_value = 1
-        local_dt.getDayOfMonth.return_value = 1
-        local_dt.getHour.return_value = 0
-        local_dt.getMinute.return_value = 0
-        local_dt.getSecond.return_value = 0
-        local_dt.getNano.return_value = 0
-
-        obj = MagicMock(spec=["toLocalDateTime"])
-        obj.toLocalDateTime.return_value = local_dt
-        result = self._m()._convert_java_object_to_python(obj)
-        assert isinstance(result, datetime.datetime)
-
-    def test_to_string_method(self):
-        obj = MagicMock(spec=["toString"])
-        obj.toString.return_value = "hello"
-        result = self._m()._convert_java_object_to_python(obj)
-        assert result == "hello"
-
-    def test_plain_python_object_returned_as_is(self):
-        plain = [1, 2, 3]
-        result = self._m()._convert_java_object_to_python(plain)
-        assert result is plain
-
 
 # ===========================================================================
 # _get_first_value  (lines 329-344)

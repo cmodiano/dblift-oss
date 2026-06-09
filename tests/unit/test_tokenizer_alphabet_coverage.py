@@ -65,21 +65,6 @@ class TestTokenizerNoSilentDrop(unittest.TestCase):
             ],
         )
 
-    def test_oracle_tokenizer_claims_double_quotes_and_q_quotes(self) -> None:
-        from db.plugins.oracle.parser.oracle_tokenizer import OracleTokenizer
-
-        self._assert_no_drops(
-            OracleTokenizer,
-            [
-                'CREATE TABLE "MyTable" (id NUMBER);',
-                "SELECT q'[O'Reilly]' FROM dual;",
-                "BEGIN DBMS_OUTPUT.PUT_LINE('hi'); END;\n/\n",
-                "DECLARE v NUMBER := 1; BEGIN NULL; END;\n/",
-                'INSERT INTO t ("Col") VALUES (1);',
-                "SELECT 1 || 2 FROM dual;",
-            ],
-        )
-
     def test_postgresql_tokenizer_claims_dollar_quotes_and_quoted_idents(self) -> None:
         from db.plugins.postgresql.parser.postgresql_tokenizer import PostgreSQLTokenizer
 
@@ -91,20 +76,6 @@ class TestTokenizerNoSilentDrop(unittest.TestCase):
                 "CREATE FUNCTION g() RETURNS int AS $body$ SELECT 1 $body$ LANGUAGE sql;",
                 "INSERT INTO t (a) VALUES (1) ON CONFLICT DO NOTHING;",
                 "SELECT a || b FROM t;",
-            ],
-        )
-
-    def test_sqlserver_tokenizer_claims_brackets_and_at_signs(self) -> None:
-        from db.plugins.sqlserver.parser.sqlserver_tokenizer import SQLServerTokenizer
-
-        self._assert_no_drops(
-            SQLServerTokenizer,
-            [
-                "SELECT [Order Date] FROM [dbo].[Orders];",
-                "DECLARE @id INT = 1;\nSELECT @@ROWCOUNT;",
-                "EXEC sp_executesql N'SELECT 1';\nGO\n",
-                "INSERT INTO t (a) VALUES (1);",
-                "CREATE PROCEDURE dbo.p @x INT AS BEGIN SELECT @x; END",
             ],
         )
 

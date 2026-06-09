@@ -153,46 +153,6 @@ class TestSqlScriptFormatterFormatScript:
         assert "-- CREATE OBJECTS" in result
         assert "-- CREATE TABLE" not in result or "-- CREATE TABLE" not in result.split("\n")[0:10]
 
-    def test_format_script_cosmosdb_sdk_operation(self):
-        """Test formatting CosmosDB SDK operation."""
-        formatter = SqlScriptFormatter()
-        statement = SqlStatement(
-            sql="CREATE CONTAINER test",
-            statement_type="CREATE",
-            object_type="CONTAINER",
-            object_name="test",
-            dialect="cosmosdb",
-            requires_sdk=True,
-            sdk_operation={
-                "operation": "create_container",
-                "python_code": "database.create_container(...)",
-            },
-        )
-        result = formatter.format_script([statement])
-        assert "[COSMOSDB SDK OPERATION]" in result
-        assert "create_container" in result
-        assert "python_code" in result or "create_container" in result
-
-    def test_format_script_cosmosdb_sdk_with_warning(self):
-        """Test formatting CosmosDB SDK operation with warning."""
-        formatter = SqlScriptFormatter()
-        statement = SqlStatement(
-            sql="DROP CONTAINER test",
-            statement_type="DROP",
-            object_type="CONTAINER",
-            object_name="test",
-            dialect="cosmosdb",
-            requires_sdk=True,
-            sdk_operation={
-                "operation": "delete_container",
-                "python_code": "database.delete_container(...)",
-                "warning": "This will delete all data",
-            },
-        )
-        result = formatter.format_script([statement])
-        assert "WARNING" in result
-        assert "This will delete all data" in result
-
     def test_format_script_with_pre_check(self):
         """Test formatting script with pre-execution check."""
         formatter = SqlScriptFormatter(include_checks=True)

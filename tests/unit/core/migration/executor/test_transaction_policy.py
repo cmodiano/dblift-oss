@@ -55,18 +55,6 @@ def test_postgresql_create_index_concurrently_requires_autocommit():
 
 
 @pytest.mark.unit
-def test_sqlserver_create_fulltext_catalog_requires_autocommit():
-    statement = classify_execution_statement(
-        "CREATE FULLTEXT CATALOG dblift_ft_catalog AS DEFAULT",
-        dialect="sqlserver",
-        statement_type="DDL",
-    )
-
-    assert statement.can_execute_in_transaction is False
-    assert "FULLTEXT CATALOG" in (statement.transaction_reason or "")
-
-
-@pytest.mark.unit
 def test_transaction_policy_rejects_mixed_autocommit_and_transactional_statements():
     policy = TransactionPolicy()
 
@@ -110,35 +98,6 @@ def test_execution_engine_runs_autocommit_only_statement_without_migration_trans
     assert result.success is True
     assert provider.events[0] == "rollback"
     assert "execute:CREATE INDEX CONCURRENTLY idx_users_id ON users(id);" in provider.events
-    assert provider.events[-2:] == ["begin", "commit"]
-    assert provider.events.count("begin") == 1
-    history_manager.record_migration.assert_called_once()
-
-
-@pytest.mark.unit
-def test_execution_engine_runs_sqlserver_fulltext_catalog_without_migration_transaction():
-    provider = RecordingTransactionalProvider()
-    history_manager = MagicMock()
-    engine = ExecutionEngine(
-        provider=provider,
-        sql_analyzer=SqlAnalyzer(dialect="sqlserver"),
-        log=NullLog(),
-        history_manager=history_manager,
-    )
-    migration = Migration(
-        script_name="V1__fulltext.sql",
-        content="CREATE FULLTEXT CATALOG dblift_ft_catalog AS DEFAULT;",
-        version="1",
-        description="fulltext",
-        type=MigrationType.SQL,
-    )
-    result = MigrateResult()
-
-    engine.execute_migration(migration, result)
-
-    assert result.success is True
-    assert provider.events[0] == "rollback"
-    assert "execute:CREATE FULLTEXT CATALOG dblift_ft_catalog AS DEFAULT;" in provider.events
     assert provider.events[-2:] == ["begin", "commit"]
     assert provider.events.count("begin") == 1
     history_manager.record_migration.assert_called_once()

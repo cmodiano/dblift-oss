@@ -41,11 +41,3 @@ class TestJdbcProviderRecordUndoPython:
         assert body.count("type IN ('SQL', 'PYTHON')") >= 2
 
 
-@pytest.mark.unit
-class TestSqlServerRecordUndoPython:
-    def test_sqlserver_record_undo_query_accepts_python_type(self):
-        from pathlib import Path
-
-        src = Path("db/plugins/sqlserver/sqlserver/history_manager.py").read_text(encoding="utf-8")
-        assert "type = 'SQL'" not in src, "sqlserver record_undo still uses type='SQL' exclusively"
-        assert "type IN ('SQL', 'PYTHON')" in src

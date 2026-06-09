@@ -90,7 +90,6 @@ def test_is_connected_has_override_docstring():
     "provider_module,class_name",
     [
         ("db.plugins.sqlite.provider", "SQLiteProvider"),
-        ("db.plugins.cosmosdb.provider", "CosmosDbProvider"),
     ],
 )
 def test_concrete_provider_implements_create_snapshot(provider_module, class_name):

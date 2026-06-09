@@ -235,13 +235,14 @@ class TestGetAllIndexesBulkVendorPath:
 
         assert ext.get_all_indexes("dbo") == []
 
-    def test_bulk_vendor_query_none_returns_empty_list(self):
-        """When get_all_indexes_query returns None, native introspection has no fallback."""
+    def test_bulk_vendor_query_none_raises_not_implemented(self):
+        """When get_all_indexes_query returns None, NotImplementedError is raised."""
         vq = MagicMock()
         vq.get_all_indexes_query.return_value = None
         ext = _make_extractor(dialect="mysql", vendor_queries=vq)
 
-        assert ext.get_all_indexes("myschema") == []
+        with pytest.raises(NotImplementedError):
+            ext.get_all_indexes("myschema")
 
     def test_no_vendor_queries_returns_empty_list(self):
         ext = _make_extractor(dialect="mysql", vendor_queries=None)
@@ -686,33 +687,6 @@ class TestParseVendorRows:
         result = ext._parse_vendor_rows("tbl", rows)
         assert result["idx1"]["columns"][0]["column"] == "lower(email)"
 
-    def test_oracle_hidden_column_replaced_by_expression(self):
-        ext = _make_extractor(dialect="oracle")
-        rows = [
-            {
-                "index_name": "IDX1",
-                "column_name": "SYS_NC00001$",
-                "index_expression": "UPPER(NAME)",
-                "ordinal_position": 1,
-                "is_descending": "N",
-            }
-        ]
-        result = ext._parse_vendor_rows("TBL", rows)
-        assert result["IDX1"]["columns"][0]["column"] == "UPPER(NAME)"
-
-    def test_oracle_sys_index_name_filtered_out(self):
-        ext = _make_extractor(dialect="oracle")
-        rows = [
-            {
-                "index_name": "SYS_C00123",
-                "column_name": "ID",
-                "ordinal_position": 1,
-                "is_descending": "N",
-            }
-        ]
-        result = ext._parse_vendor_rows("TBL", rows)
-        assert result == {}
-
     def test_multiple_rows_same_index_builds_multi_column(self):
         ext = _make_extractor()
         rows = [
@@ -971,73 +945,6 @@ class TestSupportsSortDirection:
 
 
 # ---------------------------------------------------------------------------
-# OracleQuirks.is_index_hidden_column (was _is_oracle_hidden_column)
-# ---------------------------------------------------------------------------
-
-
-class TestIsOracleHiddenColumn:
-    @staticmethod
-    def _quirks():
-        from db.provider_registry import ProviderRegistry
-
-        return ProviderRegistry.get_quirks("oracle")
-
-    def test_empty_string_returns_false(self):
-        assert self._quirks().is_index_hidden_column("") is False
-
-    def test_sys_underscore_prefix_returns_true(self):
-        assert self._quirks().is_index_hidden_column("SYS_NC00001$") is True
-
-    def test_sys_dollar_prefix_returns_true(self):
-        assert self._quirks().is_index_hidden_column("SYS$ROWID") is True
-
-    def test_lowercase_sys_prefix_returns_true(self):
-        assert self._quirks().is_index_hidden_column("sys_NC00001$") is True
-
-    def test_normal_column_returns_false(self):
-        assert self._quirks().is_index_hidden_column("EMPLOYEE_ID") is False
-
-    def test_sys_without_underscore_returns_false(self):
-        """SYS alone is not a hidden column name."""
-        assert self._quirks().is_index_hidden_column("SYSDATE") is False
-
-
-# ---------------------------------------------------------------------------
-# OracleQuirks.should_skip_index (was _sanitize_index_name)
-# ---------------------------------------------------------------------------
-
-
-class TestSanitizeIndexName:
-    @staticmethod
-    def _quirks(dialect: str):
-        from db.provider_registry import ProviderRegistry
-
-        return ProviderRegistry.get_quirks(dialect)
-
-    def test_empty_string_returns_false(self):
-        assert self._quirks("oracle").should_skip_index("") is False
-
-    def test_sys_underscore_returns_true(self):
-        assert self._quirks("oracle").should_skip_index("SYS_C00123") is True
-
-    def test_sys_dollar_returns_true(self):
-        assert self._quirks("oracle").should_skip_index("SYS$XYZ") is True
-
-    def test_normal_name_preserved(self):
-        assert self._quirks("oracle").should_skip_index("IDX_ORDERS") is False
-
-    def test_lowercase_sys_returns_true(self):
-        assert self._quirks("oracle").should_skip_index("sys_c00001") is True
-
-    def test_non_oracle_dialect_never_skips(self):
-        """Non-Oracle dialects don't filter SYS_ names."""
-        assert self._quirks("mysql").should_skip_index("SYS_C00123") is False
-
-    def test_whitespace_stripped_before_check(self):
-        assert self._quirks("oracle").should_skip_index("  SYS_C00123  ") is True
-
-
-# ---------------------------------------------------------------------------
 # _add_dialect_specific_properties
 # ---------------------------------------------------------------------------
 
@@ -1086,41 +993,6 @@ class TestAddDialectSpecificProperties:
         ext._add_dialect_specific_properties(idx_data, kwargs)
         # BTREE is not FULLTEXT/SPATIAL so no change from this method
         assert kwargs.get("type") == "BTREE"
-
-    def test_oracle_bitmap_type_set(self):
-        ext = _make_extractor(dialect="oracle")
-        idx_data = {"type": "BITMAP", "tablespace": None, "is_local": None}
-        kwargs = {}
-        ext._add_dialect_specific_properties(idx_data, kwargs)
-        assert kwargs.get("type") == "BITMAP"
-
-    def test_oracle_tablespace_set(self):
-        ext = _make_extractor(dialect="oracle")
-        idx_data = {"type": "NORMAL", "tablespace": "USERS", "is_local": None}
-        kwargs = {}
-        ext._add_dialect_specific_properties(idx_data, kwargs)
-        assert kwargs.get("tablespace") == "USERS"
-
-    def test_oracle_is_local_true(self):
-        ext = _make_extractor(dialect="oracle")
-        idx_data = {"type": None, "tablespace": None, "is_local": True}
-        kwargs = {}
-        ext._add_dialect_specific_properties(idx_data, kwargs)
-        assert kwargs.get("is_local") is True
-
-    def test_oracle_is_local_false(self):
-        ext = _make_extractor(dialect="oracle")
-        idx_data = {"type": None, "tablespace": None, "is_local": False}
-        kwargs = {}
-        ext._add_dialect_specific_properties(idx_data, kwargs)
-        assert kwargs.get("is_local") is False
-
-    def test_oracle_is_local_none_not_set(self):
-        ext = _make_extractor(dialect="oracle")
-        idx_data = {"type": None, "tablespace": None, "is_local": None}
-        kwargs = {}
-        ext._add_dialect_specific_properties(idx_data, kwargs)
-        assert "is_local" not in kwargs
 
     def test_non_special_dialect_noop(self):
         ext = _make_extractor(dialect="db2")

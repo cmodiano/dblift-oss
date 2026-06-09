@@ -73,16 +73,6 @@ class TestUndoStatementEmitterGenerateDrop(unittest.TestCase):
         self.assertIn("IF EXISTS", sql)
         self.assertNotIn("CASCADE", sql)
 
-    def test_oracle_table_no_if_exists(self):
-        emitter = self._make_emitter("oracle")
-        sql = emitter._generate_drop_statement("TABLE", "users", None)
-        self.assertNotIn("IF EXISTS", sql)
-
-    def test_sqlserver_table_has_if_exists(self):
-        emitter = self._make_emitter("sqlserver")
-        sql = emitter._generate_drop_statement("TABLE", "users", None)
-        self.assertIn("IF EXISTS", sql)
-
     def test_with_schema_quoted_identifiers(self):
         emitter = self._make_emitter("postgresql")
         sql = emitter._generate_drop_statement("TABLE", "users", "public")
@@ -110,11 +100,6 @@ class TestUndoStatementEmitterQuoteIdentifier(unittest.TestCase):
 
     def test_mysql_backticks(self):
         emitter = self._make_emitter("mysql")
-        result = emitter._quote_identifier("users")
-        self.assertIn("users", result)
-
-    def test_oracle_double_quotes(self):
-        emitter = self._make_emitter("oracle")
         result = emitter._quote_identifier("users")
         self.assertIn("users", result)
 
@@ -1726,22 +1711,6 @@ class TestUndoScriptGeneratorDialects(unittest.TestCase):
         self.assertTrue(len(drop_stmts) >= 1)
         for stmt in drop_stmts:
             self.assertNotIn("CASCADE", stmt.sql)
-
-    def test_oracle_table_drop_no_if_exists(self):
-        gen = self._make_generator("oracle")
-        migration = self._make_migration("CREATE TABLE t (id INT);")
-        results = gen._generate_undo_statements(migration)
-        drop_stmts = [s for s in results if "DROP TABLE" in s.sql]
-        self.assertTrue(len(drop_stmts) >= 1)
-        for stmt in drop_stmts:
-            self.assertNotIn("IF EXISTS", stmt.sql)
-
-    def test_sqlserver_dialect(self):
-        gen = self._make_generator("sqlserver")
-        migration = self._make_migration("CREATE TABLE t (id INT);")
-        results = gen._generate_undo_statements(migration)
-        drop_stmts = [s for s in results if "DROP TABLE" in s.sql]
-        self.assertTrue(len(drop_stmts) >= 1)
 
 
 if __name__ == "__main__":

@@ -1,1 +1,0 @@
-# CosmosDB provider unit tests

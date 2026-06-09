@@ -140,11 +140,7 @@ def test_first_party_plugins_now_declare_config_class(_reset_registry):
     direct_class_dialects = (
         "postgresql",
         "mysql",
-        "oracle",
-        "sqlserver",
-        "db2",
         "sqlite",
-        "cosmosdb",
     )
     for dialect in direct_class_dialects:
         plugin = ProviderRegistry._plugins.get(dialect)

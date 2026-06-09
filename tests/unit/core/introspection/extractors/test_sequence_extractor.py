@@ -49,25 +49,6 @@ class TestSequenceExtractorNoVendorQueries(unittest.TestCase):
 
 
 class TestSequenceExtractorBasicExtraction(unittest.TestCase):
-    def test_native_provider_reopens_closed_connection(self):
-        vq, _ = _simple_vq([])
-        extractor = _make_extractor(dialect="postgresql", vendor_queries=vq)
-        extractor.provider.provider_transport = "native"
-        old_conn = MagicMock()
-        old_conn.closed = True
-        new_conn = MagicMock()
-        new_conn.closed = False
-        extractor.connection = old_conn
-        extractor.provider.create_connection.return_value = new_conn
-        extractor.provider.query_executor.execute_query.return_value = []
-
-        self.assertEqual(extractor.get_sequences("public"), [])
-
-        extractor.provider.create_connection.assert_called_once_with()
-        extractor.provider.query_executor.execute_query.assert_called_once_with(
-            new_conn, "SELECT 1", []
-        )
-
     def test_single_sequence_basic_fields(self):
         vq, _ = _simple_vq([])
         extractor = _make_extractor(dialect="postgresql", vendor_queries=vq)
@@ -191,33 +172,6 @@ class TestSequenceExtractorCycle(unittest.TestCase):
         self.assertFalse(seqs[0].cycle)
 
 
-class TestSequenceExtractorOracleFilter(unittest.TestCase):
-    def test_oracle_iseq_sequences_are_skipped(self):
-        vq, _ = _simple_vq([])
-        extractor = _make_extractor(dialect="oracle", vendor_queries=vq)
-        extractor.provider.query_executor.execute_query.return_value = [
-            {
-                "sequence_name": "ISEQ$$_12345",
-                "last_number": "1",
-                "increment_by": "1",
-                "min_value": "1",
-                "max_value": "9999",
-                "cycle_flag": "N",
-                "cache_size": None,
-            },
-            {
-                "sequence_name": "my_seq",
-                "last_number": "1",
-                "increment_by": "1",
-                "min_value": "1",
-                "max_value": "9999",
-                "cycle_flag": "N",
-                "cache_size": None,
-            },
-        ]
-        seqs = extractor.get_sequences("myschema")
-        self.assertEqual(len(seqs), 1)
-        self.assertEqual(seqs[0].name, "my_seq")
 
 
 class TestSequenceExtractorPostgresqlTemp(unittest.TestCase):

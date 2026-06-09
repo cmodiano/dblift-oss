@@ -36,24 +36,6 @@ class TestSqlFormatter:
         # Check that it's formatted (has newlines)
         assert "\n" in formatted or formatted != sql.strip()
 
-    def test_format_oracle_table(self):
-        """Test formatting Oracle CREATE TABLE statement."""
-        formatter = SqlFormatter(dialect="oracle")
-        sql = "CREATE TABLE users(user_id NUMBER(10) PRIMARY KEY,username VARCHAR2(50))"
-        formatted = formatter.format(sql)
-
-        assert "CREATE TABLE" in formatted
-        assert "user_id" in formatted
-
-    def test_format_db2_fallback(self):
-        """Test that DB2 falls back to unformatted SQL."""
-        formatter = SqlFormatter(dialect="db2")
-        sql = "CREATE TABLE users(id INTEGER,name VARCHAR(100))"
-        formatted = formatter.format(sql)
-
-        # Should return original SQL (DB2 not supported by sqlglot)
-        assert formatted == sql
-
     def test_format_invalid_sql_fallback(self):
         """Test that invalid SQL falls back gracefully."""
         formatter = SqlFormatter(dialect="postgresql")
@@ -363,14 +345,14 @@ class TestSqlGenerator:
 
     def test_generate_ddl_skip_formatting_for_package(self):
         """Test skipping formatting for packages."""
-        generator = SqlGenerator(default_dialect="oracle")
+        generator = SqlGenerator(default_dialect="postgresql")
         from core.sql_model.base import SqlObjectType
 
         package = MagicMock()
         package.name = "test_package"
         package.object_type = SqlObjectType.PACKAGE
         package.create_statement = "CREATE PACKAGE test_package AS\nEND;\n/"
-        package.dialect = "oracle"
+        package.dialect = "postgresql"
         package.schema = None
         package.format_identifier = lambda x: x
 
@@ -431,8 +413,8 @@ class TestSqlGenerator:
         generator = SqlGenerator(default_dialect="postgresql")
         table = Table(name="users", columns=[SqlColumn("id", "INTEGER")], dialect="postgresql")
 
-        generator.generate_ddl([table], target_dialect="oracle")
-        assert generator.formatter.dialect == "oracle"
+        generator.generate_ddl([table], target_dialect="mysql")
+        assert generator.formatter.dialect == "mysql"
 
     def test_generate_drop_statements_empty(self):
         """Test generating DROP statements for empty list."""
@@ -485,36 +467,6 @@ class TestSqlGenerator:
         result = generator.generate_drop_statements([table], reverse_order=True)
         assert "DROP TABLE" in result
 
-    def test_generate_drop_statement_view_cosmosdb(self):
-        """Test generating DROP VIEW for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        view = View(name="test_view", query="SELECT 1", dialect="cosmosdb")
-        result = generator._generate_drop_statement(view, "cosmosdb")
-        assert "CosmosDB does not support views" in result
-
-    def test_generate_drop_statement_view_oracle(self):
-        """Test generating DROP VIEW for Oracle."""
-        generator = SqlGenerator(default_dialect="oracle")
-        view = View(name="test_view", query="SELECT 1", dialect="oracle")
-        result = generator._generate_drop_statement(view, "oracle")
-        assert "DROP VIEW" in result
-        assert "IF EXISTS" not in result
-
-    def test_generate_drop_statement_table_cosmosdb(self):
-        """Test generating DROP TABLE for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        table = Table(name="test_table", columns=[SqlColumn("id", "INTEGER")], dialect="cosmosdb")
-        result = generator._generate_drop_statement(table, "cosmosdb")
-        assert "DROP CONTAINER" in result
-
-    def test_generate_drop_statement_table_oracle(self):
-        """Test generating DROP TABLE for Oracle."""
-        generator = SqlGenerator(default_dialect="oracle")
-        table = Table(name="test_table", columns=[SqlColumn("id", "INTEGER")], dialect="oracle")
-        result = generator._generate_drop_statement(table, "oracle")
-        assert "DROP TABLE" in result
-        assert "CASCADE CONSTRAINTS" in result
-
     def test_generate_drop_statement_table_mysql(self):
         """Test generating DROP TABLE for MySQL."""
         generator = SqlGenerator(default_dialect="mysql")
@@ -522,81 +474,6 @@ class TestSqlGenerator:
         result = generator._generate_drop_statement(table, "mysql")
         assert "DROP TABLE IF EXISTS" in result
         assert "CASCADE" not in result
-
-    def test_generate_drop_statement_index_cosmosdb(self):
-        """Test generating DROP INDEX for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        index = Index(
-            name="test_index", table_name="test_table", columns=["id"], dialect="cosmosdb"
-        )
-        result = generator._generate_drop_statement(index, "cosmosdb")
-        assert "CosmosDB indexes are managed" in result
-
-    def test_generate_drop_statement_index_sqlserver(self):
-        """Test generating DROP INDEX for SQL Server."""
-        generator = SqlGenerator(default_dialect="sqlserver")
-        index = Index(
-            name="test_index", table_name="test_table", columns=["id"], dialect="sqlserver"
-        )
-        result = generator._generate_drop_statement(index, "sqlserver")
-        assert "DROP INDEX IF EXISTS" in result
-        assert "ON" in result
-
-    def test_generate_drop_statement_sequence_cosmosdb(self):
-        """Test generating DROP SEQUENCE for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        sequence = Sequence(name="test_seq", dialect="cosmosdb")
-        result = generator._generate_drop_statement(sequence, "cosmosdb")
-        assert "CosmosDB does not support sequences" in result
-
-    def test_generate_drop_statement_sequence_oracle(self):
-        """Test generating DROP SEQUENCE for Oracle."""
-        generator = SqlGenerator(default_dialect="oracle")
-        sequence = Sequence(name="test_seq", dialect="oracle")
-        result = generator._generate_drop_statement(sequence, "oracle")
-        assert "DROP SEQUENCE" in result
-        assert "IF EXISTS" not in result
-
-    def test_generate_drop_statement_procedure_cosmosdb(self):
-        """Test generating DROP PROCEDURE for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        procedure = Procedure(name="test_proc", definition="BEGIN END", dialect="cosmosdb")
-        result = generator._generate_drop_statement(procedure, "cosmosdb")
-        assert "CosmosDB SQL API does not support" in result
-
-    def test_generate_drop_statement_procedure_oracle(self):
-        """Test generating DROP PROCEDURE for Oracle."""
-        generator = SqlGenerator(default_dialect="oracle")
-        procedure = Procedure(name="test_proc", definition="BEGIN END", dialect="oracle")
-        result = generator._generate_drop_statement(procedure, "oracle")
-        assert "DROP PROCEDURE" in result
-        assert "IF EXISTS" not in result
-
-    def test_generate_drop_statement_trigger_cosmosdb(self):
-        """Test generating DROP TRIGGER for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        trigger = Trigger(
-            name="test_trigger",
-            table_name="test_table",
-            timing="BEFORE",
-            events=["INSERT"],
-            dialect="cosmosdb",
-        )
-        result = generator._generate_drop_statement(trigger, "cosmosdb")
-        assert "CosmosDB does not support triggers" in result
-
-    def test_generate_drop_statement_extension_cosmosdb(self):
-        """Test generating DROP EXTENSION for CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        from core.sql_model.base import SqlObjectType
-
-        extension = MagicMock()
-        extension.name = "test_ext"
-        extension.object_type = SqlObjectType.EXTENSION
-        extension.schema = None
-        extension.format_identifier = lambda x: x
-        result = generator._generate_drop_statement(extension, "cosmosdb")
-        assert "CosmosDB does not support extensions" in result
 
     def test_generate_drop_statement_extension_postgresql(self):
         """Test generating DROP EXTENSION for PostgreSQL."""
@@ -610,19 +487,6 @@ class TestSqlGenerator:
         extension.format_identifier = lambda x: x
         result = generator._generate_drop_statement(extension, "postgresql")
         assert "DROP EXTENSION IF EXISTS" in result
-
-    def test_generate_drop_statement_unknown_type_cosmosdb(self):
-        """Test generating DROP for unknown type in CosmosDB."""
-        generator = SqlGenerator(default_dialect="cosmosdb")
-        from core.sql_model.base import SqlObjectType
-
-        unknown = MagicMock()
-        unknown.name = "test_obj"
-        unknown.object_type = SqlObjectType.UNKNOWN
-        unknown.schema = None
-        unknown.format_identifier = lambda x: x
-        result = generator._generate_drop_statement(unknown, "cosmosdb")
-        assert "CosmosDB does not support DROP" in result
 
     def test_generate_drop_statement_with_schema(self):
         """Test generating DROP statement with schema."""
@@ -996,16 +860,16 @@ class TestDependencyAnalyzer:
         analyzer = DependencyAnalyzer()
 
         table = Table(
-            name="ORDERS",
-            schema="DBLIFT_TEST",
-            columns=[SqlColumn("order_id", "NUMBER")],
-            dialect="oracle",
+            name="orders",
+            schema="public",
+            columns=[SqlColumn("order_id", "INTEGER")],
+            dialect="postgresql",
         )
         view = View(
-            name="VW_CUSTOMER_ORDERS",
-            schema="DBLIFT_TEST",
+            name="vw_customer_orders",
+            schema="public",
             query="SELECT order_id FROM orders",
-            dialect="oracle",
+            dialect="postgresql",
         )
 
         ordered = analyzer.get_create_order([view, table])
@@ -1366,13 +1230,6 @@ class TestScriptOrganizer:
         )
         assert "-- SQL Script: test.sql" in header
         assert "Generated:" not in header
-
-    def test_generate_file_header_sqlserver(self):
-        """Test generating file header for SQL Server."""
-        organizer = ScriptOrganizer()
-        header = organizer.generate_file_header("test.sql", 5, "sqlserver")
-        assert "SET ANSI_NULLS ON" in header
-        assert "SET QUOTED_IDENTIFIER ON" in header
 
     def test_generate_file_header_none_dialect(self):
         """Test generating file header with None dialect."""

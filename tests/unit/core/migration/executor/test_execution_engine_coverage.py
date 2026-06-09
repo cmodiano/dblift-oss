@@ -195,14 +195,6 @@ class TestParseSqlStatements(unittest.TestCase):
         # Should still work (fall through to sql_analyzer.dialect)
         self.assertIsNotNone(result)
 
-    def test_mssql_normalized_to_sqlserver(self):
-        """Lines 272-273: dialect_key 'mssql' → 'sqlserver'."""
-        engine = _make_engine(with_config=True)
-        engine.config.database.type.value = "mssql"
-        migration = _make_sql_migration()
-
-        result = engine._parse_sql_statements(migration, MagicMock())
-        self.assertIsNotNone(result)
 
     def test_no_dialect_key_falls_back_to_analyzer(self):
         """Lines 274-275: No config database → use sql_analyzer.dialect."""
@@ -226,16 +218,6 @@ class TestParseSqlStatements(unittest.TestCase):
 
         engine.placeholder_service.replace_placeholders.assert_called_once_with(migration.content)
 
-    def test_oracle_extract_sqlplus_context(self):
-        """Lines 286-301: Oracle path: extract SQL*Plus context and apply DEFINE."""
-        engine = _make_engine(dialect="oracle", with_config=True)
-        engine.config.database.type.value = "oracle"
-        engine.config.database.url = "oracle+oracledb://host:1521?service_name=XE"
-        migration = _make_sql_migration(content="SET SERVEROUTPUT ON\nSELECT 1 FROM DUAL;")
-
-        result = engine._parse_sql_statements(migration, MagicMock())
-        # Should not raise
-        self.assertIsNotNone(result)
 
     def test_exception_sets_result_error_and_returns_none(self):
         """Lines 306-313: Exception → result.set_error, return None."""
@@ -257,28 +239,6 @@ class TestParseSqlStatements(unittest.TestCase):
 
 class TestProbeDialectKeyAdditional(unittest.TestCase):
 
-    def test_provider_canonical_dialect_oracle(self):
-        """PR-F4: provider's ``canonical_dialect_key`` is authoritative.
-
-        Replaces the previous URL-sniffing test: the framework no longer
-        looks at the provider's legacy URL, it asks the provider directly
-        via the ``canonical_dialect_key`` class attribute set by each
-        plugin (e.g. ``OracleProvider.canonical_dialect_key = "oracle"``).
-        """
-        engine = _make_engine(with_config=False)
-        engine.sql_analyzer.dialect = "postgresql"  # would have masked the old URL path
-        engine.provider.canonical_dialect_key = "oracle"
-        result = engine._probe_dialect_key()
-        self.assertEqual(result, "oracle")
-
-    def test_provider_canonical_dialect_db2(self):
-        """PR-F4: provider's ``canonical_dialect_key`` short-circuits the fallback."""
-        engine = _make_engine(with_config=False)
-        engine.sql_analyzer.dialect = "postgresql"
-        engine.provider.canonical_dialect_key = "db2"
-        result = engine._probe_dialect_key()
-        self.assertEqual(result, "db2")
-
     def test_no_config_no_url_falls_back_to_provider_dialect(self):
         """Lines 396-404: No config, no url → fall back to provider.dialect."""
         engine = _make_engine(with_config=False)
@@ -289,29 +249,6 @@ class TestProbeDialectKeyAdditional(unittest.TestCase):
             result = engine._probe_dialect_key()
 
         self.assertEqual(result, "mysql")
-
-    def test_config_db2_resolved_from_provider_attribute(self):
-        """PR-F4: the engine trusts ``provider.canonical_dialect_key``.
-
-        The architectural cleanup means a DB2 plugin's provider declares
-        its dialect once; the framework reads it instead of pattern-matching
-        URLs (Epic 26 dialect isolation).
-        """
-        engine = _make_engine(with_config=True)
-        engine.provider.canonical_dialect_key = "db2"
-
-        result = engine._probe_dialect_key()
-
-        self.assertEqual(result, "db2")
-
-    def test_config_oracle_resolved_from_provider_attribute(self):
-        """PR-F4: Oracle provider declares ``canonical_dialect_key = "oracle"``."""
-        engine = _make_engine(with_config=True)
-        engine.provider.canonical_dialect_key = "oracle"
-
-        result = engine._probe_dialect_key()
-
-        self.assertEqual(result, "oracle")
 
     def test_all_none_returns_none(self):
         """Lines 396-404: Everything None → return None."""
@@ -360,13 +297,6 @@ class TestClassifyExecutionStatements(unittest.TestCase):
         result = engine._classify_execution_statements(["-- comment only"])
         self.assertEqual(len(result), 0)
 
-    def test_skips_tsql_batch_separator(self):
-        """Lines 203-220: GO is a TSQL batch separator, skipped."""
-        engine = _make_engine(dialect="sqlserver")
-        engine.sql_analyzer.get_statement_type.return_value = "DML"
-
-        result = engine._classify_execution_statements(["GO", "SELECT 1"])
-        self.assertEqual(len(result), 1)
 
     def test_classifies_normal_statement(self):
         """Lines 203-220: Normal statement gets classified."""
@@ -398,14 +328,6 @@ class TestExecuteStatements(unittest.TestCase):
         success = engine._execute_statements(["", "SELECT 1"], migration, result, time.time())
         self.assertTrue(success)
 
-    def test_skips_tsql_batch_separator_in_loop(self):
-        """Lines 468-469: GO batch separator skipped."""
-        engine = _make_engine(dialect="sqlserver")
-        engine.provider.execute_statement.return_value = 0
-        migration, result = self._make_migration_result()
-
-        success = engine._execute_statements(["GO", "SELECT 1"], migration, result, time.time())
-        self.assertTrue(success)
 
     def test_skips_comment_only_in_loop(self):
         """Lines 470-471: Comment-only statements skipped."""
@@ -537,45 +459,6 @@ class TestExecuteStatements(unittest.TestCase):
         success = engine._execute_statements(["SELECT 1"], migration, result, time.time())
         self.assertTrue(success)
 
-    def test_whenever_sqlerror_continue_skips_statement_error(self):
-        """Lines 573-584: WHENEVER SQLERROR CONTINUE → continue on DB error."""
-        from db.plugins.oracle.parser.sqlplus_context import SqlplusContext
-
-        engine = _make_engine(dialect="oracle")
-        engine._current_sqlplus_ctx = SqlplusContext()
-
-        engine.provider.execute_statement.side_effect = Exception("ORA-01234 some error")
-        migration, result = self._make_migration_result()
-
-        success = engine._execute_statements(
-            ["WHENEVER SQLERROR CONTINUE", "SELECT 1"],
-            migration,
-            result,
-            time.time(),
-        )
-        # With CONTINUE policy, the error is logged as warning but execution continues
-        # The loop finishes, so True is returned
-        # (The second statement "SELECT 1" also fails, but policy is continue)
-        self.assertTrue(success)
-
-    def test_whenever_sqlerror_continue_does_not_skip_transaction_aborted(self):
-        """Lines 573-584: TransactionAbortedError not skipped even with CONTINUE."""
-        from db.plugins.oracle.parser.sqlplus_context import SqlplusContext
-
-        engine = _make_engine(dialect="oracle")
-        engine._current_sqlplus_ctx = SqlplusContext()
-
-        engine.provider.execute_statement.side_effect = TransactionAbortedError("aborted")
-        migration, result = self._make_migration_result()
-
-        success = engine._execute_statements(
-            ["SELECT 1"],
-            migration,
-            result,
-            time.time(),
-        )
-
-        self.assertFalse(success)
 
 
 # ---------------------------------------------------------------------------
@@ -683,36 +566,6 @@ class TestRecordAutocommitHistoryTransactional(unittest.TestCase):
 
 
 class TestCommitAndVerifyExtended(unittest.TestCase):
-
-    def test_oracle_dialect_uses_count_without_limit(self):
-        """Lines 805-811: Oracle uses SELECT COUNT(*) without LIMIT."""
-        engine = _make_engine(dialect="oracle")
-        engine.sql_analyzer.dialect = "oracle"
-        engine.provider.connection.isClosed.return_value = False
-        engine.provider.execute_query.return_value = [{"cnt": 0}]
-        migration = _make_sql_migration()
-
-        statements = ["CREATE TABLE public.employees (id INT)"]
-        engine._commit_and_verify(migration, statements, 100)
-
-        query_calls = [str(c) for c in engine.provider.execute_query.call_args_list]
-        # Oracle should not have LIMIT in query
-        self.assertTrue(any("COUNT" in c for c in query_calls))
-        self.assertFalse(any("LIMIT" in c for c in query_calls))
-
-    def test_sqlserver_dialect_uses_count_without_limit(self):
-        """Lines 805-811: SQL Server uses SELECT COUNT(*) without LIMIT."""
-        engine = _make_engine(dialect="sqlserver")
-        engine.sql_analyzer.dialect = "sqlserver"
-        engine.provider.connection.isClosed.return_value = False
-        engine.provider.execute_query.return_value = [{"cnt": 0}]
-        migration = _make_sql_migration()
-
-        statements = ["CREATE TABLE dbo.orders (id INT)"]
-        engine._commit_and_verify(migration, statements, 100)
-
-        query_calls = [str(c) for c in engine.provider.execute_query.call_args_list]
-        self.assertTrue(any("COUNT" in c for c in query_calls))
 
     def test_special_chars_in_table_name_skip_verification(self):
         """Lines 779-782: table/schema with special chars → skip verification."""

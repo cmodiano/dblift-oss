@@ -144,53 +144,6 @@ class TestBug04CleanDryRunCoversAllObjectTypes(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# B5-BUG-05: SQL Server indexed view must emit CREATE VIEW, not MATERIALIZED
-# ---------------------------------------------------------------------------
-class TestBug05SqlServerIndexedViewEmitsCreateView(unittest.TestCase):
-    def test_indexed_view_statement_uses_view_keyword_with_schemabinding(self) -> None:
-        from core.sql_model.view import View
-        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
-
-        view = View(
-            name="v_dept_employee_count",
-            schema="dblift_test",
-            query=(
-                "SELECT dept_id, COUNT_BIG(*) AS emp_count "
-                "FROM dblift_test.employees GROUP BY dept_id"
-            ),
-            materialized=True,
-            dialect="sqlserver",
-        )
-        view.clustered_index_name = "idx_v_dept_emp"  # type: ignore[attr-defined]
-        view.clustered_index_columns = ["dept_id"]  # type: ignore[attr-defined]
-
-        stmt = SQLServerSqlGenerator().generate_ddl([view], target_dialect="sqlserver")
-        # The previous output was "CREATE MATERIALIZED VIEW ..." (invalid TSQL).
-        self.assertNotIn("MATERIALIZED VIEW", stmt)
-        self.assertIn("CREATE VIEW", stmt)
-        self.assertIn("WITH SCHEMABINDING", stmt)
-        self.assertIn("CREATE UNIQUE CLUSTERED INDEX", stmt)
-        self.assertIn("idx_v_dept_emp", stmt)
-        self.assertIn("GO", stmt)
-
-    def test_non_indexed_view_still_emits_create_view(self) -> None:
-        from core.sql_model.view import View
-        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
-
-        view = View(
-            name="v_high_earners",
-            schema="dblift_test",
-            query="SELECT * FROM employees WHERE salary > 100000",
-            materialized=False,
-            dialect="sqlserver",
-        )
-        stmt = SQLServerSqlGenerator()._generate_view_create_statement(view)
-        self.assertIn("CREATE VIEW", stmt)
-        self.assertNotIn("MATERIALIZED VIEW", stmt)
-        self.assertNotIn("WITH SCHEMABINDING", stmt)
-
-
-# ---------------------------------------------------------------------------
 # B5-BUG-06: schema_name must mirror target_schema when not explicitly set
 # ---------------------------------------------------------------------------
 class TestBug06SchemaNameMirrorsTargetSchema(unittest.TestCase):

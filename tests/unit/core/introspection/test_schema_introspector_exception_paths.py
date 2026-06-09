@@ -18,19 +18,6 @@ def _make_introspector(dialect="postgresql"):
     return intr, provider, log
 
 
-class TestApplyDb2PropertiesIntConversion(unittest.TestCase):
-    def test_int_conversion_error_suppressed(self):
-        from db.plugins.db2.quirks import Db2Quirks
-
-        table = MagicMock()
-        row = {"data_capture": "invalid_int"}
-        # Should not raise — ValueError/TypeError caught
-        try:
-            Db2Quirks().apply_vendor_table_properties(table, row)
-        except Exception as e:
-            self.fail(f"Should not raise: {e}")
-
-
 class TestAutoCommitExceptionPaths(unittest.TestCase):
     def test_connection_creation_exception_propagates(self):
         intr, provider, log = _make_introspector()

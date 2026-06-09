@@ -21,23 +21,10 @@ class TestDialectEnumQuoteIdentifier:
             # mysql → backtick
             ("mysql", "users", "`users`"),
             ("MySQL", "my_table", "`my_table`"),
-            # sqlserver → square brackets
-            ("sqlserver", "users", "[users]"),
-            ("SQLSERVER", "my_table", "[my_table]"),
             # postgresql → double-quote (ANSI default)
             ("postgresql", "users", '"users"'),
-            # oracle → double-quote (ANSI default)
-            ("oracle", "MY_COL", '"MY_COL"'),
-            # db2 → double-quote (ANSI default)
-            ("db2", "T1", '"T1"'),
             # sqlite → double-quote (ANSI default)
             ("sqlite", "data", '"data"'),
-            # cosmosdb → no quoting (NoSQL — JSON keys, not SQL identifiers).
-            # Story 26-5: CosmosdbQuirks sets ``quote_open=""``/``quote_close=""``
-            # so ``Dialect.quote_identifier`` and ``base.format_identifier``
-            # both pass identifiers through unchanged. Aligns with the
-            # SQL DDL emitter which already produced unquoted output.
-            ("cosmosdb", "Container", "Container"),
             # unknown string → double-quote (ANSI default)
             ("unknown_db", "x", '"x"'),
             # None → double-quote (ANSI default)
@@ -62,7 +49,6 @@ class TestDialectEnumQuoteIdentifier:
     def test_identifiers_with_spaces(self):
         """Identifiers containing spaces are wrapped correctly."""
         assert DialectEnum.quote_identifier("mysql", "my table") == "`my table`"
-        assert DialectEnum.quote_identifier("sqlserver", "my table") == "[my table]"
         assert DialectEnum.quote_identifier("postgresql", "my table") == '"my table"'
 
 
@@ -117,25 +103,6 @@ class TestDiffSqlGeneratorQuoteRegressions:
 
         gen = DiffSqlGenerator(dialect="mysql")
         assert gen._quote_identifier("users") == "`users`"
-
-    def test_oracle_double_quote(self):
-        from core.sql_generator.diff_sql_generator import DiffSqlGenerator
-
-        gen = DiffSqlGenerator(dialect="oracle")
-        assert gen._quote_identifier("users") == '"users"'
-
-    def test_sqlserver_brackets(self):
-        from core.sql_generator.diff_sql_generator import DiffSqlGenerator
-
-        gen = DiffSqlGenerator(dialect="sqlserver")
-        assert gen._quote_identifier("users") == "[users]"
-
-    def test_cosmosdb_no_quote(self):
-        # Story 26-5: CosmosDB is NoSQL — quirks set empty quote chars.
-        from core.sql_generator.diff_sql_generator import DiffSqlGenerator
-
-        gen = DiffSqlGenerator(dialect="cosmosdb")
-        assert gen._quote_identifier("users") == "users"
 
     def test_unknown_dialect_returns_double_quote(self):
         """Unknown dialect now returns double-quote (ANSI standard fallback)."""

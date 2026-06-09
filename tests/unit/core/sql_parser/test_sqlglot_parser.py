@@ -31,20 +31,6 @@ class TestSqlGlotParser:
         assert parser.dialect_name == "mysql"
         assert parser.sqlglot_dialect == "mysql"
 
-    def test_parser_creation_oracle(self):
-        """Test parser can be created for Oracle."""
-        parser = SqlGlotParser(dialect="oracle")
-        assert parser is not None
-        assert parser.dialect_name == "oracle"
-        assert parser.sqlglot_dialect == "oracle"
-
-    def test_parser_creation_sqlserver(self):
-        """Test parser can be created for SQL Server."""
-        parser = SqlGlotParser(dialect="sqlserver")
-        assert parser is not None
-        assert parser.dialect_name == "sqlserver"
-        assert parser.sqlglot_dialect == "tsql"
-
     # ==================== PostgreSQL Tests ====================
 
     def test_parse_postgresql_create_table(self):
@@ -179,79 +165,6 @@ class TestSqlGlotParser:
         assert result.success
         assert len(result.statements) == 1
         assert result.statements[0].statement_type == SqlStatementType.INSERT
-
-    # ==================== Oracle Tests ====================
-
-    def test_parse_oracle_create_table(self):
-        """Test parsing Oracle CREATE TABLE."""
-        parser = SqlGlotParser(dialect="oracle")
-        sql = "CREATE TABLE users (id NUMBER, name VARCHAR2(100))"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-        assert result.statements[0].statement_type == SqlStatementType.CREATE
-        assert result.statements[0].objects[0].name == "users"
-
-    def test_parse_oracle_create_sequence(self):
-        """Test parsing Oracle CREATE SEQUENCE."""
-        parser = SqlGlotParser(dialect="oracle")
-        sql = "CREATE SEQUENCE user_id_seq START WITH 1"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-        assert result.statements[0].statement_type == SqlStatementType.CREATE
-
-    def test_parse_oracle_dual(self):
-        """Test parsing Oracle SELECT FROM DUAL."""
-        parser = SqlGlotParser(dialect="oracle")
-        sql = "SELECT SYSDATE FROM DUAL"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-
-    # ==================== SQL Server Tests ====================
-
-    def test_parse_sqlserver_create_table(self):
-        """Test parsing SQL Server CREATE TABLE."""
-        parser = SqlGlotParser(dialect="sqlserver")
-        sql = "CREATE TABLE users (id INT PRIMARY KEY, name NVARCHAR(100))"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-        assert result.statements[0].statement_type == SqlStatementType.CREATE
-
-    def test_parse_sqlserver_inline_primary_key_clustered(self):
-        """SQL Server inline PRIMARY KEY with CLUSTERED should parse."""
-        parser = SqlGlotParser(dialect="sqlserver")
-        sql = "CREATE TABLE orders (order_id INT NOT NULL PRIMARY KEY CLUSTERED, status NVARCHAR(20));"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-        objects = result.statements[0].objects
-        assert any(
-            obj.object_type == SqlObjectType.TABLE and obj.name == "orders" for obj in objects
-        )
-
-    def test_parse_sqlserver_select_top(self):
-        """Test parsing SQL Server SELECT TOP."""
-        parser = SqlGlotParser(dialect="sqlserver")
-        sql = "SELECT TOP 10 * FROM users"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-        assert len(result.statements) == 1
-        assert result.statements[0].statement_type == SqlStatementType.SELECT
 
     # ==================== Common DDL Tests ====================
 
@@ -448,20 +361,3 @@ class TestSqlGlotParser:
 
         assert result.success
 
-    def test_oracle_number_type(self):
-        """Test parsing Oracle NUMBER type."""
-        parser = SqlGlotParser(dialect="oracle")
-        sql = "CREATE TABLE users (id NUMBER(10,0))"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success
-
-    def test_sqlserver_identity(self):
-        """Test parsing SQL Server IDENTITY."""
-        parser = SqlGlotParser(dialect="sqlserver")
-        sql = "CREATE TABLE users (id INT IDENTITY(1,1) PRIMARY KEY)"
-
-        result = parser.parse_sql(sql)
-
-        assert result.success

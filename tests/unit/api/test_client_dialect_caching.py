@@ -300,13 +300,13 @@ class TestGeneratorFactoryCaseInsensitive:
         assert type(gen_upper) is type(gen_lower)
 
     def test_generator_factory_is_supported_case_insensitive(self):
-        """is_supported('ORACLE') == is_supported('oracle')."""
+        """is_supported('POSTGRESQL') == is_supported('postgresql')."""
         from core.sql_generator.generator_factory import SqlGeneratorFactory
 
         # Ensure defaults are registered
         SqlGeneratorFactory.create("postgresql")
-        assert SqlGeneratorFactory.is_supported("ORACLE") is True
-        assert SqlGeneratorFactory.is_supported("oracle") is True
+        assert SqlGeneratorFactory.is_supported("POSTGRESQL") is True
+        assert SqlGeneratorFactory.is_supported("postgresql") is True
 
 
 # ── AC#4 — DiffSqlGenerator inline comment ──────────────────────────────

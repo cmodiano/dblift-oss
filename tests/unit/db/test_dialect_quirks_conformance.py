@@ -29,11 +29,7 @@ KNOWN_DIALECTS = (
     "postgresql",
     "mysql",
     "mariadb",
-    "oracle",
-    "sqlserver",
-    "db2",
     "sqlite",
-    "cosmosdb",
 )
 
 # Aliases registered alongside the canonical names. Each must round-trip
@@ -154,16 +150,9 @@ def test_render_identity_clause_mysql_returns_auto_increment() -> None:
     assert quirks.render_identity_clause(_Col()) == "AUTO_INCREMENT"
 
 
-def test_fk_reference_bind_params_oracle_has_four_items() -> None:
-    """Story 27-4: Oracle FK bind list must include schema twice."""
-    quirks = ProviderRegistry.get_quirks("oracle")
-    params = quirks.fk_reference_bind_params("MY_SCHEMA", "MY_TABLE", "MY_COL")
-    assert params == ["MY_SCHEMA", "MY_SCHEMA", "MY_TABLE", "MY_COL"]
-
-
 @pytest.mark.parametrize(
     "dialect",
-    [d for d in KNOWN_DIALECTS if d != "oracle"],
+    KNOWN_DIALECTS,
 )
 def test_fk_reference_bind_params_non_oracle_has_three_items(dialect: str) -> None:
     """Story 27-4: Non-Oracle FK bind list must have three items."""
@@ -172,15 +161,9 @@ def test_fk_reference_bind_params_non_oracle_has_three_items(dialect: str) -> No
     assert params == ["s", "t", "c"], f"{dialect}: fk_reference_bind_params returned {params!r}"
 
 
-def test_cosmosdb_requires_sdk_for_drop() -> None:
-    """Story 27-3: CosmosDB must declare SDK-required drops."""
-    quirks = ProviderRegistry.get_quirks("cosmosdb")
-    assert quirks.requires_sdk_for_drop() is True
-
-
 @pytest.mark.parametrize(
     "dialect",
-    [d for d in KNOWN_DIALECTS if d != "cosmosdb"],
+    KNOWN_DIALECTS,
 )
 def test_non_cosmosdb_does_not_require_sdk_for_drop(dialect: str) -> None:
     """Story 27-3: Non-CosmosDB dialects must not require SDK drops."""
@@ -188,17 +171,6 @@ def test_non_cosmosdb_does_not_require_sdk_for_drop(dialect: str) -> None:
     assert (
         quirks.requires_sdk_for_drop() is False
     ), f"{dialect}: requires_sdk_for_drop() must return False"
-
-
-def test_unwrap_default_value_sqlserver_strips_parens() -> None:
-    """Story 27-5: SQL Server must strip outer parens from simple defaults."""
-
-    class _Col:
-        data_type = "int"
-
-    quirks = ProviderRegistry.get_quirks("sqlserver")
-    assert quirks.unwrap_default_value("(42)", _Col()) == "42"
-    assert quirks.unwrap_default_value("(a + b)", _Col()) == "(a + b)"
 
 
 def test_unwrap_default_value_mysql_normalises_string_default() -> None:
@@ -211,21 +183,3 @@ def test_unwrap_default_value_mysql_normalises_string_default() -> None:
     assert quirks.unwrap_default_value("`hello`", _Col()) == "'hello'"
 
 
-def test_each_first_party_plugin_declares_quirks_class() -> None:
-    """Every first-party plugin in this repo ships ``quirks.py`` (story 26-2).
-
-    Third-party plugins may omit it — they get :class:`BaseQuirks` —
-    but in-tree plugins are the test bed for the epic and must opt
-    in so subsequent stories have somewhere to add overrides.
-    """
-    missing = []
-    for dialect in KNOWN_DIALECTS:
-        plugin_info = ProviderRegistry._plugins.get(dialect)
-        assert plugin_info is not None, f"{dialect} plugin not registered"
-        if plugin_info.quirks_class is None:
-            missing.append(dialect)
-    assert not missing, (
-        "First-party plugins missing quirks.py: "
-        + ", ".join(missing)
-        + ". See docs/architecture/EPIC-26-dialect-plugin-isolation.md story 26-2."
-    )

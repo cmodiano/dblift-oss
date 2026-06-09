@@ -75,25 +75,10 @@ class TestSafetyCheckerInit:
         checker = SafetyChecker(dialect="postgresql")
         assert checker.dialect == "postgresql"
 
-    def test_init_sqlserver(self):
-        """Test initialization with SQL Server dialect."""
-        checker = SafetyChecker(dialect="sqlserver")
-        assert checker.dialect == "sqlserver"
-
     def test_init_mysql(self):
         """Test initialization with MySQL dialect."""
         checker = SafetyChecker(dialect="mysql")
         assert checker.dialect == "mysql"
-
-    def test_init_oracle(self):
-        """Test initialization with Oracle dialect."""
-        checker = SafetyChecker(dialect="oracle")
-        assert checker.dialect == "oracle"
-
-    def test_init_db2(self):
-        """Test initialization with DB2 dialect."""
-        checker = SafetyChecker(dialect="db2")
-        assert checker.dialect == "db2"
 
     def test_init_lowercase(self):
         """Test initialization converts dialect to lowercase."""
@@ -389,32 +374,6 @@ class TestSafetyCheckerTableHasData:
         assert result.safe is True
         assert result.details["has_data"] is False
 
-    def test_check_table_data_sqlserver(self):
-        """Test checking table data for SQL Server dialect."""
-        checker = SafetyChecker(dialect="sqlserver")
-        table = Table(name="users", columns=[SqlColumn("id", "INTEGER")], dialect="sqlserver")
-        provider = MagicMock()
-        provider.execute_query.return_value = [{"has_data": 0}]
-
-        result = checker.check_table_has_data(table, provider)
-        assert result.safe is True
-        # Verify SQL Server specific query
-        call_args = provider.execute_query.call_args[0][0]
-        assert "TOP 1" in call_args.upper()
-
-    def test_check_table_data_oracle(self):
-        """Test checking table data for Oracle dialect."""
-        checker = SafetyChecker(dialect="oracle")
-        table = Table(name="users", columns=[SqlColumn("id", "INTEGER")], dialect="oracle")
-        provider = MagicMock()
-        provider.execute_query.return_value = [{"has_data": 0}]
-
-        result = checker.check_table_has_data(table, provider)
-        assert result.safe is True
-        # Verify Oracle specific query
-        call_args = provider.execute_query.call_args[0][0]
-        assert "ROWNUM" in call_args.upper() or "DUAL" in call_args.upper()
-
     def test_check_table_data_exception(self):
         """Test checking table data when query raises exception."""
         checker = SafetyChecker()
@@ -447,24 +406,9 @@ class TestSafetyCheckerHelperMethods:
         checker = SafetyChecker(dialect="postgresql")
         assert checker._get_default_schema() == "public"
 
-    def test_get_default_schema_sqlserver(self):
-        """Test getting default schema for SQL Server."""
-        checker = SafetyChecker(dialect="sqlserver")
-        assert checker._get_default_schema() == "dbo"
-
     def test_get_default_schema_mysql(self):
         """Test getting default schema for MySQL."""
         checker = SafetyChecker(dialect="mysql")
-        assert checker._get_default_schema() == ""
-
-    def test_get_default_schema_oracle(self):
-        """Test getting default schema for Oracle."""
-        checker = SafetyChecker(dialect="oracle")
-        assert checker._get_default_schema() == ""
-
-    def test_get_default_schema_db2(self):
-        """Test getting default schema for DB2."""
-        checker = SafetyChecker(dialect="db2")
         assert checker._get_default_schema() == ""
 
     def test_get_default_schema_unknown(self):
@@ -483,18 +427,6 @@ class TestSafetyCheckerHelperMethods:
         checker = SafetyChecker(dialect="postgresql")
         result = checker._format_table_name("", "users")
         assert result == '"users"'
-
-    def test_format_table_name_sqlserver(self):
-        """Test formatting table name for SQL Server."""
-        checker = SafetyChecker(dialect="sqlserver")
-        result = checker._format_table_name("dbo", "users")
-        assert result == "[dbo].[users]"
-
-    def test_format_table_name_sqlserver_escape(self):
-        """Test formatting table name for SQL Server with brackets."""
-        checker = SafetyChecker(dialect="sqlserver")
-        result = checker._format_table_name("dbo]", "users]")
-        assert result == "[dbo]]].[users]]]"
 
     def test_format_table_name_mysql(self):
         """Test formatting table name for MySQL."""
@@ -525,12 +457,6 @@ class TestSafetyCheckerHelperMethods:
         checker = SafetyChecker(dialect="postgresql")
         result = checker._quote_identifier("users")
         assert result == '"users"'
-
-    def test_quote_identifier_sqlserver(self):
-        """Test quoting identifier for SQL Server."""
-        checker = SafetyChecker(dialect="sqlserver")
-        result = checker._quote_identifier("users")
-        assert result == "[users]"
 
     def test_quote_identifier_mysql(self):
         """Test quoting identifier for MySQL."""
@@ -596,14 +522,6 @@ class TestSafetyCheckerHelperMethods:
 class TestSafetyCheckerFKQueries:
     """Tests for foreign key reference queries."""
 
-    def test_get_fk_reference_query_sqlserver(self):
-        """Test FK reference query for SQL Server."""
-        checker = SafetyChecker(dialect="sqlserver")
-        query, params = checker._get_fk_reference_query("dbo", "users", "id")
-        assert query is not None
-        assert len(params) == 3
-        assert "sys.foreign_keys" in query.lower()
-
     def test_get_fk_reference_query_postgresql(self):
         """Test FK reference query for PostgreSQL."""
         checker = SafetyChecker(dialect="postgresql")
@@ -620,22 +538,6 @@ class TestSafetyCheckerFKQueries:
         assert len(params) == 3
         assert "information_schema" in query.lower()
 
-    def test_get_fk_reference_query_oracle(self):
-        """Test FK reference query for Oracle."""
-        checker = SafetyChecker(dialect="oracle")
-        query, params = checker._get_fk_reference_query("SCHEMA", "users", "id")
-        assert query is not None
-        assert len(params) == 4
-        assert "all_constraints" in query.lower()
-
-    def test_get_fk_reference_query_db2(self):
-        """Test FK reference query for DB2."""
-        checker = SafetyChecker(dialect="db2")
-        query, params = checker._get_fk_reference_query("SCHEMA", "users", "id")
-        assert query is not None
-        assert len(params) == 3
-        assert "syscat.references" in query.lower()
-
     def test_get_fk_reference_query_unknown(self):
         """Test FK reference query for unknown dialect."""
         checker = SafetyChecker(dialect="unknown")
@@ -647,14 +549,6 @@ class TestSafetyCheckerFKQueries:
 @pytest.mark.unit
 class TestSafetyCheckerIndexQueries:
     """Tests for index reference queries."""
-
-    def test_get_index_reference_query_sqlserver(self):
-        """Test index reference query for SQL Server."""
-        checker = SafetyChecker(dialect="sqlserver")
-        query, params = checker._get_index_reference_query("dbo", "users", "id")
-        assert query is not None
-        assert len(params) == 3
-        assert "sys.indexes" in query.lower()
 
     def test_get_index_reference_query_postgresql(self):
         """Test index reference query for PostgreSQL."""
@@ -671,22 +565,6 @@ class TestSafetyCheckerIndexQueries:
         assert query is not None
         assert len(params) == 3
         assert "information_schema" in query.lower()
-
-    def test_get_index_reference_query_oracle(self):
-        """Test index reference query for Oracle."""
-        checker = SafetyChecker(dialect="oracle")
-        query, params = checker._get_index_reference_query("SCHEMA", "users", "id")
-        assert query is not None
-        assert len(params) == 3
-        assert "all_ind_columns" in query.lower()
-
-    def test_get_index_reference_query_db2(self):
-        """Test index reference query for DB2."""
-        checker = SafetyChecker(dialect="db2")
-        query, params = checker._get_index_reference_query("SCHEMA", "users", "id")
-        assert query is not None
-        assert len(params) == 3
-        assert "syscat.indexcoluse" in query.lower()
 
     def test_get_index_reference_query_unknown(self):
         """Test index reference query for unknown dialect."""
@@ -716,27 +594,12 @@ class TestSafetyCheckerQuirksRefactor:
         result = checker._format_table_name("mydb", "orders")
         assert result == "`mydb`.`orders`"
 
-    def test_format_table_name_sqlserver_uses_brackets(self):
-        from core.sql_generator.safety_checker import SafetyChecker
-
-        checker = SafetyChecker("sqlserver")
-        result = checker._format_table_name("dbo", "orders")
-        assert result == "[dbo].[orders]"
-
     def test_format_table_name_postgresql_uses_double_quotes(self):
         from core.sql_generator.safety_checker import SafetyChecker
 
         checker = SafetyChecker("postgresql")
         result = checker._format_table_name("public", "orders")
         assert result == '"public"."orders"'
-
-    def test_existence_check_oracle_via_quirks(self):
-        from core.sql_generator.safety_checker import SafetyChecker
-
-        checker = SafetyChecker("oracle")
-        table_name = '"HR"."EMPLOYEES"'
-        sql = checker._quirks.existence_check_sql(table_name)
-        assert "ROWNUM" in sql
 
     def test_fk_query_uses_quirks_not_dispatch_dict(self):
         import inspect

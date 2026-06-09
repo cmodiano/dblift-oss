@@ -254,25 +254,6 @@ class TestGetViewsColumnNames(unittest.TestCase):
         self.assertEqual(views[0].columns, ["id", "name"])
 
 
-class TestGetViewsDB2LowercaseName(unittest.TestCase):
-    def test_db2_view_name_lowercased(self):
-        vq = MagicMock()
-        vq.supports_views.return_value = True
-        vq.get_views_query.return_value = ("SELECT 1", [])
-        extractor = _make_extractor(dialect="db2", vendor_queries=vq)
-        extractor.provider.query_executor.execute_query.return_value = [
-            {
-                "view_name": "V_ORDERS",
-                "view_definition": "SELECT * FROM ORDERS",
-                "is_updatable": "Y",
-                "check_option": None,
-                "column_names": None,
-            }
-        ]
-        views = extractor.get_views("myschema")
-        self.assertEqual(views[0].name, "v_orders")
-
-
 class TestGetViewsMysqlDialect(unittest.TestCase):
     def _make_mysql_extractor(self):
         vq = MagicMock()

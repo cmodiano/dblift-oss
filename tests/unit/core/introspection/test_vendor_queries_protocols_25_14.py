@@ -73,28 +73,10 @@ class TestISP01ConcreteImplementations:
         return PostgreSQLMetadataQueries()
 
     @pytest.fixture
-    def oracle_queries(self):
-        from db.plugins.oracle.introspection.oracle_queries import OracleMetadataQueries
-
-        return OracleMetadataQueries()
-
-    @pytest.fixture
     def mysql_queries(self):
         from db.plugins.mysql.introspection.mysql_queries import MySQLMetadataQueries
 
         return MySQLMetadataQueries()
-
-    @pytest.fixture
-    def sqlserver_queries(self):
-        from db.plugins.sqlserver.introspection.sqlserver_queries import SQLServerMetadataQueries
-
-        return SQLServerMetadataQueries()
-
-    @pytest.fixture
-    def db2_queries(self):
-        from db.plugins.db2.introspection.db2_queries import DB2MetadataQueries
-
-        return DB2MetadataQueries()
 
     @pytest.mark.parametrize("proto", ALL_PROTOCOLS, ids=PROTOCOL_NAMES)
     def test_postgresql_satisfies_all_protocols(self, postgresql_queries, proto):
@@ -103,25 +85,7 @@ class TestISP01ConcreteImplementations:
         ), f"PostgreSQLMetadataQueries does not satisfy {proto.__name__}"
 
     @pytest.mark.parametrize("proto", ALL_PROTOCOLS, ids=PROTOCOL_NAMES)
-    def test_oracle_satisfies_all_protocols(self, oracle_queries, proto):
-        assert isinstance(
-            oracle_queries, proto
-        ), f"OracleMetadataQueries does not satisfy {proto.__name__}"
-
-    @pytest.mark.parametrize("proto", ALL_PROTOCOLS, ids=PROTOCOL_NAMES)
     def test_mysql_satisfies_all_protocols(self, mysql_queries, proto):
         assert isinstance(
             mysql_queries, proto
         ), f"MySQLMetadataQueries does not satisfy {proto.__name__}"
-
-    @pytest.mark.parametrize("proto", ALL_PROTOCOLS, ids=PROTOCOL_NAMES)
-    def test_sqlserver_satisfies_all_protocols(self, sqlserver_queries, proto):
-        assert isinstance(
-            sqlserver_queries, proto
-        ), f"SQLServerMetadataQueries does not satisfy {proto.__name__}"
-
-    @pytest.mark.parametrize("proto", ALL_PROTOCOLS, ids=PROTOCOL_NAMES)
-    def test_db2_satisfies_all_protocols(self, db2_queries, proto):
-        assert isinstance(
-            db2_queries, proto
-        ), f"DB2MetadataQueries does not satisfy {proto.__name__}"

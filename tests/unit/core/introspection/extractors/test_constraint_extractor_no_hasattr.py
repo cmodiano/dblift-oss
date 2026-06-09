@@ -48,21 +48,12 @@ class TestConstraintExtractorNoHasattr:
                 f'hasattr(constraint, "{attr}")' not in source
             ), f"hasattr(constraint, '{attr}') encore présent dans get_check_constraints"
 
-    def test_vendor_queries_hasattr_removed_dialect_guard_in_quirks(self):
-        """Story 20-18 + H.2 — ``hasattr`` is gone from the extractor and the
-        DB2 dialect gate moved to :class:`Db2Quirks.fetch_unique_constraints`."""
+    def test_vendor_queries_hasattr_removed_from_extractor(self):
+        """Story 20-18 — ``hasattr`` is gone from the extractor."""
         source = inspect.getsource(ConstraintExtractor._get_unique_constraints_via_vendor_queries)
         assert (
             "hasattr" not in source
         ), "hasattr vendor_queries still present — should have been removed by story 20-18"
-
-        # After H.2 the dialect gate lives on Db2Quirks, not the extractor.
-        from db.plugins.db2.quirks import Db2Quirks
-
-        quirks_source = inspect.getsource(Db2Quirks.fetch_unique_constraints)
-        assert (
-            "_get_unique_constraints_via_vendor_queries" in quirks_source
-        ), "Db2Quirks.fetch_unique_constraints must delegate to the DB2 SYSCAT path"
 
     def test_get_foreign_keys_assigns_reference_schema_directly(self):
         """AC#1 behavioral — reference_schema est assigné directement (sans guard hasattr)."""

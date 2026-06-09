@@ -44,37 +44,6 @@ def test_index_create_statement_with_expression_column():
     assert '""UPPER("email")""' not in stmt
 
 
-def test_index_create_statement_includes_tablespace_for_oracle():
-    index = Index(
-        name="idx_sales_region",
-        table_name="sales",
-        columns=["region"],
-        sort_directions=["ASC"],
-        dialect="oracle",
-        type="BITMAP",
-        tablespace="USERS",
-    )
-
-    stmt = index.create_statement
-    assert stmt.startswith("CREATE BITMAP INDEX")
-    assert 'TABLESPACE "USERS"' in stmt
-
-
-def test_index_create_statement_marks_local_for_oracle_bitmap():
-    index = Index(
-        name="idx_sales_region",
-        table_name="sales",
-        columns=["region"],
-        sort_directions=["ASC"],
-        dialect="oracle",
-        type="BITMAP",
-        is_local=True,
-    )
-
-    stmt = index.create_statement
-    assert "CREATE BITMAP INDEX" in stmt
-    assert " LOCAL" in stmt
-
 
 def test_mysql_index_does_not_schema_qualify_name():
     index = Index(
@@ -204,38 +173,10 @@ class TestIndexDropStatement:
         )
         assert idx.drop_statement == 'DROP INDEX IF EXISTS "idx_users_email"'
 
-    def test_oracle_omits_if_exists(self):
-        idx = Index(
-            name="IDX_USERS_EMAIL",
-            table_name="USERS",
-            columns=["EMAIL"],
-            schema="HR",
-            dialect="oracle",
-        )
-        assert idx.drop_statement == 'DROP INDEX "HR"."IDX_USERS_EMAIL"'
-        assert "IF EXISTS" not in idx.drop_statement
-
-    def test_db2_omits_if_exists(self):
-        idx = Index(
-            name="IDX_USERS_EMAIL",
-            table_name="USERS",
-            columns=["EMAIL"],
-            schema="DB2INST1",
-            dialect="db2",
-        )
-        assert idx.drop_statement == 'DROP INDEX "DB2INST1"."IDX_USERS_EMAIL"'
-        assert "IF EXISTS" not in idx.drop_statement
-
     def test_mysql_uses_table_form_no_if_exists(self):
         idx = Index(name="idx_users_email", table_name="users", columns=["email"], dialect="mysql")
         assert idx.drop_statement == "DROP INDEX `idx_users_email` ON `users`"
         assert "IF EXISTS" not in idx.drop_statement
-
-    def test_sqlserver_uses_table_form_with_if_exists(self):
-        idx = Index(
-            name="idx_users_email", table_name="users", columns=["email"], dialect="sqlserver"
-        )
-        assert idx.drop_statement == "DROP INDEX IF EXISTS [idx_users_email] ON [users]"
 
 
 def test_index_properties_serialization():

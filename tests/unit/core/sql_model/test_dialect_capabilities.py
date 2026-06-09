@@ -35,10 +35,14 @@ from core.sql_model.dialect import (
 class TestMatrixInvariants:
     """Invariants the matrix itself must satisfy."""
 
+    _ENTERPRISE_DIALECTS = {DialectEnum.ORACLE, DialectEnum.SQLSERVER, DialectEnum.DB2, DialectEnum.COSMOSDB}
+
     @pytest.mark.parametrize("member", list(DialectEnum))
     def test_every_canonical_dialect_has_a_capabilities_entry(self, member):
         if member is DialectEnum.UNKNOWN:
             pytest.skip("UNKNOWN is handled via the fallback, not the matrix.")
+        if member in self._ENTERPRISE_DIALECTS:
+            pytest.skip(f"{member.name} is an enterprise-only dialect.")
         assert member.value in _CAPABILITIES, (
             f"DialectEnum.{member.name} has no entry in _CAPABILITIES. Add one — "
             "the matrix must cover every canonical dialect."
@@ -104,19 +108,6 @@ class TestPostgreSQL:
         assert dialect_clean_strategy("postgresql") == "introspector"
 
 
-class TestOracle:
-    def test_supports_transactions_but_not_ddl(self):
-        assert dialect_supports_transactions("oracle") is True
-        # Oracle auto-commits DDL; rollback cannot undo CREATE/ALTER/DROP.
-        assert dialect_supports_transactional_ddl("oracle") is False
-
-    def test_uppercase_identifiers(self):
-        assert dialect_uses_uppercase_identifiers("oracle") is True
-
-    def test_schema_required(self):
-        assert dialect_requires_schema("oracle") is True
-
-
 class TestMySQL:
     def test_supports_transactions_but_not_ddl(self):
         assert dialect_supports_transactions("mysql") is True
@@ -124,20 +115,6 @@ class TestMySQL:
 
     def test_schema_required(self):
         assert dialect_requires_schema("mysql") is True
-
-
-class TestSQLServer:
-    def test_supports_transactions_and_ddl(self):
-        assert dialect_supports_transactions("sqlserver") is True
-        assert dialect_supports_transactional_ddl("sqlserver") is True
-
-
-class TestDB2:
-    def test_uppercase_identifiers(self):
-        assert dialect_uses_uppercase_identifiers("db2") is True
-
-    def test_supports_transactional_ddl(self):
-        assert dialect_supports_transactional_ddl("db2") is True
 
 
 class TestSQLite:
@@ -156,19 +133,6 @@ class TestSQLite:
         # SQLite enumerates drop candidates via the provider directly,
         # not via generic introspection.
         assert dialect_clean_strategy("sqlite") == "native"
-
-
-class TestCosmosDB:
-    def test_no_transactions(self):
-        # Cosmos DB is NoSQL; begin/commit/rollback are no-ops.
-        assert dialect_supports_transactions("cosmosdb") is False
-        assert dialect_supports_transactional_ddl("cosmosdb") is False
-
-    def test_no_schema_required(self):
-        assert dialect_requires_schema("cosmosdb") is False
-
-    def test_clean_strategy_is_native(self):
-        assert dialect_clean_strategy("cosmosdb") == "native"
 
 
 # --- Provider conformance ---------------------------------------------------
@@ -198,13 +162,9 @@ class TestProviderConformance:
 
     # Each entry: (provider class, dialect string)
     _INSTANTIABLE_PROVIDERS = [
-        ("cosmosdb", "db.plugins.cosmosdb.provider", "CosmosDbProvider"),
-        ("db2", "db.plugins.db2.provider", "Db2Provider"),
         ("mysql", "db.plugins.mysql.provider", "MySqlProvider"),
-        ("oracle", "db.plugins.oracle.provider", "OracleProvider"),
         ("postgresql", "db.plugins.postgresql.provider", "PostgreSqlProvider"),
         ("sqlite", "db.plugins.sqlite.provider", "SQLiteProvider"),
-        ("sqlserver", "db.plugins.sqlserver.provider", "SqlServerProvider"),
     ]
 
     @staticmethod

@@ -128,5 +128,5 @@ def test_first_party_plugins_round_trip_through_full_discovery(_reset_registry):
     all 7 first-party plugins registered, regardless of which path
     finds each one."""
     ProviderRegistry.discover_plugins()
-    for dialect in ("postgresql", "mysql", "oracle", "sqlserver", "db2", "sqlite", "cosmosdb"):
+    for dialect in ("postgresql", "mysql", "mariadb", "sqlite"):
         assert dialect in ProviderRegistry._plugins, f"{dialect} not registered"

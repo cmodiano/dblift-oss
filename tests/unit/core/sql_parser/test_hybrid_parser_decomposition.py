@@ -151,11 +151,6 @@ class TestShouldSkipDependencyStatement:
         stmt = "BEGIN\n  INSERT INTO t VALUES (1);\nEND;"
         assert parser._should_skip_dependency_statement(stmt) is True
 
-    def test_skip_oracle_unsupported(self):
-        parser = _make_parser("oracle")
-        stmt = "CREATE OR REPLACE PACKAGE BODY my_pkg AS BEGIN NULL; END;"
-        assert parser._should_skip_dependency_statement(stmt) is True
-
     def test_no_skip_pure_sql_select(self):
         parser = _make_parser("postgresql")
         stmt = "SELECT * FROM users WHERE id = 1"

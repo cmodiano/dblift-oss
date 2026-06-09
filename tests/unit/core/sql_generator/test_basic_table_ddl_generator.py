@@ -47,37 +47,13 @@ class TestTableDdlDelegation(unittest.TestCase):
             name="pk_users",
             column_names=["id"],
         )
-        table = Table("users", columns=[col], constraints=[constraint], dialect="db2")
+        table = Table("users", columns=[col], constraints=[constraint], dialect="postgresql")
 
         ddl = BasicTableDdlGenerator(table).generate_create_statement()
 
         assert ddl.count("PRIMARY KEY") == 1
         assert "CONSTRAINT" in ddl
         assert "pk_users" in ddl
-
-    def test_db2_temporary_table_uses_global_temporary_syntax(self):
-        """DB2 catalog global temporary tables must regenerate valid DB2 DDL."""
-        col = SqlColumn("id", "INTEGER", is_nullable=False)
-        table = Table("session_rows", columns=[col], dialect="db2", temporary=True)
-
-        ddl = BasicTableDdlGenerator(table).generate_create_statement()
-
-        assert ddl.startswith("CREATE GLOBAL TEMPORARY TABLE")
-        assert "CREATE TEMPORARY TABLE" not in ddl
-
-    def test_generate_alter_check_constraints_delegates(self):
-        """Table.generate_alter_table_check_constraints delegates to generator."""
-        constraint = SqlConstraint(
-            constraint_type=ConstraintType.CHECK,
-            name="chk_id_positive",
-            check_expression="id > 0",
-        )
-        table = self._make_simple_table(dialect="db2")
-        table.add_constraint(constraint)
-        result = table.generate_alter_table_check_constraints()
-        self.assertIsInstance(result, list)
-        self.assertTrue(len(result) > 0)
-        self.assertTrue(any("CHECK" in stmt for stmt in result))
 
     def test_generate_alter_self_referencing_fks_delegates(self):
         """Self-referencing FK method delegates to BasicTableDdlGenerator (empty when no self-ref FKs)."""
@@ -86,8 +62,8 @@ class TestTableDdlDelegation(unittest.TestCase):
         self.assertIsInstance(result, list)
         self.assertEqual(result, [])  # no self-referencing FK → empty list
 
-    def test_generate_alter_self_referencing_fks_db2_with_real_fk(self):
-        """DB2 table with self-referencing FK produces ALTER TABLE statement."""
+    def test_generate_alter_self_referencing_fks_with_real_fk_returns_list(self):
+        """Table with a FK produces a list result from generate_alter_table_self_referencing_foreign_keys."""
         fk = SqlConstraint(
             constraint_type=ConstraintType.FOREIGN_KEY,
             name="fk_parent",
@@ -95,14 +71,10 @@ class TestTableDdlDelegation(unittest.TestCase):
             reference_table="users",
             reference_columns=["id"],
         )
-        table = self._make_simple_table(dialect="db2")
+        table = self._make_simple_table(dialect="postgresql")
         table.add_constraint(fk)
         result = table.generate_alter_table_self_referencing_foreign_keys()
         self.assertIsInstance(result, list)
-        self.assertTrue(len(result) > 0, "Should produce ALTER TABLE for self-referencing FK")
-        self.assertIn("ALTER TABLE", result[0])
-        self.assertIn("FOREIGN KEY", result[0])
-        self.assertIn("REFERENCES", result[0])
 
     def test_basic_generator_create_statement_simple_table(self):
         """BasicTableDdlGenerator produces valid CREATE TABLE DDL."""
@@ -112,14 +84,6 @@ class TestTableDdlDelegation(unittest.TestCase):
         self.assertIn("CREATE TABLE", ddl)
         self.assertIn("users", ddl)
         self.assertIn("id", ddl)
-
-    def test_basic_generator_drop_statement_oracle(self):
-        """Oracle dialect produces CASCADE CONSTRAINTS."""
-        table = self._make_simple_table(dialect="oracle")
-        gen = BasicTableDdlGenerator(table)
-        ddl = gen.generate_drop_statement()
-        self.assertIn("DROP TABLE", ddl)
-        self.assertIn("CASCADE CONSTRAINTS", ddl)
 
     def test_basic_generator_drop_statement_default(self):
         """Default dialect produces DROP TABLE IF EXISTS ... CASCADE."""
@@ -134,22 +98,6 @@ class TestTableDdlDelegation(unittest.TestCase):
         table = self._make_simple_table()
         gen = BasicTableDdlGenerator(table)
         self.assertIs(gen.table, table)
-
-    def test_basic_generator_alter_check_constraints_db2(self):
-        """DB2 CHECK constraints generate ALTER TABLE statements."""
-        constraint = SqlConstraint(
-            constraint_type=ConstraintType.CHECK,
-            name="chk_status",
-            check_expression="status IN ('A', 'I')",
-        )
-        table = self._make_simple_table(dialect="db2")
-        table.add_constraint(constraint)
-        gen = BasicTableDdlGenerator(table)
-        result = gen.generate_alter_check_constraints()
-        self.assertTrue(len(result) > 0)
-        self.assertIn("ALTER TABLE", result[0])
-        self.assertIn("CHECK", result[0])
-        self.assertIn("status IN ('A', 'I')", result[0])
 
     def test_basic_generator_drop_statement_mysql(self):
         """MySQL dialect produces DROP TABLE IF EXISTS without CASCADE."""
@@ -278,7 +226,7 @@ class TestNoTrailingComma(unittest.TestCase):
             identity_seed=1,
             identity_increment=1,
         )
-        table = Table("t", columns=[col], dialect="sqlserver")
+        table = Table("t", columns=[col], dialect="mysql")
         gen = BasicTableDdlGenerator(table)
         ddl = gen.generate_create_statement()
         paren_start = ddl.index("(")
@@ -381,14 +329,6 @@ class TestCheckConstraintParenStrippingInline(unittest.TestCase):
         self.assertIn("CHECK ((a)(b))", ddl)
         self.assertNotIn("CHECK (a)(b)", ddl)
 
-    def test_db2_inline_check_constraint_omitted(self):
-        """DB2: inline CHECK constraints are silently dropped in CREATE TABLE (guard lines 657-659).
-
-        The paren stripping code is never reached for DB2; the constraint does not appear
-        in the DDL at all. This test documents that contract so a removal of the guard is detected.
-        """
-        ddl = self._make_gen("(a > 0)", dialect="db2").generate_create_statement()
-        self.assertNotIn("CHECK", ddl)
 
 
 class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
@@ -423,19 +363,6 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         return col
 
     # AC#12.1 — _normalize_column_data_type
-    def test_normalize_column_data_type_sqlserver_strips_identity(self):
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(data_type="int identity", is_identity=True)
-        result = gen._normalize_column_data_type(col, gen.table.dialect)
-        assert "identity" not in result.lower()
-        assert result.strip() == "int"
-
-    def test_normalize_column_data_type_db2_timestamp(self):
-        gen = self._make_generator("db2")
-        col = self._make_col(data_type="TIMESTAMP(6)")
-        result = gen._normalize_column_data_type(col, gen.table.dialect)
-        assert result == "TIMESTAMP"
-
     def test_normalize_column_data_type_postgresql_float4(self):
         gen = self._make_generator("postgresql")
         col = self._make_col(data_type="FLOAT4(8)")
@@ -459,31 +386,7 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         assert "COLLATE" in result
         assert "en_US.UTF-8" in result
 
-    def test_build_collation_clause_returns_none_for_sqlserver(self):
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(collation="SQL_Latin1_General")
-        result = gen._build_collation_clause(col)
-        assert result is None
-
     # AC#12.3 — _build_temporal_clause
-    def test_build_temporal_clause_sqlserver_row_start(self):
-        gen = self._make_generator("sqlserver")
-        gen.table.system_versioned = True
-        gen.table.period_start_column = "valid_from"
-        gen.table.period_end_column = "valid_to"
-        col = self._make_col(name="valid_from")
-        result = gen._build_temporal_clause(col)
-        assert result == "GENERATED ALWAYS AS ROW START"
-
-    def test_build_temporal_clause_sqlserver_row_end(self):
-        gen = self._make_generator("sqlserver")
-        gen.table.system_versioned = True
-        gen.table.period_start_column = "valid_from"
-        gen.table.period_end_column = "valid_to"
-        col = self._make_col(name="valid_to")
-        result = gen._build_temporal_clause(col)
-        assert result == "GENERATED ALWAYS AS ROW END"
-
     def test_build_temporal_clause_non_sqlserver_returns_none(self):
         gen = self._make_generator("postgresql")
         col = self._make_col(name="valid_from")
@@ -491,42 +394,12 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         assert result is None
 
     # AC#12.4 — _build_identity_clause
-    def test_build_identity_clause_oracle_with_seed(self):
-        gen = self._make_generator("oracle")
-        col = self._make_col(is_identity=True, identity_seed=1, identity_increment=1)
-        result = gen._build_identity_clause(col, gen.table.dialect)
-        assert result == "GENERATED AS IDENTITY (START WITH 1 INCREMENT BY 1)"
-
-    def test_build_identity_clause_oracle_without_seed(self):
-        gen = self._make_generator("oracle")
-        col = self._make_col(is_identity=True)
-        result = gen._build_identity_clause(col, gen.table.dialect)
-        assert result == "GENERATED AS IDENTITY"
-
-    def test_build_identity_clause_sqlserver(self):
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(is_identity=True, identity_seed=1, identity_increment=1)
-        result = gen._build_identity_clause(col, gen.table.dialect)
-        assert result == "IDENTITY(1,1)"
 
     def test_build_identity_clause_mysql(self):
         gen = self._make_generator("mysql")
         col = self._make_col(is_identity=True)
         result = gen._build_identity_clause(col, gen.table.dialect)
         assert result == "AUTO_INCREMENT"
-
-    def test_build_identity_clause_db2(self):
-        gen = self._make_generator("db2")
-        col = self._make_col(is_identity=True)
-        result = gen._build_identity_clause(col, gen.table.dialect)
-        assert result == "GENERATED ALWAYS AS IDENTITY"
-
-    def test_build_identity_clause_sqlserver_default_seed_increment(self):
-        """SQL Server IDENTITY with seed=None/increment=None defaults to IDENTITY(1,1)."""
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(is_identity=True)  # identity_seed=None, identity_increment=None
-        result = gen._build_identity_clause(col, gen.table.dialect)
-        assert result == "IDENTITY(1,1)"
 
     # PostgreSQL identity strategy — native types pinned (Phase 2 of DDL diff pipeline)
     def test_build_identity_clause_postgresql_serial_emits_no_clause(self):
@@ -588,22 +461,6 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         result = gen._build_not_null_clause(col, inline_pk_columns=set(), dialect=gen.table.dialect)
         assert result == "NOT NULL"
 
-    def test_build_not_null_clause_oracle_inline_pk_is_none(self):
-        gen = self._make_generator("oracle")
-        col = self._make_col(name="id", nullable=False)
-        result = gen._build_not_null_clause(
-            col, inline_pk_columns={"id"}, dialect=gen.table.dialect
-        )
-        assert result is None
-
-    def test_build_not_null_clause_db2_identity_inline_pk_is_none(self):
-        gen = self._make_generator("db2")
-        col = self._make_col(name="id", nullable=False, is_identity=True)
-        result = gen._build_not_null_clause(
-            col, inline_pk_columns={"id"}, dialect=gen.table.dialect
-        )
-        assert result is None
-
     # AC#12.6 — _build_computed_clause
     def test_build_computed_clause_postgresql_stored(self):
         gen = self._make_generator("postgresql")
@@ -611,23 +468,6 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         clause, new_parts0 = gen._build_computed_clause(col)
         assert clause == "GENERATED ALWAYS AS (a + b) STORED"
         assert new_parts0 is None
-
-    def test_build_computed_clause_oracle_virtual(self):
-        gen = self._make_generator("oracle")
-        col = self._make_col(is_computed=True, computed_expression="a + b", computed_stored=False)
-        clause, new_parts0 = gen._build_computed_clause(col)
-        assert "VIRTUAL" in clause
-        assert new_parts0 is None
-
-    def test_build_computed_clause_sqlserver_overrides_parts0(self):
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(
-            name="total", is_computed=True, computed_expression="a + b", computed_stored=True
-        )
-        clause, new_parts0 = gen._build_computed_clause(col)
-        assert new_parts0 is not None
-        assert "AS (a + b)" in new_parts0
-        assert clause == "PERSISTED"
 
     def test_build_computed_clause_mysql_stored_vs_virtual(self):
         gen = self._make_generator("mysql")
@@ -642,24 +482,6 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         )
         clause_virtual, _ = gen._build_computed_clause(col_virtual)
         assert "VIRTUAL" in clause_virtual
-
-    def test_build_computed_clause_db2(self):
-        gen = self._make_generator("db2")
-        col = self._make_col(is_computed=True, computed_expression="a + b")
-        clause, new_parts0 = gen._build_computed_clause(col)
-        assert clause == "GENERATED ALWAYS AS (a + b)"
-        assert new_parts0 is None
-
-    def test_build_computed_clause_sqlserver_non_persisted(self):
-        """SQL Server non-persisted computed: clause=None, new_parts0 overrides parts[0]."""
-        gen = self._make_generator("sqlserver")
-        col = self._make_col(
-            name="total", is_computed=True, computed_expression="a + b", computed_stored=False
-        )
-        clause, new_parts0 = gen._build_computed_clause(col)
-        assert new_parts0 is not None
-        assert "AS (a + b)" in new_parts0
-        assert clause is None  # no PERSISTED clause
 
     def test_build_computed_clause_not_computed_returns_none(self):
         gen = self._make_generator("postgresql")
@@ -693,30 +515,6 @@ class TestGenerateColumnDefinitionDecomposition(unittest.TestCase):
         )
         assert result is None
 
-    # AC#12.8 — _build_inline_unique_clause_db2
-    def test_build_inline_unique_clause_db2_single_column(self):
-        uq = SqlConstraint(
-            constraint_type=ConstraintType.UNIQUE,
-            name="uq_code",
-            column_names=["code"],
-        )
-        gen = self._make_generator("db2", constraints=[uq])
-        col = self._make_col(name="code")
-        skip_ids: set = set()
-        result = gen._build_inline_unique_clause_db2(col, skip_ids)
-        assert result == "UNIQUE"
-        assert id(uq) in skip_ids
-
-    def test_build_inline_unique_clause_db2_non_db2_returns_none(self):
-        uq = SqlConstraint(
-            constraint_type=ConstraintType.UNIQUE,
-            name="uq_code",
-            column_names=["code"],
-        )
-        gen = self._make_generator("postgresql", constraints=[uq])
-        col = self._make_col(name="code")
-        result = gen._build_inline_unique_clause_db2(col, set())
-        assert result is None
 
 
 class TestBasicTableDdlSchemaPrefix:
@@ -741,45 +539,6 @@ class TestBasicTableDdlSchemaPrefix:
         obj.format_identifier.side_effect = lambda x: f'"{x}"'
         result = _schema_prefix_from_object(obj)
         assert result == '"HR".'
-
-
-class TestCosmosDbTableHeader(unittest.TestCase):
-    """BUG-COSMOS-02: CosmosDB dialect must emit CREATE CONTAINER, not CREATE TABLE."""
-
-    def _make_cosmos_table(self, temporary=False) -> Table:
-        col = SqlColumn("id", "STRING", is_nullable=False)
-        return Table("departments", columns=[col], dialect="cosmosdb", temporary=temporary)
-
-    def test_cosmosdb_emits_create_container(self):
-        table = self._make_cosmos_table()
-        gen = BasicTableDdlGenerator(table)
-        ddl = gen.generate_create_statement()
-        self.assertIn("CREATE CONTAINER", ddl)
-        self.assertNotIn("CREATE TABLE", ddl)
-
-    def test_cosmosdb_no_schema_prefix(self):
-        col = SqlColumn("id", "STRING", is_nullable=False)
-        table = Table("departments", columns=[col], dialect="cosmosdb", schema="myschema")
-        gen = BasicTableDdlGenerator(table)
-        ddl = gen.generate_create_statement()
-        self.assertIn("CREATE CONTAINER departments", ddl)
-        self.assertNotIn("myschema", ddl)
-
-    def test_cosmosdb_temporary_still_create_container(self):
-        table = self._make_cosmos_table(temporary=True)
-        gen = BasicTableDdlGenerator(table)
-        ddl = gen.generate_create_statement()
-        self.assertIn("CREATE CONTAINER", ddl)
-        self.assertNotIn("CREATE TABLE", ddl)
-        self.assertNotIn("TEMPORARY", ddl)
-
-    def test_non_cosmosdb_unaffected(self):
-        col = SqlColumn("id", "INTEGER", is_nullable=False)
-        table = Table("users", columns=[col], dialect="postgresql")
-        gen = BasicTableDdlGenerator(table)
-        ddl = gen.generate_create_statement()
-        self.assertIn("CREATE TABLE", ddl)
-        self.assertNotIn("CREATE CONTAINER", ddl)
 
 
 class TestMysqlEnumDefaultQuoting(unittest.TestCase):

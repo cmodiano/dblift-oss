@@ -233,27 +233,6 @@ class TestConsistencyValidator:
         # Expression columns should be skipped
         assert isinstance(result, ValidationResult)
 
-    def test_validate_indexes_cosmosdb_wildcard_column(self):
-        """CosmosDB auto indexes use * to mean all document paths."""
-        validator = ConsistencyValidator()
-
-        table = MagicMock()
-        table.constraints = []
-        table.name = "test_table"
-        table.columns = []
-
-        index = Index(
-            name="auto_index_test_table",
-            table_name="test_table",
-            columns=["*"],
-            dialect="cosmosdb",
-        )
-
-        result = validator.validate_indexes([table], [index], schema="public")
-
-        assert result.passed is True
-        assert not any("non-existent column" in issue.message for issue in result.issues)
-
     def test_validate_indexes_non_cosmosdb_wildcard_column_still_errors(self):
         """The wildcard skip is limited to CosmosDB synthetic indexes."""
         validator = ConsistencyValidator()

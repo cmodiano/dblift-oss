@@ -31,46 +31,26 @@ class TestBug01PostCommitQuoting(unittest.TestCase):
         self.assertEqual(DialectEnum.quote_identifier("mysql", "public"), "`public`")
         self.assertEqual(DialectEnum.quote_identifier("mysql", "users"), "`users`")
 
-    def test_sqlserver_uses_brackets(self) -> None:
-        from core.sql_model.dialect import DialectEnum
-
-        self.assertEqual(DialectEnum.quote_identifier("sqlserver", "dbo"), "[dbo]")
-        self.assertEqual(DialectEnum.quote_identifier("sqlserver", "Users"), "[Users]")
-
-    def test_postgres_and_oracle_use_ansi_quotes(self) -> None:
+    def test_postgres_uses_ansi_quotes(self) -> None:
         from core.sql_model.dialect import DialectEnum
 
         self.assertEqual(DialectEnum.quote_identifier("postgresql", "public"), '"public"')
-        self.assertEqual(DialectEnum.quote_identifier("oracle", "HR"), '"HR"')
 
     def test_engine_composes_verification_per_dialect(self) -> None:
         """Compose the exact same expression the engine builds and assert
-        the resulting SELECT text differs by dialect and respects Oracle's
-        upper-case folding."""
+        the resulting SELECT text differs by dialect."""
         from core.sql_model.dialect import DialectEnum
 
         def compose(dialect: str, schema: str, table: str) -> str:
-            s = schema.upper() if dialect == "oracle" else schema
-            t = table.upper() if dialect == "oracle" else table
             qualified = (
-                f"{DialectEnum.quote_identifier(dialect, s)}"
-                f".{DialectEnum.quote_identifier(dialect, t)}"
+                f"{DialectEnum.quote_identifier(dialect, schema)}"
+                f".{DialectEnum.quote_identifier(dialect, table)}"
             )
-            if dialect in ("oracle", "sqlserver"):
-                return f"SELECT COUNT(*) as cnt FROM {qualified}"
             return f"SELECT COUNT(*) as cnt FROM {qualified} LIMIT 1"
 
         self.assertEqual(
             compose("mysql", "app", "users"),
             "SELECT COUNT(*) as cnt FROM `app`.`users` LIMIT 1",
-        )
-        self.assertEqual(
-            compose("sqlserver", "dbo", "users"),
-            "SELECT COUNT(*) as cnt FROM [dbo].[users]",
-        )
-        self.assertEqual(
-            compose("oracle", "hr", "employees"),
-            'SELECT COUNT(*) as cnt FROM "HR"."EMPLOYEES"',
         )
         self.assertEqual(
             compose("postgresql", "public", "users"),
@@ -209,18 +189,9 @@ class TestBug22UrlPrefixDialect(unittest.TestCase):
         result = self._detect("postgresql://sqlserver-vm.internal/db")
         self.assertEqual(result, "postgresql")
 
-    def test_sqlserver_prefix_classifies_as_sqlserver(self) -> None:
-        result = self._detect("mssql+pymssql://host/x")
-        self.assertEqual(result, "sqlserver")
-
     def test_mysql_url_with_oracle_in_path_stays_mysql(self) -> None:
         result = self._detect("mysql+pymysql://h:3306/oracle_migrated_db")
         self.assertEqual(result, "mysql")
-
-    def test_db2_prefix_matches(self) -> None:
-        result = self._detect("ibm_db_sa://h:50000/sample")
-        self.assertEqual(result, "db2")
-
 
 # ---------------------------------------------------------------------------
 # B10-BUG-23: SQLite partial-index WHERE predicate must round-trip
@@ -292,48 +263,6 @@ class TestBug23SqlitePartialIndexWhere(unittest.TestCase):
         )
         sql = gen._generate_index_create_statement(index)
         self.assertNotIn("WHERE", sql.upper())
-
-
-# ---------------------------------------------------------------------------
-# B10-BUG-24: CosmosDB clean drops internal containers instead of clearing rows
-# ---------------------------------------------------------------------------
-class TestBug24CosmosCleanInternalContainers(unittest.TestCase):
-    """Clean should remove every Cosmos container, including history."""
-
-    def _make_ops(self):
-        from db.plugins.cosmosdb.cosmosdb.schema_operations import (
-            CosmosDbSchemaOperations,
-        )
-
-        ops = CosmosDbSchemaOperations.__new__(CosmosDbSchemaOperations)
-        ops.log = MagicMock()
-        ops.connection_manager = MagicMock()
-        return ops
-
-    def _run_clean(self, ops, container_names):
-        ops.list_containers = MagicMock(return_value=container_names)
-        ops.delete_container = MagicMock(return_value=True)
-        ops.clean_schema(connection=None, schema="")
-        return ops
-
-    def test_history_container_is_dropped_not_cleared(self) -> None:
-        ops = self._make_ops()
-        self._run_clean(ops, ["dblift_schema_history"])
-
-        ops.delete_container.assert_called_once_with("dblift_schema_history")
-        ops.connection_manager.get_container_client.assert_not_called()
-
-    def test_all_internal_containers_are_dropped(self) -> None:
-        ops = self._make_ops()
-        self._run_clean(
-            ops,
-            ["dblift_schema_history", "dblift_schema_snapshots", "dblift_migration_lock"],
-        )
-
-        self.assertEqual(
-            [call.args[0] for call in ops.delete_container.call_args_list],
-            ["dblift_schema_history", "dblift_schema_snapshots", "dblift_migration_lock"],
-        )
 
 
 if __name__ == "__main__":

@@ -694,7 +694,7 @@ def test_main_missing_database_username_subprocess():
         "-m",
         "cli.main",
         "--db-url",
-        "oracle+oracledb://localhost:1521?service_name=XE",
+        "postgresql+psycopg://localhost:5432/testdb",
         "migrate",
         # No --db-username provided, should trigger error
     ]
@@ -716,7 +716,7 @@ def test_main_missing_database_password_subprocess():
         "-m",
         "cli.main",
         "--db-url",
-        "mssql+pymssql://localhost:1433/testdb",
+        "postgresql+psycopg://localhost:5432/testdb",
         "--db-username",
         "user",
         "migrate",
