@@ -34,7 +34,6 @@ Utility scripts for development, testing, and code quality.
 | Script | Purpose |
 |---|---|
 | `build_docker.sh` | Build and smoke-test the Docker image locally |
-| `docker/run_validation.py` | Validation entrypoint used inside the CI validation image |
 
 ## Typical workflow
 
