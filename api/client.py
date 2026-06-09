@@ -26,8 +26,6 @@ from api._client_factory import (
     resolve_config_or_raise,
 )
 from api._client_operations import (
-    export_schema_operation,
-    generate_sql_from_diff_operation,
     generate_undo_script_operation,
     generate_undo_scripts_operation,
 )
@@ -36,25 +34,19 @@ from config import DbliftConfig
 from core.logger.results import (
     BaselineResult,
     CleanResult,
-    DiffResult,
-    ExportSchemaResult,
-    GenerateSqlFromDiffResult,
     GenerateUndoScriptResult,
     InfoResult,
     MigrateResult,
     OperationResult,
-    PlanResult,
     RepairResult,
-    SnapshotResult,
     UndoResult,
     ValidateResult,
 )
-from core.migration.commands.export_schema_command import ExportSchemaOptions
 from core.migration.executor.migration_executor import MigrationExecutor
 from db.base_provider import BaseProvider
 from db.provider_interfaces import ConnectionProvider, TransactionalProvider
 
-__all__ = ["DBLiftClient", "ExportSchemaOptions"]
+__all__ = ["DBLiftClient"]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
@@ -424,151 +416,8 @@ class DBLiftClient:
             self.events.emit(EventType.VALIDATION_FAILED, {"error": str(e)})
             raise
 
-    @_with_client_emitter
-    def plan(
-        self,
-        snapshot_model: Union[str, Path],
-        skip_validate_sql: bool = False,
-        validate_scope: str = "pending",
-        recursive: bool = True,
-        additional_dirs: Optional[List[Path]] = None,
-        dir_recursive_map: Optional[Dict[Path, bool]] = None,
-        **kwargs: Any,
-    ) -> PlanResult:
-        """Build an offline migration plan from a DBLift snapshot model."""
-        self._guard_scripts_dir_kwarg(kwargs)
-        return self.executor.plan(
-            scripts_dir=self._get_scripts_dir(),
-            snapshot_model=Path(snapshot_model),
-            recursive=recursive,
-            additional_dirs=additional_dirs,
-            dir_recursive_map=dir_recursive_map,
-            skip_validate_sql=skip_validate_sql,
-            validate_scope=validate_scope,
-            **kwargs,
-        )
 
-    @_with_client_emitter
-    def diff(
-        self,
-        snapshot_model: Optional[str] = None,
-        ignore_unmanaged: bool = False,
-        target_version: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        exclude_tags: Optional[List[str]] = None,
-        versions: Optional[List[str]] = None,
-        exclude_versions: Optional[List[str]] = None,
-        recursive: bool = True,
-        additional_dirs: Optional[List[Path]] = None,
-        **kwargs: Any,
-    ) -> DiffResult:
-        """Compare schema against migrations (drift detection).
 
-        Args:
-            snapshot_model: Optional snapshot model path to compare against
-            ignore_unmanaged: Hide unmanaged objects section
-            target_version: Target version to compare
-            tags: List of tags to include
-            exclude_tags: List of tags to exclude
-            versions: List of versions to include
-            exclude_versions: List of versions to exclude
-            recursive: Search scripts directory recursively
-            additional_dirs: Additional script directories
-            **kwargs: Additional options
-
-        Returns:
-            DiffResult with comparison results
-        """
-        self._guard_scripts_dir_kwarg(kwargs)
-        snapshot_model_path = Path(snapshot_model) if snapshot_model else None
-
-        result = self.executor.diff(
-            scripts_dir=self._get_scripts_dir(),
-            target_version=target_version,
-            tags=",".join(tags) if tags else None,
-            exclude_tags=",".join(exclude_tags) if exclude_tags else None,
-            versions=",".join(versions) if versions else None,
-            exclude_versions=",".join(exclude_versions) if exclude_versions else None,
-            ignore_unmanaged=ignore_unmanaged,
-            recursive=recursive,
-            additional_dirs=additional_dirs,
-            snapshot_model_path=snapshot_model_path,
-            **kwargs,
-        )
-
-        if result and hasattr(result, "has_differences") and result.has_differences:
-            self.events.emit(
-                EventType.SCHEMA_DIFF_DETECTED,
-                {
-                    "result": result,
-                    "summary": getattr(result, "summary", ""),
-                },
-            )
-
-        return result
-
-    @_with_client_emitter
-    def generate_sql_from_diff(
-        self,
-        diff: Optional[Any] = None,
-        diff_result: Optional["DiffResult"] = None,
-        output_file: Optional[Union[str, Path]] = None,
-        expected_objects: Optional[Dict[str, Any]] = None,
-        title: Optional[str] = None,
-        description: Optional[str] = None,
-        include_comments: bool = True,
-        include_checks: bool = True,
-        **kwargs: Any,
-    ) -> "GenerateSqlFromDiffResult":
-        """Generate SQL script from a schema diff.
-
-        This method converts a SchemaDiff into executable SQL statements
-        that can be reviewed and executed by DBAs to synchronize schemas.
-
-        Args:
-            diff: SchemaDiff object (if provided, takes precedence over diff_result)
-            diff_result: DiffResult from a previous diff() call
-            output_file: Optional path to save the SQL script
-            expected_objects: Optional dict mapping object types to expected objects
-                             (e.g., {"tables": {...}, "views": {...}})
-            title: Optional title for the SQL script
-            description: Optional description for the SQL script
-            include_comments: Whether to include comments in the script
-            include_checks: Whether to include pre-execution safety checks
-            **kwargs: Additional options
-
-        Returns:
-            GenerateSqlFromDiffResult with the generated SQL script
-
-        Example:
-            >>> client = DBLiftClient.from_config_file("dblift.yaml")
-            >>>
-            >>> # Option 1: Use diff result
-            >>> diff_result = client.diff()
-            >>> sql_result = client.generate_sql_from_diff(
-            ...     diff_result=diff_result,
-            ...     output_file="schema_update.sql",
-            ...     title="Schema Synchronization Script"
-            ... )
-            >>> print(f"Generated {sql_result.statements_generated} statements")
-            >>>
-            >>> # Option 2: Use SchemaDiff directly
-            >>> from core.comparison.comparator import ObjectComparator
-            >>> comparator = ObjectComparator()
-            >>> schema_diff = comparator.compare_schemas(expected, actual)
-            >>> sql_result = client.generate_sql_from_diff(diff=schema_diff)
-        """
-        return generate_sql_from_diff_operation(
-            self,
-            diff=diff,
-            diff_result=diff_result,
-            output_file=output_file,
-            expected_objects=expected_objects,
-            title=title,
-            description=description,
-            include_comments=include_comments,
-            include_checks=include_checks,
-        )
 
     @_with_client_emitter
     def undo(
@@ -965,116 +814,7 @@ class DBLiftClient:
             )
             raise
 
-    @_with_client_emitter
-    def export_schema(
-        self,
-        output: Optional[Union[str, Path]] = None,
-        output_dir: Optional[Union[str, Path]] = None,
-        split_by_type: bool = False,
-        tables: Optional[List[str]] = None,
-        types: Optional[List[str]] = None,
-        unmanaged_only: bool = False,
-        managed_only: bool = False,
-        include_drops: bool = False,
-        schema: Optional[str] = None,
-        description: Optional[str] = None,
-        source: str = "live-database",
-        snapshot_model: Optional[Union[str, Path]] = None,
-        tags: Optional[str] = None,
-        exclude_tags: Optional[str] = None,
-        versions: Optional[str] = None,
-        exclude_versions: Optional[str] = None,
-        target_version: Optional[str] = None,
-        options: Optional[Any] = None,
-        **kwargs: Any,
-    ) -> ExportSchemaResult:
-        """Export database schema to SQL file(s).
 
-        Args:
-            output: Single output file path
-            output_dir: Output directory (for split-by-type)
-            split_by_type: Split output by object type
-            tables: Filter by table names (comma-separated string or list)
-            types: Filter by object types (comma-separated string or list)
-            unmanaged_only: Export only unmanaged objects
-            managed_only: Export only managed objects
-            include_drops: Include DROP statements
-            schema: Target schema name
-            source: Source type (live-database, database-model, file-model)
-            snapshot_model: Path to snapshot model file (for file-model source)
-            tags: Include migrations with tags
-            exclude_tags: Exclude migrations with tags
-            versions: Include specific versions
-            exclude_versions: Exclude specific versions
-            target_version: Target version for filtering
-            options: Pre-built ``ExportSchemaOptions`` dataclass. When provided,
-                it takes precedence and the individual kwargs above are ignored
-                (they still control the default-building path when ``options``
-                is ``None``). Before this, ``options=...`` landed in ``**kwargs``
-                and was silently discarded.
-            **kwargs: Reserved for forward compatibility
-
-        Returns:
-            ExportSchemaResult with success status and details
-        """
-        return export_schema_operation(
-            self,
-            output=output,
-            output_dir=output_dir,
-            split_by_type=split_by_type,
-            tables=tables,
-            types=types,
-            unmanaged_only=unmanaged_only,
-            managed_only=managed_only,
-            include_drops=include_drops,
-            schema=schema,
-            description=description,
-            source=source,
-            snapshot_model=snapshot_model,
-            tags=tags,
-            exclude_tags=exclude_tags,
-            versions=versions,
-            exclude_versions=exclude_versions,
-            target_version=target_version,
-            options=options,
-        )
-
-    @_with_client_emitter
-    def snapshot(
-        self,
-        output: Union[str, Path],
-        source: str = "database-stored",
-        min_confidence: Optional[float] = None,
-    ) -> SnapshotResult:
-        """Export schema snapshot to JSON model file.
-
-        Args:
-            output: Output file path
-            source: Source type (database-stored, live-database)
-            min_confidence: Optional lower bound on overall confidence score
-                (0.0-1.0). When set and the live-database snapshot scores
-                below this value, the operation fails (B8-BUG-05).
-
-        Returns:
-            SnapshotResult with success status and details
-        """
-        from core.migration.commands.snapshot_command import snapshot as snapshot_impl
-
-        # Call the snapshot implementation
-        # B8-BUG-03: reuse the client's provider instead of creating a second
-        # provider in the same process.
-        success, err_msg = snapshot_impl(
-            config=self.config,
-            output=str(output),
-            source=source,
-            log=self.logger,
-            provider=getattr(self, "provider", None),
-            min_confidence=min_confidence,
-        )
-
-        result = SnapshotResult(success=success, error_message=err_msg, output_file=str(output))
-        result.complete()
-        return result
 
     @classmethod
     def from_config(

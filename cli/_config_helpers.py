@@ -239,9 +239,8 @@ def _load_and_merge_config(args: argparse.Namespace, log: Any) -> Any:
         # the same bypass must apply here so they don't trigger provider calls.
         command = getattr(args, "command", None)
         commands_list = getattr(args, "commands_list", None) or ([command] if command else [])
-        is_offline = command in ("validate-sql", "plan") and len(commands_list) == 1
-        if not is_offline:
-            from config.secrets._resolver import resolve_secret_refs
+        if True:
+            from config.secrets import resolve_secret_refs
 
             try:
                 db_overrides = resolve_secret_refs({"database": db_overrides}, config.secrets).get(

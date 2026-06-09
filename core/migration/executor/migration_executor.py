@@ -365,30 +365,6 @@ class MigrationExecutor:
             exclude_versions=exclude_versions,
         )
 
-    def plan(
-        self,
-        scripts_dir: Path,
-        snapshot_model: Path,
-        recursive: bool = True,
-        additional_dirs: Optional[List[Path]] = None,
-        dir_recursive_map: Optional[Dict[Path, bool]] = None,
-        skip_validate_sql: bool = False,
-        validate_scope: str = "pending",
-    ) -> PlanResult:
-        """Build an offline migration plan from a snapshot model."""
-        from core.migration.commands.plan_command import PlanCommand
-
-        command = PlanCommand(self._make_command_context())
-        return command.execute(
-            scripts_dir=scripts_dir,
-            snapshot_model=snapshot_model,
-            recursive=recursive,
-            additional_dirs=additional_dirs,
-            dir_recursive_map=dir_recursive_map,
-            skip_validate_sql=skip_validate_sql,
-            validate_scope=validate_scope,
-        )
-
     def info(
         self,
         scripts_dir: Path,
@@ -413,59 +389,6 @@ class MigrationExecutor:
             additional_dirs=additional_dirs,
             dir_recursive_map=dir_recursive_map,
             display_human=display_human,
-        )
-
-    def diff(
-        self,
-        scripts_dir: Path,
-        target_version: Optional[str] = None,
-        tags: Optional[str] = None,
-        exclude_tags: Optional[str] = None,
-        versions: Optional[str] = None,
-        exclude_versions: Optional[str] = None,
-        ignore_unmanaged: bool = False,
-        recursive: bool = True,
-        additional_dirs: Optional[List[Path]] = None,
-        dir_recursive_map: Optional[Dict[Path, bool]] = None,
-        snapshot_model_path: Optional[Path] = None,
-    ) -> DiffResult:
-        """Compare applied migrations against live database schema (drift detection).
-
-        Args:
-            scripts_dir: Directory containing migration scripts
-            target_version: Compare only up to this version
-            tags: Compare only migrations with these tags
-            exclude_tags: Exclude migrations with these tags
-            versions: Compare only specific versions
-            exclude_versions: Exclude specific versions
-            ignore_unmanaged: Hide unmanaged objects section
-            recursive: Search scripts directory recursively
-            additional_dirs: Additional script directories
-            dir_recursive_map: Optional mapping of directory paths to their recursive settings
-            snapshot_model_path: Optional path to a snapshot model file to compare against
-
-        Returns:
-            DiffResult containing comparison results
-        """
-        from core.migration.commands.diff_command import DiffCommand
-
-        command = DiffCommand(
-            self._make_command_context(),
-            snapshot_service=self.snapshot_service,
-        )
-
-        return command.execute(
-            scripts_dir=scripts_dir,
-            target_version=target_version,
-            tags=tags,
-            exclude_tags=exclude_tags,
-            versions=versions,
-            exclude_versions=exclude_versions,
-            ignore_unmanaged=ignore_unmanaged,
-            recursive=recursive,
-            additional_dirs=additional_dirs,
-            dir_recursive_map=dir_recursive_map,
-            snapshot_model_path=snapshot_model_path,
         )
 
     def baseline(

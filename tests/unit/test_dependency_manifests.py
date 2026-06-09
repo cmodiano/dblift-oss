@@ -59,8 +59,6 @@ def test_requirements_txt_does_not_include_obsolete_dataclasses_backport():
 def test_docker_manifests_do_not_install_jvm_runtime():
     dockerfiles = [
         ROOT / "Dockerfile",
-        ROOT / "Dockerfile.validation",
-        ROOT / "Dockerfile.validation-lite",
     ]
     forbidden_terms = ("jlink", "JAVA_HOME", "jpype", "jdbc_drivers")
 
@@ -68,12 +66,6 @@ def test_docker_manifests_do_not_install_jvm_runtime():
         content = dockerfile.read_text(encoding="utf-8").lower()
         assert not any(term.lower() in content for term in forbidden_terms), dockerfile
 
-
-@pytest.mark.unit
-def test_validation_lite_image_installs_sqlalchemy():
-    content = (ROOT / "Dockerfile.validation-lite").read_text(encoding="utf-8")
-
-    assert "SQLAlchemy" in content
 
 
 @pytest.mark.unit
@@ -114,8 +106,6 @@ def test_user_docs_do_not_describe_jdbc_or_jvm_runtime():
         ROOT / "README.md",
         ROOT / "SECURITY.md",
         ROOT / "DOCKER.md",
-        ROOT / "ARCHITECTURE.md",
-        ROOT / "docs" / "release" / "offline-delivery.md",
         ROOT / "docs" / "operations" / "recovery" / "index.md",
         ROOT / "docs" / "operations" / "recovery" / "oracle-lock-timeout.md",
         ROOT / "docs" / "operations" / "recovery" / "schema-history-corruption.md",

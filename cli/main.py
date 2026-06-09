@@ -227,8 +227,6 @@ def _parse_argv_and_load_config(argv: List[str]) -> _CliContext:
     # Validate log format before any config load so bogus --log-format fails with argparse
     # UX (and so db/* commands are covered — _validate_db_config skips early for "db").
     _validate_log_format_for_cli(args, parser)
-    # Attach the full command list so load_config can distinguish standalone
-    # offline commands (plan, validate-sql) from chained invocations.
     args.commands_list = commands
     config = None if commands[0] == "db" else _load_and_merge_config(args, log)
     _validate_db_config(args, config, parser, commands)
@@ -284,22 +282,10 @@ def _setup_logging_and_output(ctx: _CliContext) -> CommandOutput:
     assert ctx.config is not None
     ctx.log = _configure_logging(ctx.args, ctx.config, ctx.parser)
 
-    _apply_validate_sql_configured_output_format(ctx)
-
     # Banner routing is centralised in :class:`cli._output.CommandOutput`
     # (ADR-0008 supersedes ADR-0005's suppression approach). Machine
     # mode routes the banner to stderr; human mode keeps it on stdout.
     return from_args(ctx.args)
-
-
-def _apply_validate_sql_configured_output_format(ctx: _CliContext) -> None:
-    """Use configured validate-sql output format before top-level banner routing."""
-    if ctx.commands != ["validate-sql"] or getattr(ctx.args, "format", None):
-        return
-    validation_config = getattr(ctx.config, "validation", None)
-    output_format = getattr(validation_config, "output_format", None)
-    if output_format:
-        ctx.args.format = output_format
 
 
 def _dispatch_command(ctx: _CliContext, command_output: CommandOutput) -> int:

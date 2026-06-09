@@ -69,30 +69,6 @@ class TestApplySqlScriptWarningScan(unittest.TestCase):
         self.assertTrue(result.requires_manual_review)
 
 
-class TestGenerateSqlFromDiffOperation(unittest.TestCase):
-    def test_no_diff_returns_error(self):
-        from api._client_operations import generate_sql_from_diff_operation
-
-        client = MagicMock()
-        result = generate_sql_from_diff_operation(client)
-        self.assertFalse(result.success)
-        self.assertIsNotNone(result.error_message)
-
-    def test_diff_result_without_schema_diff(self):
-        from api._client_operations import generate_sql_from_diff_operation
-
-        client = MagicMock()
-        diff_result = MagicMock(spec=[])  # no schema_diff
-        result = generate_sql_from_diff_operation(client, diff_result=diff_result)
-        self.assertFalse(result.success)
-
-    def test_invalid_diff_type_returns_error(self):
-        from api._client_operations import generate_sql_from_diff_operation
-
-        client = MagicMock()
-        result = generate_sql_from_diff_operation(client, diff="not a schema diff")
-        self.assertFalse(result.success)
-
 
 class TestGenerateUndoScriptOperation(unittest.TestCase):
     def test_missing_script_raises_or_errors(self):

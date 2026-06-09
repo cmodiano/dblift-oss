@@ -53,12 +53,8 @@ class TestApiPackageSurface:
 
         assert EventType is not None
 
-    def test_export_schema_options_is_importable(self):
-        from api import ExportSchemaOptions
 
-        assert isinstance(ExportSchemaOptions, type)
-
-    def test_all_lists_exactly_four_symbols(self):
+    def test_all_lists_exactly_three_symbols(self):
         """``api.__all__`` is the contract. Additions are MINOR bumps
         (document in semver-policy.md + CHANGELOG); removals are MAJOR."""
         import api
@@ -67,7 +63,6 @@ class TestApiPackageSurface:
             "DBLiftClient",
             "EventEmitter",
             "EventType",
-            "ExportSchemaOptions",
         }
 
 
@@ -247,16 +242,13 @@ class TestLoggerPackageSurface:
 
 
 class TestDBLiftClientPublicMethods:
-    """The 14 public methods on DBLiftClient (§ 3.2 of ARCHITECTURE.md)."""
+    """The public methods on DBLiftClient."""
 
     EXPECTED_PUBLIC_METHODS = frozenset(
         {
             "migrate",
-            "plan",
             "info",
             "validate",
-            "diff",
-            "generate_sql_from_diff",
             "undo",
             "generate_undo_script",
             "generate_undo_scripts",
@@ -264,8 +256,6 @@ class TestDBLiftClientPublicMethods:
             "baseline",
             "repair",
             "import_flyway",
-            "export_schema",
-            "snapshot",
             # Construction helpers
             "from_config",
             "from_config_file",
@@ -312,11 +302,8 @@ class TestDBLiftClientPublicMethods:
     EXPECTED_DECORATED_OPERATIONS = frozenset(
         {
             "migrate",
-            "plan",
             "info",
             "validate",
-            "diff",
-            "generate_sql_from_diff",
             "undo",
             "generate_undo_script",
             "generate_undo_scripts",
@@ -324,8 +311,6 @@ class TestDBLiftClientPublicMethods:
             "baseline",
             "repair",
             "import_flyway",
-            "export_schema",
-            "snapshot",
         }
     )
 

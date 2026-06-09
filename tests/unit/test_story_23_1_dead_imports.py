@@ -40,11 +40,3 @@ def test_cli_main_exposes_private_parser_helpers_as_reexports():
             f"{name} must be accessible in cli.main namespace "
             f"(tests/unit/cli/test_main_cli_decomposition.py imports it)"
         )
-
-
-def test_export_schema_command_json_default_not_needed_as_reexport():
-    """_json_default was removed from export_schema_command imports — verify the module
-    still imports cleanly without it."""
-    import core.migration.commands.export_schema_command as mod
-
-    assert hasattr(mod, "ExportSchemaOptions")  # sanity check module loaded

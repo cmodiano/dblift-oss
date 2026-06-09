@@ -618,7 +618,7 @@ class TestDatabaseUrlMasking:
     """Test that database URLs are masked before logging in CLI."""
 
     def test_mask_database_url_imported_in_cli_main(self):
-        """cli.main doit exposer _mask_database_url (importée depuis snapshot_command)."""
+        """cli.main must expose _mask_database_url."""
         import cli.main as m
 
         assert hasattr(m, "_mask_database_url"), "_mask_database_url must be imported in cli.main"

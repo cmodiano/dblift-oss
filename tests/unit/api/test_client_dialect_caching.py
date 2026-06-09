@@ -78,24 +78,12 @@ class TestClientDialectCaching:
             assert client.dialect == "postgresql"
             assert mock_get.call_count == 1
 
-    def test_generate_sql_from_diff_uses_self_dialect_not_method(self):
-        """generate_sql_from_diff, generate_undo_script and generate_undo_scripts_batch
-        use self.dialect (not _get_dialect_for_sql_generation) — regression guard."""
+    def test_generate_undo_scripts_dialect_regression(self):
+        """generate_undo_script and generate_undo_scripts_batch use client.dialect."""
         from api._client_operations import (
             _generate_undo_script_for_migration,
-            generate_sql_from_diff_operation,
             generate_undo_scripts_operation,
         )
-
-        direct_dialect_helpers = (generate_sql_from_diff_operation,)
-        for helper in direct_dialect_helpers:
-            source = inspect.getsource(helper)
-            assert (
-                "client.dialect" in source
-            ), f"{helper.__name__} should use client.dialect (cached)"
-            assert (
-                "_get_dialect_for_sql_generation()" not in source
-            ), f"{helper.__name__} must not re-call _get_dialect_for_sql_generation()"
 
         undo_generation_source = inspect.getsource(_generate_undo_script_for_migration)
         assert "client.dialect" in undo_generation_source

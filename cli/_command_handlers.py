@@ -21,7 +21,6 @@ from cli.extensions import (
 from cli.handlers._shared import (  # noqa: F401  re-exported public surface
     _MIGRATION_FILENAME_RE,
     CliCommandContext,
-    ValidateSqlConfigClient,
     _extract_version_filters,
     _is_migration_sql_file,
     _minimal_result,

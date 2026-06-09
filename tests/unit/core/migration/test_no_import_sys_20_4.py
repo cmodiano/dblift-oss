@@ -14,7 +14,6 @@ _FILES_UNDER_TEST = [
     "core/migration/executor/migration_helpers.py",
     "core/migration/executor/placeholder_manager.py",
     "core/sql_validator/linting/rule_engine.py",
-    "scripts/get_coverage_report.py",
 ]
 # fmt: on
 

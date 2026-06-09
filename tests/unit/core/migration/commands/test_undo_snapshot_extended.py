@@ -1,4 +1,4 @@
-"""Extended tests for undo_command.py and snapshot_command.py."""
+"""Extended tests for undo_command.py."""
 
 import unittest
 from pathlib import Path
@@ -60,14 +60,3 @@ class TestUndoCommandExecute(unittest.TestCase):
         self.assertIsNotNone(result)
 
 
-class TestSnapshotSource(unittest.TestCase):
-    def test_snapshot_source_values(self):
-        from core.migration.commands.snapshot_command import SnapshotSource
-
-        self.assertIn("database-stored", [s.value for s in SnapshotSource])
-
-    def test_snapshot_source_is_string(self):
-        from core.migration.commands.snapshot_command import SnapshotSource
-
-        for src in SnapshotSource:
-            self.assertIsInstance(src.value, str)
