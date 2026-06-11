@@ -158,10 +158,8 @@ class CosmosDbQueryExecutor(BaseQueryExecutor):
                 return len(results) if results else 0
 
         except Exception as e:
-            # BUG-04: transient ServiceUnavailable on emulator first-boot is
-            # retried at the caller (e.g. ``create_snapshot_table_if_not_exists``).
-            # Logging this at ERROR level on every retry surfaced as a wall
-            # of errors even when the migration body itself succeeded.
+            # Transient ServiceUnavailable on emulator first-boot may be retried
+            # by callers. Avoid logging an error wall for each retry attempt.
             error_msg = f"Error executing Cosmos DB statement: {str(e)}"
             msg_lower = str(e).lower()
             is_transient = (
@@ -416,7 +414,7 @@ class CosmosDbQueryExecutor(BaseQueryExecutor):
                 )
                 # Simple approach: replace field names with c.field
                 order_by_normalized = re.sub(
-                    r"\b(snapshot_id|captured_at|checksum|model_data|id|name|value|version|description|type|script|installed_by|installed_on|execution_time|success)\b",
+                    r"\b(item_id|captured_at|checksum|model_data|id|name|value|version|description|type|script|installed_by|installed_on|execution_time|success)\b",
                     r"c.\1",
                     order_by_clause,
                     flags=re.IGNORECASE,
@@ -442,7 +440,7 @@ class CosmosDbQueryExecutor(BaseQueryExecutor):
                 if " C." not in sql_upper[where_pos:] and " C[" not in sql_upper[where_pos:]:
                     # Add 'c.' prefix to field references in WHERE clause
                     where_clause_normalized = re.sub(
-                        r"\b(snapshot_id|captured_at|checksum|model_data|id|name|value|version|description|type|script|installed_by|installed_on|execution_time|success)\b(?=\s*[=<>!])",
+                        r"\b(item_id|captured_at|checksum|model_data|id|name|value|version|description|type|script|installed_by|installed_on|execution_time|success)\b(?=\s*[=<>!])",
                         r"c.\1",
                         where_clause,
                         flags=re.IGNORECASE,
@@ -843,7 +841,7 @@ class CosmosDbQueryExecutor(BaseQueryExecutor):
         Returns:
             Number of documents inserted
         """
-        # Substitute positional ? placeholders first (snapshot repository and other
+        # Substitute positional ? placeholders first (parameterized queries and other
         # legacy callers use ? positional params). Must run before @paramN
         # substitution because _substitute_params inlines values as SQL literals,
         # which is what the VALUES parser below expects.

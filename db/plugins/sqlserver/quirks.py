@@ -32,7 +32,7 @@ class SqlserverQuirks(BaseQuirks):
     supports_transactional_ddl = True
     schema_required = True
     uppercase_identifiers = False
-    clean_strategy = "introspector"
+    clean_strategy = "native"
     sqlglot_dialect = "tsql"
     pygments_lexer = "tsql"
     connection_identifier_attrs = ("url", "host", "database")
@@ -156,21 +156,6 @@ class SqlserverQuirks(BaseQuirks):
         """Initialize SQL Server quirks with the dialect name."""
         super().__init__(dialect_name=dialect_name)
 
-    def build_snapshot_table_ddl(
-        self,
-        qualified_table: str,
-        snapshot_id_size: int,
-        checksum_size: int,
-    ) -> str:
-        """Render the SQL Server snapshot table DDL — ``NVARCHAR`` / ``NVARCHAR(MAX)``."""
-        return (
-            f"CREATE TABLE {qualified_table} ("
-            f"snapshot_id NVARCHAR({snapshot_id_size}) PRIMARY KEY, "
-            f"captured_at NVARCHAR({snapshot_id_size}) NOT NULL, "
-            f"checksum NVARCHAR({checksum_size}) NOT NULL, "
-            f"model_data NVARCHAR(MAX) NOT NULL)"
-        )
-
     def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
         """Return the SQL Server-specific :class:`SQLServerSqlGenerator` (lazy import)."""
         from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
@@ -182,22 +167,6 @@ class SqlserverQuirks(BaseQuirks):
         from db.plugins.sqlserver.generator.alter_generator import SQLServerAlterGenerator
 
         return SQLServerAlterGenerator
-
-    def vendor_queries_class(self) -> "Optional[Type[Any]]":
-        """Return the SQL Server :class:`SQLServerMetadataQueries` bundle (lazy import)."""
-        from db.plugins.sqlserver.introspection.sqlserver_queries import (
-            SQLServerMetadataQueries,
-        )
-
-        return SQLServerMetadataQueries
-
-    def introspector_class(self) -> "Optional[Type[Any]]":
-        """Return the SQL Server :class:`SQLServerIntrospector` (F.3.d, lazy import)."""
-        from db.plugins.sqlserver.introspection.sqlserver_introspector import (
-            SQLServerIntrospector,
-        )
-
-        return SQLServerIntrospector
 
     def parser_class(self, parser_type: str) -> Optional[type]:
         """SQL Server parser dispatch: hybrid → :class:`HybridParser`, sqlglot →
@@ -336,7 +305,7 @@ class SqlserverQuirks(BaseQuirks):
 
     def apply_vendor_table_properties(self, table: Any, row: Dict[str, Any]) -> None:
         """Apply SQL Server filegroup / memory-optimised / system-versioned flags."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         filegroup = get_row_value(row, "filegroup_name")
         if filegroup:
@@ -372,7 +341,7 @@ class SqlserverQuirks(BaseQuirks):
         / ``YES`` / ``TRUE`` → IMMUTABLE, else VOLATILE). Only relevant for
         functions (the SQL Server vendor procedure query doesn't project
         ``is_deterministic``)."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         deterministic = get_row_value(row, "is_deterministic")
         if deterministic is not None:
@@ -385,7 +354,7 @@ class SqlserverQuirks(BaseQuirks):
         """SQL Server: ``partition_function`` + ``partition_type``
         (RANGE_LEFT / RANGE_RIGHT — always ``RANGE`` for the model)
         + comma-separated ``partition_columns``."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         part_func = get_row_value(row, "partition_function")
         part_type = get_row_value(row, "partition_type")
@@ -417,16 +386,12 @@ class SqlserverQuirks(BaseQuirks):
         (``type='UQ'``) joined with ``sys.index_columns`` —
         generic index catalog rows would conflate them with standalone UNIQUE
         indexes."""
-        from core.introspection.extractors.constraint_extractor import (
-            _build_unique_constraints_from_dict,
-        )
-
         try:
             unique_indexes = extractor._get_unique_constraints_sqlserver(schema, table)
         except Exception as e:
             extractor.log.warning(f"Error getting unique constraints for {schema}.{table}: {e}")
             return []
-        return _build_unique_constraints_from_dict(extractor, unique_indexes)
+        return list(unique_indexes)
 
     def fk_reference_query(
         self, schema: str, table: str, col: str

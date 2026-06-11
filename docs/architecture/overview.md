@@ -142,7 +142,6 @@ class DBLiftClient:
     def clean(self, **options) -> CleanResult
     def repair(self, **options) -> RepairResult
     def export_schema(self, **options) -> ExportResult
-    def snapshot(self, **options) -> SnapshotResult
 ```
 
 ### Key Responsibilities

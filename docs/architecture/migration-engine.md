@@ -39,7 +39,6 @@ class MigrationExecutor:
 - Compute migration state (pending/applied)
 - Execute commands through database provider
 - Record results in history table
-- Manage schema snapshots
 
 ## Command Pattern
 

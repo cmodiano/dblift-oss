@@ -27,7 +27,7 @@ class Db2Quirks(BaseQuirks):
     supports_transactional_ddl = True
     schema_required = True
     uppercase_identifiers = True
-    clean_strategy = "introspector"
+    clean_strategy = "native"
     connection_probe_sql = "SELECT 1 FROM SYSIBM.SYSDUMMY1"
     select_supports_limit = False
     unquoted_identifier_case = "uppercase"
@@ -58,10 +58,6 @@ class Db2Quirks(BaseQuirks):
     requires_explicit_commit_after_ddl = True
     supports_session_autocommit = False
     retry_drop_create_on_error = True
-    # DB2 blocks subsequent queries until uncommitted transactions are
-    # resolved; the snapshot service rolls back after read-only
-    # introspection to free the connection.
-    requires_rollback_after_introspection = True
     # PR-C2: DB2 SYSCAT stores unquoted identifiers upper-cased — the
     # round-trip tester upper-cases unquoted table names before DROP.
     unquoted_identifiers_uppercase_in_dictionary = True
@@ -104,21 +100,6 @@ class Db2Quirks(BaseQuirks):
         """Initialize Db2 quirks with the dialect name."""
         super().__init__(dialect_name=dialect_name)
 
-    def build_snapshot_table_ddl(
-        self,
-        qualified_table: str,
-        snapshot_id_size: int,
-        checksum_size: int,
-    ) -> str:
-        """Render the DB2 snapshot table DDL — uppercase columns + ``NOT NULL PRIMARY KEY``."""
-        return (
-            f"CREATE TABLE {qualified_table} ("
-            f"SNAPSHOT_ID VARCHAR({snapshot_id_size}) NOT NULL PRIMARY KEY, "
-            f"CAPTURED_AT VARCHAR({snapshot_id_size}) NOT NULL, "
-            f"CHECKSUM VARCHAR({checksum_size}) NOT NULL, "
-            f"MODEL_DATA CLOB NOT NULL)"
-        )
-
     def render_round_trip_drop_table_sql(self, target: str) -> str:
         """Older DB2 versions reject ``DROP TABLE IF EXISTS`` — use plain DROP."""
         return f"DROP TABLE {target}"
@@ -133,7 +114,7 @@ class Db2Quirks(BaseQuirks):
         """Look up the actual TABSCHEMA/TABNAME in SYSCAT.TABLES and try it first."""
         import logging
 
-        log = logging.getLogger("core.snapshot")
+        log = logging.getLogger("core.clean")
 
         strategies: "list[str]" = [f'"{schema_clean}"."{table_clean}"']
         try:
@@ -175,18 +156,6 @@ class Db2Quirks(BaseQuirks):
         from db.plugins.db2.generator.alter_generator import DB2AlterGenerator
 
         return DB2AlterGenerator
-
-    def vendor_queries_class(self) -> "Optional[Type[Any]]":
-        """Return the Db2 :class:`DB2MetadataQueries` bundle (lazy import)."""
-        from db.plugins.db2.introspection.db2_queries import DB2MetadataQueries
-
-        return DB2MetadataQueries
-
-    def introspector_class(self) -> "Optional[Type[Any]]":
-        """Return the Db2 :class:`DB2Introspector` (F.3.f, lazy import)."""
-        from db.plugins.db2.introspection.db2_introspector import DB2Introspector
-
-        return DB2Introspector
 
     def parser_class(self, parser_type: str) -> Optional[type]:
         """Return the Db2 parser class for ``parser_type``, or ``None``.
@@ -232,7 +201,7 @@ class Db2Quirks(BaseQuirks):
 
     def apply_vendor_table_properties(self, table: Any, row: Dict[str, Any]) -> None:
         """Apply DB2 tablespace + compression + storage params."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         tablespace = get_row_value(row, "tablespace_name")
         if tablespace:
@@ -289,7 +258,7 @@ class Db2Quirks(BaseQuirks):
         DB2 only supports range partitioning."""
         import re
 
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         part_def = get_row_value(row, "partition_definition")
         if not part_def:

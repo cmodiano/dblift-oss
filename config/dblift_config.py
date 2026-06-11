@@ -281,10 +281,6 @@ class DbliftConfig:
 
     # Migration history and journal configuration
     history_table: str = "dblift_schema_history"
-    snapshot_table: str = "dblift_schema_snapshots"
-    max_snapshots: int = (
-        1  # Maximum number of snapshots to keep (oldest are deleted when limit exceeded)
-    )
     journal_enabled: bool = True
     journal_dir: Optional[str] = None
 
@@ -372,10 +368,6 @@ class DbliftConfig:
 
         if "history_table" in other_config and other_config["history_table"]:
             self.history_table = other_config["history_table"]
-        if "snapshot_table" in other_config and other_config["snapshot_table"]:
-            self.snapshot_table = other_config["snapshot_table"]
-        if "max_snapshots" in other_config:
-            self.max_snapshots = other_config["max_snapshots"]
 
         if "logging" in other_config:
             logging_raw = other_config["logging"]
@@ -609,8 +601,6 @@ class DbliftConfig:
             clean_disabled=data.get("clean_disabled", True),
             placeholders=data.get("placeholders"),
             history_table=data.get("history_table", "dblift_schema_history"),
-            snapshot_table=data.get("snapshot_table", "dblift_schema_snapshots"),
-            max_snapshots=data.get("max_snapshots", 1),
             journal_enabled=data.get("journal_enabled", True),
             error_handling_enabled=data.get("error_handling_enabled", True),
             max_retries=data.get("max_retries", 3),
@@ -698,7 +688,7 @@ class DbliftConfig:
 
         Convention: DBLIFT_DB_<SUFFIX> maps to database.<suffix.lower()>.
         Special cases: USER -> username, OPTIONS and SESSION_VARS accept JSON or k=v CSV.
-        Top-level keys: DBLIFT_SNAPSHOT_TABLE, DBLIFT_HISTORY_TABLE, DBLIFT_MAX_SNAPSHOTS.
+        Top-level keys: DBLIFT_HISTORY_TABLE.
         Pass ``diagnostics`` to collect ignored/coercion issues without changing
         the default silent-merge behavior.
         """
@@ -787,17 +777,8 @@ class DbliftConfig:
         config: Dict[str, Any] = {}
         if db:
             config["database"] = db
-        if env.get("DBLIFT_SNAPSHOT_TABLE"):
-            config["snapshot_table"] = env["DBLIFT_SNAPSHOT_TABLE"]
         if env.get("DBLIFT_HISTORY_TABLE"):
             config["history_table"] = env["DBLIFT_HISTORY_TABLE"]
-        if env.get("DBLIFT_MAX_SNAPSHOTS"):
-            try:
-                config["max_snapshots"] = int(env["DBLIFT_MAX_SNAPSHOTS"])
-            except ValueError:
-                if diagnostics is not None:
-                    diagnostics.invalid_int_vars.append("DBLIFT_MAX_SNAPSHOTS")
-                pass  # Ignore invalid values
         if env.get("DBLIFT_CLEAN_DISABLED"):
             config["clean_disabled"] = env["DBLIFT_CLEAN_DISABLED"].lower() in ("1", "true", "yes")
         return config
@@ -865,9 +846,7 @@ class DbliftConfig:
             config["database"] = db_cfg
 
         for key in (
-            "snapshot_table",
             "history_table",
-            "max_snapshots",
             "baseline_version",
             "target_version",
             "dry_run",
@@ -997,8 +976,6 @@ class DbliftConfig:
             "strict_mode": self.strict_mode,
             "clean_disabled": self.clean_disabled,
             "history_table": self.history_table,
-            "snapshot_table": self.snapshot_table,
-            "max_snapshots": self.max_snapshots,
             "journal_enabled": self.journal_enabled,
             # Error handling configuration
             "error_handling_enabled": self.error_handling_enabled,

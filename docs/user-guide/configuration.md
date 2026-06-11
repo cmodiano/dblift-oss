@@ -17,12 +17,9 @@ migrations:
   directory: "./migrations"  # Single directory (legacy format)
   recursive: true  # Whether to search subdirectories (default: true)
 
-# Snapshot configuration
-snapshot_table: "dblift_schema_snapshots"  # Table name for storing schema snapshots
-max_snapshots: 1  # Maximum number of snapshots to keep (default: 1, oldest deleted when limit exceeded)
 ```
 
-> **`schema` is required** for every dialect except SQLite (which always uses `main`). There is no implicit default — you must set it either in `dblift.yaml` or on the command line via `--db-schema`. DBLift creates the history table, lock table, and snapshot table inside this schema, so an incorrect or missing value produces silent cross-schema mismatches (e.g. a history table written in one schema but looked up in another).
+> **`schema` is required** for every dialect except SQLite (which always uses `main`). There is no implicit default — you must set it either in `dblift.yaml` or on the command line via `--db-schema`. DBLift creates managed metadata tables inside this schema, so an incorrect or missing value produces silent cross-schema mismatches.
 
 ## Multiple Migration Directories
 
@@ -154,8 +151,6 @@ Instead of putting passwords in `dblift.yaml`, use environment variables:
 export DBLIFT_DB_URL="postgresql+psycopg://localhost:5432/mydb"
 export DBLIFT_DB_USERNAME="myuser"
 export DBLIFT_DB_PASSWORD="mypassword"
-export DBLIFT_SNAPSHOT_TABLE="dblift_schema_snapshots"  # Optional: custom snapshot table name
-export DBLIFT_MAX_SNAPSHOTS="5"  # Optional: keep up to 5 snapshots (default: 1)
 ```
 
 !!! warning "Security Best Practice"

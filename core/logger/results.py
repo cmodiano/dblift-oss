@@ -466,24 +466,6 @@ class RepairResult(OperationResult):
         self.aligned_migrations.append(migration)
 
 
-class SnapshotResult(OperationResult):
-    """Result of a snapshot operation."""
-
-    def __init__(
-        self,
-        success: bool = True,
-        error_message: Optional[str] = None,
-        output_file: Optional[str] = None,
-        snapshot_id: Optional[str] = None,
-        captured_at: Optional[str] = None,
-    ) -> None:
-        """Initialize a snapshot result with file path, snapshot id, and capture timestamp."""
-        super().__init__(success=success, error_message=error_message)
-        self.output_file: Optional[str] = output_file
-        self.snapshot_id: Optional[str] = snapshot_id
-        self.captured_at: Optional[str] = captured_at
-
-
 class UndoResult(OperationResult):
     """Result of an undo operation."""
 

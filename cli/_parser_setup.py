@@ -88,17 +88,6 @@ def _make_history_table_parent() -> argparse.ArgumentParser:
     return p
 
 
-def _make_snapshot_table_parent() -> argparse.ArgumentParser:
-    """Parent parser for commands that read or write persisted schema snapshots."""
-    p = argparse.ArgumentParser(add_help=False)
-    p.add_argument(
-        "--snapshot-table",
-        dest="snapshot_table",
-        help="Custom schema snapshot table name (default: dblift_schema_snapshots)",
-    )
-    return p
-
-
 def _make_strict_parent() -> argparse.ArgumentParser:
     """Parent parser for the ``--strict`` flag (not exposed by import-flyway)."""
     p = argparse.ArgumentParser(add_help=False)
@@ -334,14 +323,13 @@ def create_parser(
     # of these dests — structurally enforced by
     # ``tests/unit/cli/test_parser_invariants.py``).
     _history = _make_history_table_parent()
-    _snapshot_table = _make_snapshot_table_parent()
     _strict = _make_strict_parent()
     _filter = _make_filter_parent()
     # Create all subcommand parsers
     migrate_parser = subparsers.add_parser(
         "migrate",
         help="Apply migrations",
-        parents=[_history, _snapshot_table, _strict, _filter],
+        parents=[_history, _strict, _filter],
     )
     info_parser = subparsers.add_parser(
         "info",
@@ -356,7 +344,7 @@ def create_parser(
     undo_parser = subparsers.add_parser(
         "undo",
         help="Rollback migrations",
-        parents=[_history, _snapshot_table, _strict, _filter],
+        parents=[_history, _strict, _filter],
     )
     clean_parser = subparsers.add_parser(
         "clean",
@@ -366,7 +354,7 @@ def create_parser(
     baseline_parser = subparsers.add_parser(
         "baseline",
         help="Baseline an existing database",
-        parents=[_history, _snapshot_table],
+        parents=[_history],
     )
     repair_parser = subparsers.add_parser(
         "repair",

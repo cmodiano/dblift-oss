@@ -7,7 +7,7 @@ enabling consistent type representation regardless of source dialect.
 
 import logging
 import re
-from typing import Any, Dict, Optional, Set
+from typing import Dict, Optional, Set
 
 from db.provider_registry import ProviderRegistry
 
@@ -125,23 +125,19 @@ class CanonicalTypeMapper:
             try:
                 min_ver = self._parse_version(min_version)
                 actual_ver = self._parse_version(version)
-                # Compare DatabaseVersion objects - mypy doesn't understand the comparison
-                result: bool = bool(actual_ver >= min_ver)  # type: ignore[operator]
-                return result
+                return actual_ver >= min_ver
             except Exception as e:
                 _logger.debug(f"Version comparison failed: {e}")
                 return False
         return version == pattern
 
-    def _parse_version(self, version_str: str) -> Any:  # DatabaseVersion
-        """Parse version string to DatabaseVersion."""
-        from core.introspection.version_detector import DatabaseVersion
-
+    def _parse_version(self, version_str: str) -> tuple[int, int, int]:
+        """Parse version string to a comparable version tuple."""
         parts = version_str.split(".")
         major = int(parts[0]) if len(parts) > 0 else 0
         minor = int(parts[1]) if len(parts) > 1 else 0
         patch = int(parts[2]) if len(parts) > 2 else 0
-        return DatabaseVersion(major, minor, patch)
+        return major, minor, patch
 
     @staticmethod
     def _extract_base_type(data_type: str) -> str:

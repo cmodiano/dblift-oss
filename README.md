@@ -306,20 +306,6 @@ dblift migrate
 
 Now only migrations after version 1.0.0 will be applied.
 
-### Exporting Schema Snapshots
-
-**Export snapshot from database (latest stored snapshot):**
-```bash
-dblift snapshot --output snapshots/public_schema.json
-```
-
-**Export snapshot from live database (capture new snapshot):**
-```bash
-dblift snapshot --source=live-database --output snapshots/public_schema.json
-```
-
----
-
 ## Everyday Commands
 
 Here are the commands you'll use most often:
@@ -333,7 +319,6 @@ Here are the commands you'll use most often:
 | `dblift undo --dry-run --show-sql` | Preview undo scripts and SQL without applying | Review rollback SQL before execution |
 | `dblift undo --target-version=X` | Rolls back to a specific version | Reverse recent changes |
 | `dblift validate` | Checks migrations for errors | Before applying changes |
-| `dblift snapshot` | Exports schema snapshot to JSON model file from database or live database | Capture schema metadata |
 | `dblift baseline --baseline-version=X` | Mark migrations as already applied | Working with existing databases |
 
 **Quick Examples:**
@@ -350,11 +335,6 @@ dblift undo --target-version=1.0.0
 # Working with existing databases
 dblift baseline --baseline-version=2.0.0
 
-# Export schema snapshot to JSON model file
-dblift snapshot --output snapshots/public_schema.json
-
-# Capture a new snapshot from live database
-dblift snapshot --source=live-database --output snapshots/public_schema.json
 ```
 
 ---
@@ -456,9 +436,6 @@ migrations:
   directory: "./migrations"  # Single directory (legacy format)
   recursive: true  # Whether to search subdirectories (default: true)
 
-# Snapshot configuration
-snapshot_table: "dblift_schema_snapshots"  # Table name for storing schema snapshots
-max_snapshots: 1  # Maximum number of snapshots to keep (default: 1, oldest deleted when limit exceeded)
 ```
 
 **Multiple Directories:**
@@ -586,8 +563,6 @@ Instead of putting passwords in `dblift.yaml`, use environment variables:
 export DBLIFT_DB_URL="postgresql+psycopg://localhost:5432/mydb"
 export DBLIFT_DB_USERNAME="myuser"
 export DBLIFT_DB_PASSWORD="mypassword"
-export DBLIFT_SNAPSHOT_TABLE="dblift_schema_snapshots"  # Optional: custom snapshot table name
-export DBLIFT_MAX_SNAPSHOTS="5"  # Optional: keep up to 5 snapshots (default: 1)
 ```
 
 ---

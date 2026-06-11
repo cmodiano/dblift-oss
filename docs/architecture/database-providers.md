@@ -29,9 +29,6 @@ db/plugins/<dialect>/
 ├── parser/
 │   ├── <dialect>_regex_parser.py
 │   └── parser_config.py
-└── introspection/
-    ├── <dialect>_introspector.py  # thin subclass of core.introspection.BaseIntrospector
-    └── <dialect>_queries.py       # VendorMetadataQueries subclass — catalog SQL bundles
 ```
 
 A plugin folder contains 100 % of the dialect-specific code; adding a
@@ -107,18 +104,9 @@ unregistered dialects degrade gracefully.
 | **Schema defaults** | `default_schema_name`, `parser_default_schema` | `None` / `None` |
 | **Capabilities** | `drop_supports_if_exists`, `drop_table_default_cascade`, `select_supports_limit`, etc. | conservative defaults |
 | **DDL shape** | `table_drop_style`, `proc_body_wrap_style`, `trigger_body_style`, sequence/index/synonym flags | ANSI defaults |
-| **Introspection — extractors** | `should_skip_index(name)`, `normalize_index_predicate(predicate)`, `is_index_hidden_column(name)`, `apply_index_vendor_properties(idx_data, kwargs)`, `apply_vendor_table_properties(table, row)`, `enrich_table_extra(extractor, schema, table_name, table)`, `supplement_table_list(extractor, schema, existing)`, `materialized_view_support_table_prefixes`, `normalize_view_name(name)`, `enrich_view_from_row(view, row, status)`, `enrich_materialized_view_from_row(mview, row)`, `provides_view_algorithm`, `fetch_view_algorithm(extractor, schema, view_name)`, `is_temporary_sequence(row)`, `is_internal_sequence(seq)`, `enrich_trigger_from_row(trigger, row, status)`, `time_type_supports_only_fractional_precision`, `varchar_max_sentinel_sizes`, `identity_uses_catalog_fallback`, `correct_computed_column_flag(...)`, `enhance_columns(extractor, schema, table, columns)`, `extract_computed_column_expression(text)` | sensible defaults |
-| **Introspection — constraints** | `fetch_unique_constraints(extractor, schema, table)`, `sanitize_constraint_name(name)`, `fk_reference_query(schema, table, col)`, `index_reference_query(schema, table, col)` | `None` / passthrough |
-| **Introspection — routines** | `fetch_routine_parameters_fallback(extractor, schema, name, kind)`, `fetch_routine_full_definition(extractor, schema, name, kind, routine, status)`, `apply_routine_volatility_from_row(extractor, routine, row)`, `apply_routine_definer_from_row(extractor, routine, row)`, `postprocess_routine(extractor, schema, routine)`, `clean_source_text(text)` | `[]` / no-op |
-| **Introspection — partitions** | `extract_partition_scheme_from_row(extractor, row, table)`, `normalize_partition_bound(value)` | no-op / passthrough |
-| **Introspection — packages / UDTs** | `enrich_packages_from_catalog(extractor, schema, packages)`, `filter_user_defined_types(extractor, schema, udts, get_tables_fn)` | no-op / passthrough |
-| **Introspection — factory classes** | `introspector_class()`, `vendor_queries_class()` | `None` (factory fallback to `BaseIntrospector` / no vendor queries) |
 | **Migration scripts** | `extract_script_context(sql)`, `terminate_script_directives(sql)`, `apply_script_substitution(sql, ctx)`, `is_script_directive(stmt)`, `parse_error_policy_directive(stmt)`, `enable_session_output(connection)`, `read_session_output(connection, log)`, `is_batch_separator(stmt)` | `None` / passthrough |
 
-A complete reference is in `db/base_quirks.py`. The introspection
-hook surface grew significantly during the H.2 / F.3 / F.0 cleanup
-waves — every former `if self.dialect == "<x>"` branch in
-`core/introspection/` was lifted into one of the hooks above.
+A complete reference is in `db/base_quirks.py`.
 
 ---
 
@@ -135,29 +123,16 @@ follow-up reference.
 Code in `core/` must not write `from db.plugins.<specific>...`. Core
 talks to plugins through two channels only:
 
-- `BaseQuirks` hooks (`introspector_class()`, `parser_class(...)`,
+- `BaseQuirks` hooks (`parser_class(...)`,
   `ddl_generator_class()`, `is_batch_separator(...)`, etc.) called
   via `ProviderRegistry.get_quirks(dialect).<hook>`.
-- Factory classes (`SqlGenerator`, `IntrospectorFactory`,
-  `VendorQueriesFactory`) that consult the registry on the caller's
+- Factory classes (`SqlGenerator`) that consult the registry on the caller's
   behalf.
 
 A new dialect is added by dropping a folder under `db/plugins/` —
 never by editing `core/`.
 
-### Rule 2 — no `core/introspection` → `core/{validation,licensing,migration}` upward leaks
-
-The introspection layer (`core/introspection/`, moved out of `db/` in
-the post-Wave-F cleanup) is a sibling of `core/sql_parser/` and
-`core/sql_generator/`. Validation, licensing, and migration callers
-consume it through factories (`IntrospectorFactory`,
-`VendorQueriesFactory`) and the model classes it produces; the
-introspection layer must not depend on those higher-level concerns.
-
-Helpers that need validation/licensing belong in those layers, with
-`core/introspection/` exposing a hook the orchestrator calls.
-
-### Rule 3 — no cross-plugin imports
+### Rule 2 — no cross-plugin imports
 
 A file in `db/plugins/<a>/` must not import from `db/plugins/<b>/`
 (a ≠ b). Plugins are siblings — they communicate through the

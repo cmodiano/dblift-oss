@@ -100,8 +100,8 @@ class TestPostgreSQL:
     def test_lowercase_identifiers(self):
         assert dialect_uses_uppercase_identifiers("postgresql") is False
 
-    def test_clean_strategy_uses_introspector(self):
-        assert dialect_clean_strategy("postgresql") == "introspector"
+    def test_clean_strategy_uses_native(self):
+        assert dialect_clean_strategy("postgresql") == "native"
 
 
 class TestMySQL:
@@ -220,7 +220,7 @@ class TestProviderConformance:
     )
     def test_clean_strategy_is_declared_for_every_provider(self, dialect, module_path, class_name):
         self._stub(module_path, class_name)
-        assert dialect_clean_strategy(dialect) in {"introspector", "native"}
+        assert dialect_clean_strategy(dialect) in {"native"}
 
     @pytest.mark.parametrize(
         "dialect,module_path,class_name",

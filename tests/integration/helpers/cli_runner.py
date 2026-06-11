@@ -254,29 +254,6 @@ class DBLiftCLI:
         """Run import-flyway command."""
         return self._run_command("import-flyway", **kwargs)
 
-    def snapshot(
-        self,
-        output: str,
-        source: str = "database-stored",
-        **kwargs,
-    ) -> CommandResult:
-        """
-        Run snapshot command.
-
-        Examples:
-            # Export from database-stored snapshot
-            result = cli.snapshot(output="snapshot.json", source="database-stored")
-
-            # Export from live database
-            result = cli.snapshot(output="snapshot.json", source="live-database")
-        """
-        return self._run_command(
-            "snapshot",
-            output=output,
-            source=source,
-            **kwargs,
-        )
-
     def chain(self, *commands: str, **kwargs) -> CommandResult:
         """
         Execute multiple commands in sequence (command chaining).
@@ -310,16 +287,13 @@ class DBLiftCLI:
         # Add config (always required)
         cmd.extend(["--config", str(self.config_file)])
 
-        # Add migration path(s) - only for commands that need it
-        # Snapshot command doesn't need --scripts
-        # Baseline accepts --scripts for command chaining compatibility
-        if command != "snapshot":
-            cmd.extend(["--scripts", str(self.migrations_dir)])
+        # Add migration path(s)
+        cmd.extend(["--scripts", str(self.migrations_dir)])
 
-            # Add additional script directories if provided
-            if kwargs.get("additional_scripts"):
-                for script_dir in kwargs["additional_scripts"]:
-                    cmd.extend(["--scripts", str(script_dir)])
+        # Add additional script directories if provided
+        if kwargs.get("additional_scripts"):
+            for script_dir in kwargs["additional_scripts"]:
+                cmd.extend(["--scripts", str(script_dir)])
 
         # Add command-specific options
         if kwargs.get("target_version"):

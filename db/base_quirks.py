@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type
 from core.dialect_boundary import DialectQuirks
 
 if TYPE_CHECKING:
-    from core.introspection.base_introspector import BaseIntrospector
     from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
     from core.sql_generator.base_generator import BaseSqlGenerator
 
@@ -63,8 +62,8 @@ class BaseQuirks:
     schema_required: bool = True
     #: Unquoted identifiers fold to uppercase in the catalogue.
     uppercase_identifiers: bool = False
-    #: How ``clean`` enumerates schema objects: ``"native"`` or ``"introspector"``.
-    clean_strategy: str = "introspector"
+    #: How ``clean`` enumerates schema objects.
+    clean_strategy: str = "native"
     #: ``sqlglot`` dialect name (or ``None`` if sqlglot has no match).
     #: Used by formatters/parsers that delegate to sqlglot.
     sqlglot_dialect: Optional[str] = None
@@ -697,8 +696,7 @@ class BaseQuirks:
     def enrich_view_from_row(self, view: Any, row: Dict[str, Any], view_status: Any = None) -> None:
         """Add dialect-specific attributes to *view* from a vendor-query row.
 
-        Called by ``core.introspection.extractors.view_extractor.get_views``
-        after the canonical ``View(...)`` is constructed. Default: no-op.
+        Called after the canonical ``View(...)`` is constructed. Default: no-op.
         Plugins override to capture attributes that only exist on their
         dialect:
 
@@ -1096,8 +1094,7 @@ class BaseQuirks:
     ) -> None:
         """Add dialect-specific attributes to *trigger* from a vendor-query row.
 
-        Called by ``core.introspection.extractors.trigger_extractor`` after the
-        canonical ``Trigger(name=..., schema=..., timing=..., events=[],
+        Called after the canonical ``Trigger(name=..., schema=..., timing=..., events=[],
         ...)`` is constructed. Default: no-op. Plugins override to capture
         attributes that only exist on their dialect:
 
@@ -1106,18 +1103,15 @@ class BaseQuirks:
         ``trigger_status`` is an opaque tracker (``ObjectCaptureStatus`` or
         ``None``) — when present, plugins call its
         ``add_property_status(property_name, captured: bool)`` for any
-        dialect-specific attribute they look for, so the introspection
-        result summary can surface "definer captured: yes / no".
+        dialect-specific attribute they look for.
         """
         return None
 
     def apply_vendor_table_properties(self, table: Any, row: Dict[str, Any]) -> None:
         """Apply dialect-specific table properties from a vendor-query row.
 
-        Called by ``core.introspection._vendor_property_applier`` after
-        ``vendor_queries.get_table_properties_query`` returns a result
-        row. Default: no-op. Plugins override to enrich the introspected
-        ``Table`` with dialect-specific attributes (SQL Server filegroup
+        Called after vendor metadata returns a result row. Default: no-op.
+        Plugins override to enrich the ``Table`` with dialect-specific attributes (SQL Server filegroup
         / memory-optimised / system-versioned, DB2 tablespace +
         compression, Oracle tablespace + storage params, MySQL
         storage_engine + row_format + collation + create_options).
@@ -1299,50 +1293,6 @@ class BaseQuirks:
     #: autoCommit is False.
     requires_explicit_commit_after_ddl: bool = False
 
-    #: Dialect leaves implicit transactions open after read-only
-    #: introspection (DB2 blocks subsequent queries until uncommitted
-    #: transactions are resolved; MySQL InnoDB consistent-snapshot mode
-    #: locks the snapshot until commit/rollback). The snapshot service
-    #: rolls back after introspection for these dialects to free the
-    #: connection.
-    requires_rollback_after_introspection: bool = False
-
-    def build_snapshot_table_ddl(
-        self,
-        qualified_table: str,
-        snapshot_id_size: int,
-        checksum_size: int,
-    ) -> str:
-        """Render the ``CREATE TABLE`` SQL for ``dblift_schema_snapshots``.
-
-        The default produces the lowercase-identifier / ``VARCHAR`` /
-        ``TEXT`` shape used by PostgreSQL, SQLite, and other dialects
-        without a wider text type. Plugins override for Oracle
-        (``VARCHAR2`` / ``CLOB`` / uppercase), SQL Server
-        (``NVARCHAR`` / ``NVARCHAR(MAX)``), MySQL family
-        (``LONGTEXT``), and DB2 (uppercase columns + explicit
-        ``NOT NULL PRIMARY KEY``).
-        """
-        return (
-            f"CREATE TABLE {qualified_table} ("
-            f"snapshot_id VARCHAR({snapshot_id_size}) PRIMARY KEY, "
-            f"captured_at VARCHAR({snapshot_id_size}) NOT NULL, "
-            f"checksum VARCHAR({checksum_size}) NOT NULL, "
-            f"model_data TEXT NOT NULL)"
-        )
-
-    def is_snapshot_table_already_exists_error(self, error_message: str) -> bool:
-        """Whether ``error_message`` indicates the snapshot table already exists.
-
-        Returning ``True`` lets ``BaseSnapshotManager`` swallow the
-        exception (idempotent create). The default is ``False`` —
-        ``CREATE TABLE IF NOT EXISTS`` covers most dialects so a real
-        failure should propagate. Oracle overrides because it has no
-        ``IF NOT EXISTS`` syntax and instead raises ORA-00955 (with
-        locale-translated message text) when the table already exists.
-        """
-        return False
-
     #: Dialect supports direct session autocommit control reliably. MySQL,
     #: DB2 and Oracle behave inconsistently; PostgreSQL and SQL Server support
     #: it cleanly.
@@ -1498,26 +1448,6 @@ class BaseQuirks:
         ``SET (SYSTEM_VERSIONING = ON|OFF …)`` shape. All identifier arguments
         arrive pre-formatted (quote rules already applied) so the hook only
         composes the surrounding SQL.
-        """
-        return None
-
-    def introspector_class(self) -> "Optional[Type[BaseIntrospector]]":
-        """Return the dialect-specific BaseIntrospector class, or None.
-
-        None means IntrospectorFactory falls back to SchemaIntrospector.
-        Plugins override with a lazy import to avoid circular imports at
-        module-load time.
-        """
-        return None
-
-    def vendor_queries_class(self) -> "Optional[Type[Any]]":
-        """Return the dialect-specific VendorMetadataQueries class, or None.
-
-        ``None`` means the plugin doesn't ship its own catalog-query
-        bundle and :class:`VendorQueriesFactory.create` returns ``None``
-        for the dialect. Plugins override with a lazy import to keep
-        the queries module out of the import graph until the factory
-        actually needs it. Mirrors :meth:`introspector_class`.
         """
         return None
 

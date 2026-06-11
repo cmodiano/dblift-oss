@@ -134,7 +134,6 @@ LEAF_SUBCOMMANDS: List[str] = [
     "baseline",
     "repair",
     "import-flyway",
-    "snapshot",
 ]
 
 

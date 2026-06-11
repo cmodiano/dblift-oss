@@ -40,11 +40,11 @@ class EventType(Enum):
     Events are organized by category:
     - Migration: Operation and script-level events
     - Validation: Validation operation and rule-level events
-    - Schema: Schema introspection events
+    - Schema: Schema object events
     - Connection: Database connection lifecycle
     - History: Migration history operations
     - Operations: Other operations (undo, clean, baseline, repair, info)
-    - Export/Snapshot: Export and snapshot operations
+    - Export: Export operations
     """
 
     # ===== Migration Events (10 events) =====
@@ -82,10 +82,7 @@ class EventType(Enum):
     VALIDATION_RULE_VIOLATION = "validation.rule.violation"
     VALIDATION_RULE_PASSED = "validation.rule.passed"
 
-    # ===== Schema Events (4 events) =====
-    SCHEMA_INTROSPECTION_STARTED = "schema.introspection.started"
-    SCHEMA_INTROSPECTION_COMPLETED = "schema.introspection.completed"
-    SCHEMA_INTROSPECTION_FAILED = "schema.introspection.failed"
+    # ===== Schema Events =====
     SCHEMA_OBJECT_DETECTED = "schema.object.detected"
 
     # ===== Connection & Provider Events (6 events) =====
@@ -131,19 +128,13 @@ class EventType(Enum):
     INFO_COMPLETED = "info.completed"
     INFO_FAILED = "info.failed"
 
-    # ===== Export & Snapshot Events (7 events) =====
+    # ===== Export Events =====
     # Export
     EXPORT_STARTED = "export.started"
     EXPORT_COMPLETED = "export.completed"
     EXPORT_FAILED = "export.failed"
     EXPORT_OBJECT_EXPORTED = "export.object.exported"
     EXPORT_FILE_WRITTEN = "export.file.written"
-
-    # Snapshot
-    SNAPSHOT_STARTED = "snapshot.started"
-    SNAPSHOT_COMPLETED = "snapshot.completed"
-    SNAPSHOT_LOADED = "snapshot.loaded"
-    SNAPSHOT_SAVED = "snapshot.saved"
 
     # ===== Callback Lifecycle Events (24 events) =====
     # Callback execution (generic)
@@ -215,7 +206,7 @@ class Event:
     type: Optional[str] = None
     execution_time: Optional[float] = None
 
-    # ----- Generation / undo / introspection -----
+    # ----- Generation / undo -----
     dialect: Optional[str] = None
     migration_path: Optional[str] = None
     count: Optional[int] = None

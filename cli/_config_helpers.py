@@ -257,8 +257,6 @@ def _load_and_merge_config(args: argparse.Namespace, log: Any) -> Any:
 
     if hasattr(args, "table_name") and args.table_name:
         config.history_table = args.table_name
-    if hasattr(args, "snapshot_table") and args.snapshot_table:
-        config.snapshot_table = args.snapshot_table
 
     if hasattr(args, "installed_by") and args.installed_by:
         config.database.installed_by = args.installed_by
@@ -305,7 +303,6 @@ def _validate_db_config(
         "repair",
         "import-flyway",
         "baseline",
-        "snapshot",
     ]
     if args.command not in migration_commands:
         return

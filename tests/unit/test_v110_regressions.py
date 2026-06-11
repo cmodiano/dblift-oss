@@ -163,7 +163,6 @@ class TestUndoScriptErrorHandling:
         mock_executor.history_manager.provider = Mock()
         mock_executor.sql_execution_service = Mock()
         mock_executor.sql_execution_service.provider = Mock()
-        mock_executor.snapshot_service = None
         mock_executor_class.return_value = mock_executor
 
         client = DBLiftClient(provider=self._make_mock_provider(), migrations_dir="/tmp")
@@ -184,7 +183,6 @@ class TestUndoScriptErrorHandling:
         mock_executor.history_manager.provider = Mock()
         mock_executor.sql_execution_service = Mock()
         mock_executor.sql_execution_service.provider = Mock()
-        mock_executor.snapshot_service = None
         mock_executor_class.return_value = mock_executor
 
         non_versioned = tmp_path / "R__repeatable.sql"
@@ -212,7 +210,6 @@ class TestUndoScriptErrorHandling:
         mock_executor.history_manager.provider = Mock()
         mock_executor.sql_execution_service = Mock()
         mock_executor.sql_execution_service.provider = Mock()
-        mock_executor.snapshot_service = None
         mock_executor_class.return_value = mock_executor
 
         migration = tmp_path / "V1_0_0__test.sql"

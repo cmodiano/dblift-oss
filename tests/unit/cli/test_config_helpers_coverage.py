@@ -244,25 +244,6 @@ class TestLoadAndMergeConfig:
             result = _load_and_merge_config(args, None)
         assert result.history_table == "my_history"
 
-    def test_snapshot_table_sets_snapshot_table(self):
-        config = self._make_config()
-        args = SimpleNamespace(
-            config=None,
-            database_url=None,
-            database_username=None,
-            database_password=None,
-            database_schema=None,
-            table_name=None,
-            snapshot_table="my_snapshots",
-            installed_by=None,
-        )
-        with (
-            patch("cli._config_helpers.load_config", return_value=config),
-            patch("cli._config_helpers.ConfigBuilder"),
-        ):
-            result = _load_and_merge_config(args, None)
-        assert result.snapshot_table == "my_snapshots"
-
     def test_installed_by_set_from_args(self):
         # Line 224-225: args.installed_by → config.database.installed_by
         config = self._make_config()

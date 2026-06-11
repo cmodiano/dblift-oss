@@ -43,11 +43,6 @@ class _Concrete(SqlAlchemyProvider):
     def clean_schema(self, schema: str) -> Any:  # noqa: D102
         pass
 
-    def create_snapshot_table_if_not_exists(
-        self, schema: str, table_name: str = "dblift_schema_snapshots"
-    ) -> None:  # noqa: D102
-        pass
-
     def create_migration_history_table_if_not_exists(
         self, schema: str, create_schema: bool = False, table_name: str = "dblift_schema_history"
     ) -> None:  # noqa: D102

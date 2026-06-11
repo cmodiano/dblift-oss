@@ -70,7 +70,6 @@ class TestCLIRunnerDirect:
         assert hasattr(cli, "validate")
         assert hasattr(cli, "clean")
         assert hasattr(cli, "repair")
-        assert hasattr(cli, "snapshot")
         assert hasattr(cli, "chain")
 
     def test_direct_runner_stays_direct_mode(self, tmp_path):

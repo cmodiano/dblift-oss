@@ -63,13 +63,9 @@ class TestFromEnvDictAutoMapping:
         }
 
     def test_top_level_keys_still_work(self, monkeypatch):
-        monkeypatch.setenv("DBLIFT_SNAPSHOT_TABLE", "my_snapshots")
         monkeypatch.setenv("DBLIFT_HISTORY_TABLE", "my_history")
-        monkeypatch.setenv("DBLIFT_MAX_SNAPSHOTS", "5")
         result = DbliftConfig.from_env_dict()
-        assert result["snapshot_table"] == "my_snapshots"
         assert result["history_table"] == "my_history"
-        assert result["max_snapshots"] == 5
 
     def test_empty_env_returns_empty_dict(self, monkeypatch):
         # New contract: with no DBLIFT_* env set, no "database" key is emitted
@@ -132,15 +128,11 @@ class TestFromEnvDictAutoMapping:
 
     def test_diagnostics_collect_invalid_int_fields(self, monkeypatch):
         monkeypatch.setenv("DBLIFT_DB_CONNECTION_TIMEOUT", "not_a_number")
-        monkeypatch.setenv("DBLIFT_MAX_SNAPSHOTS", "NaN")
         diagnostics = ConfigEnvDiagnostics()
 
         DbliftConfig.from_env_dict(diagnostics=diagnostics)
 
-        assert diagnostics.invalid_int_vars == [
-            "DBLIFT_DB_CONNECTION_TIMEOUT",
-            "DBLIFT_MAX_SNAPSHOTS",
-        ]
+        assert diagnostics.invalid_int_vars == ["DBLIFT_DB_CONNECTION_TIMEOUT"]
 
     def test_diagnostics_collect_invalid_structured_fields(self, monkeypatch):
         for key in list(__import__("os").environ.keys()):

@@ -28,7 +28,7 @@ Regenerating the snapshot
 
 ::
 
-    UPDATE_API_SNAPSHOT=1 pytest tests/unit/api/test_public_surface_contract.py
+    UPDATE_API_SURFACE=1 pytest tests/unit/api/test_public_surface_contract.py
 
 This is a deliberate action: the snapshot lives in version control so
 the diff is the reviewer's evidence that the breakage is intentional.
@@ -48,8 +48,8 @@ import pytest
 pytestmark = [pytest.mark.unit]
 
 
-SNAPSHOT_PATH = Path(__file__).parent / "api_public_surface.txt"
-UPDATE_ENV_VAR = "UPDATE_API_SNAPSHOT"
+SURFACE_PATH = Path(__file__).parent / "api_public_surface.txt"
+UPDATE_ENV_VAR = "UPDATE_API_SURFACE"
 
 
 def _render_callable(qualname: str, fn: Any) -> str:
@@ -143,21 +143,21 @@ def test_public_api_surface_matches_snapshot() -> None:
     current = _render_api_surface()
 
     if os.environ.get(UPDATE_ENV_VAR):
-        SNAPSHOT_PATH.write_text(current, encoding="utf-8")
+        SURFACE_PATH.write_text(current, encoding="utf-8")
         pytest.skip(
-            f"Snapshot regenerated at {SNAPSHOT_PATH}. "
+            f"Surface fixture regenerated at {SURFACE_PATH}. "
             "Review the diff in git, commit it, then rerun without "
             f"{UPDATE_ENV_VAR}=1."
         )
 
-    if not SNAPSHOT_PATH.exists():
+    if not SURFACE_PATH.exists():
         pytest.fail(
-            f"Snapshot file missing: {SNAPSHOT_PATH}\n"
+            f"Surface fixture missing: {SURFACE_PATH}\n"
             f"Run `{UPDATE_ENV_VAR}=1 pytest "
             "tests/unit/api/test_public_surface_contract.py` to create it."
         )
 
-    expected = SNAPSHOT_PATH.read_text(encoding="utf-8")
+    expected = SURFACE_PATH.read_text(encoding="utf-8")
     if current == expected:
         return
 

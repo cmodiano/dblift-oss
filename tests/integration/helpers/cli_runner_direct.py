@@ -187,14 +187,13 @@ class DBLiftCLIDirect:
         # Add config (always required)
         argv.extend(["--config", str(self.config_file)])
 
-        # Add migration path(s) - only for commands that need it
-        if command != "snapshot":
-            argv.extend(["--scripts", str(self.migrations_dir)])
+        # Add migration path(s)
+        argv.extend(["--scripts", str(self.migrations_dir)])
 
-            # Add additional script directories if provided
-            if kwargs.get("additional_scripts"):
-                for script_dir in kwargs["additional_scripts"]:
-                    argv.extend(["--scripts", str(script_dir)])
+        # Add additional script directories if provided
+        if kwargs.get("additional_scripts"):
+            for script_dir in kwargs["additional_scripts"]:
+                argv.extend(["--scripts", str(script_dir)])
 
         # Add command-specific options
         if kwargs.get("target_version"):
@@ -409,20 +408,6 @@ class DBLiftCLIDirect:
     def import_flyway(self, **kwargs) -> CommandResult:
         """Run import-flyway command."""
         return self._run_command("import-flyway", **kwargs)
-
-    def snapshot(
-        self,
-        output: str,
-        source: str = "database-stored",
-        **kwargs,
-    ) -> CommandResult:
-        """Run snapshot command."""
-        return self._run_command(
-            "snapshot",
-            output=output,
-            source=source,
-            **kwargs,
-        )
 
     def chain(self, *commands: str, **kwargs) -> CommandResult:
         """Execute multiple commands in sequence (command chaining)."""

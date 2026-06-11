@@ -18,7 +18,6 @@ from db.plugins.sqlite.sqlite import (
     SQLiteQueryExecutor,
     SQLiteSchemaOperations,
 )
-from db.plugins.sqlite.sqlite.snapshot_table import ensure_sqlite_snapshot_table_exists
 
 
 class SQLiteProvider(NativeProvider):
@@ -26,12 +25,7 @@ class SQLiteProvider(NativeProvider):
 
     canonical_dialect_key = "sqlite"
 
-    # BUG-04: schema_snapshot_service filters internal tables by looking up
-    # ``provider.MIGRATION_LOCK_TABLE`` via ``getattr(..., "")``. Without this
-    # attribute, the filter reduced to the empty string and the lock table
-    # appeared in snapshots as if it were a user table. SQLite inherits from
-    # ``BaseProvider``, so we declare it here explicitly, matching the hardcoded name used by
-    # ``SQLiteLockingManager``.
+    # Keep the lock-table name available to internal-table filters.
     MIGRATION_LOCK_TABLE = "dblift_migration_lock"
 
     def __init__(self, config: DbliftConfig, log: Optional[Log] = None) -> None:
@@ -342,26 +336,6 @@ class SQLiteProvider(NativeProvider):
         self.history_manager.create_migration_history_table_if_not_exists(
             connection, schema, create_schema, table_name
         )
-
-    def create_snapshot_table_if_not_exists(
-        self, schema: str, table_name: str = "dblift_schema_snapshots"
-    ) -> None:
-        """Create the schema snapshot storage table if it does not exist.
-
-        Args:
-            schema: Schema name (ignored for SQLite)
-            table_name: Table name for snapshots
-        """
-        connection = self._get_connection()
-
-        try:
-            ensure_sqlite_snapshot_table_exists(
-                self.query_executor, connection, schema, table_name, self.log
-            )
-        except Exception as e:
-            error_msg = f"Failed to create snapshot table {table_name}: {str(e)}"
-            self.log.error(error_msg)
-            raise RuntimeError(error_msg) from e
 
     def _is_connection_closed(self) -> bool:
         """Check if the connection is closed.

@@ -91,21 +91,6 @@ dblift migrate
 
 Now only migrations after version 1.0.0 will be applied.
 
-### Exporting Schema Snapshots
-
-**Export snapshot from database (latest stored snapshot):**
-```bash
-dblift snapshot --output snapshots/public_schema.json
-```
-
-**Export snapshot from live database (capture new snapshot):**
-```bash
-dblift snapshot --source=live-database --output snapshots/public_schema.json
-```
-
-!!! note "CosmosDB supports database-stored snapshots"
-    As of v1.6.0, CosmosDB captures snapshots automatically during `migrate` (stored in `dblift_schema_snapshots`). Use `--source database-stored` to retrieve them, same as other dialects.
-
 ## Everyday Commands
 
 Here are the commands you'll use most often:
@@ -117,7 +102,6 @@ Here are the commands you'll use most often:
 | `dblift migrate --dry-run` | Preview without applying | Check what will happen before doing it |
 | `dblift undo --target-version=X` | Rolls back to a specific version | Reverse recent changes |
 | `dblift validate` | Checks migration history and metadata consistency | Before applying changes |
-| `dblift snapshot` | Exports schema snapshot to JSON model file from database or live database | Capture schema metadata |
 | `dblift baseline --baseline-version=X` | Mark migrations as already applied | Working with existing databases |
 
 **Quick Examples:**
@@ -134,11 +118,6 @@ dblift undo --target-version=1.0.0
 # Working with existing databases
 dblift baseline --baseline-version=2.0.0
 
-# Export schema snapshot to JSON model file
-dblift snapshot --output snapshots/public_schema.json
-
-# Capture a new snapshot from live database
-dblift snapshot --source=live-database --output snapshots/public_schema.json
 ```
 
 ## Organizing Your Migrations

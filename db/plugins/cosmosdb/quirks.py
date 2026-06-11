@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from db.base_quirks import BaseQuirks
 
 if TYPE_CHECKING:
-    from core.introspection.base_introspector import BaseIntrospector
     from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
     from core.sql_generator.base_generator import BaseSqlGenerator
 
@@ -233,12 +232,6 @@ class CosmosdbQuirks(BaseQuirks):
             "\n"
         )
         return header + python_script
-
-    def introspector_class(self) -> "Optional[Type[BaseIntrospector]]":
-        """Return the CosmosDB-specific :class:`CosmosDbIntrospector` (lazy import)."""
-        from db.plugins.cosmosdb.introspection import CosmosDbIntrospector
-
-        return cast("Optional[Type[BaseIntrospector]]", CosmosDbIntrospector)
 
     def type_equivalents(self) -> "Dict[str, str]":
         """CosmosDB has no relational type aliases — JSON documents store untyped values."""

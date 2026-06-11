@@ -237,7 +237,6 @@ class TestExecuteSingleCommand:
         client.repair.return_value = mock_repair_result
         client.import_flyway.return_value = mock_operation_result
         client.export_schema.return_value = mock_operation_result
-        client.snapshot.return_value = mock_operation_result
 
         return client
 

@@ -152,7 +152,7 @@ _CAPABILITIES_UNKNOWN: DialectCapabilities = DialectCapabilities(
     supports_transactional_ddl=False,
     schema_required=True,  # safest default — force explicit config
     uppercase_identifiers=False,
-    clean_strategy="introspector",
+    clean_strategy="native",
 )
 
 

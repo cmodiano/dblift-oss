@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Type, cast
+from typing import TYPE_CHECKING, Optional, Type
 
 from db.base_quirks import BaseQuirks
 
 if TYPE_CHECKING:
-    from core.introspection.base_introspector import BaseIntrospector
     from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
     from core.sql_generator.base_generator import BaseSqlGenerator
 
@@ -70,18 +69,6 @@ class SqliteQuirks(BaseQuirks):
         if parser_type in ("hybrid", "regex"):
             return SQLiteRegexParser
         return None
-
-    def introspector_class(self) -> Optional[Type["BaseIntrospector"]]:
-        """Return the SQLite-specific :class:`SQLiteIntrospector` (lazy import)."""
-        from db.plugins.sqlite.introspection import SQLiteIntrospector
-
-        return cast("Optional[Type[BaseIntrospector]]", SQLiteIntrospector)
-
-    def vendor_queries_class(self) -> "Optional[Type[Any]]":
-        """Return the SQLite :class:`SQLiteMetadataQueries` bundle (lazy import)."""
-        from db.plugins.sqlite.introspection.sqlite_queries import SQLiteMetadataQueries
-
-        return SQLiteMetadataQueries
 
     def type_equivalents(self) -> "dict[str, str]":
         """SQLite alias → canonical type map.

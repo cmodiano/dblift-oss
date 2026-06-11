@@ -40,7 +40,7 @@ class PostgresqlQuirks(BaseQuirks):
     supports_transactional_ddl = True
     schema_required = True
     uppercase_identifiers = False
-    clean_strategy = "introspector"
+    clean_strategy = "native"
     sqlglot_dialect = "postgres"
     pygments_lexer = "postgresql"
     default_schema_name = "public"
@@ -122,22 +122,6 @@ class PostgresqlQuirks(BaseQuirks):
 
         return PostgreSQLAlterGenerator
 
-    def vendor_queries_class(self) -> "Optional[Type[Any]]":
-        """Return the PostgreSQL :class:`PostgreSQLMetadataQueries` bundle (lazy import)."""
-        from db.plugins.postgresql.introspection.postgresql_queries import (
-            PostgreSQLMetadataQueries,
-        )
-
-        return PostgreSQLMetadataQueries
-
-    def introspector_class(self) -> "Optional[Type[Any]]":
-        """Return the PostgreSQL :class:`PostgreSQLIntrospector` (F.3.a, lazy import)."""
-        from db.plugins.postgresql.introspection.postgresql_introspector import (
-            PostgreSQLIntrospector,
-        )
-
-        return PostgreSQLIntrospector
-
     def parser_class(self, parser_type: str) -> Optional[type]:
         """PostgreSQL parser dispatch: hybrid → :class:`HybridParser`, sqlglot →
         :class:`SqlGlotParser` (``postgres`` dialect), regex → :class:`PostgreSqlRegexParser`."""
@@ -172,7 +156,7 @@ class PostgresqlQuirks(BaseQuirks):
         """PostgreSQL 15+ views can declare ``security_definer`` /
         ``security_invoker``; the vendor query projects both as
         boolean-coerced columns."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         security_definer = get_row_value(row, "security_definer")
         security_invoker = get_row_value(row, "security_invoker")
@@ -184,21 +168,24 @@ class PostgresqlQuirks(BaseQuirks):
     def enrich_materialized_view_from_row(self, mview: Any, row: Dict[str, Any]) -> None:
         """PostgreSQL materialized views can be ``UNLOGGED``; the catalog
         projects ``relpersistence`` as ``is_unlogged`` (``"YES"`` / ``"NO"``)."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         is_unlogged = get_row_value(row, "is_unlogged")
         if is_unlogged == "YES":
             mview.unlogged = True
 
     def normalize_index_predicate(self, predicate: Optional[str]) -> Optional[str]:
-        """Strip redundant ``::TEXT`` and ``CAST(<col> AS TEXT)`` decorations
-        the catalog re-introduces, so partial-index WHERE clauses round-trip
-        against the source DDL."""
-        from core.introspection.extractors.index_extractor import (
-            normalize_postgresql_index_predicate,
+        """Strip simple text casts from PostgreSQL index predicates."""
+        if predicate is None:
+            return None
+        normalized = re.sub(r"::\s*text\b", "", predicate, flags=re.IGNORECASE)
+        normalized = re.sub(
+            r"CAST\(([^()]+)\s+AS\s+TEXT\)",
+            r"\1",
+            normalized,
+            flags=re.IGNORECASE,
         )
-
-        return normalize_postgresql_index_predicate(predicate)
+        return normalized
 
     def apply_index_vendor_properties(
         self, idx_data: Dict[str, Any], index_kwargs: Dict[str, Any]
@@ -220,16 +207,12 @@ class PostgresqlQuirks(BaseQuirks):
 
         Falls back to the generic vendor path if the catalog query fails (rare; preserves
         the existing error semantics)."""
-        from core.introspection.extractors.constraint_extractor import (
-            _build_unique_constraints_from_dict,
-        )
-
         try:
             unique_indexes = extractor._get_unique_constraints_postgresql(schema, table)
         except Exception as e:
             extractor.log.warning(f"Error getting unique constraints for {schema}.{table}: {e}")
             return []
-        return _build_unique_constraints_from_dict(extractor, unique_indexes)
+        return list(unique_indexes)
 
     def extract_partition_scheme_from_row(
         self, extractor: Any, row: Dict[str, Any], table: Any
@@ -239,7 +222,7 @@ class PostgresqlQuirks(BaseQuirks):
         ``partition_columns``."""
         import re
 
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         part_def = get_row_value(row, "partition_definition")
         if not part_def:
@@ -280,7 +263,7 @@ class PostgresqlQuirks(BaseQuirks):
 
     def _postgresql_relation_type_names(self, extractor: Any, schema: str) -> "set[str]":
         """Return table/view/materialized-view row-type names for PostgreSQL."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         query_executor = getattr(getattr(extractor, "provider", None), "query_executor", None)
         connection = getattr(extractor, "connection", None)
@@ -315,7 +298,7 @@ class PostgresqlQuirks(BaseQuirks):
         string so older PostgreSQL versions (or trimmed query sets)
         simply skip the unsupported call.
         """
-        from core.introspection._utils import get_row_value, parse_json_array
+        from db.value_utils import get_row_value, parse_json_array
 
         vendor_queries = extractor.vendor_queries
         if not vendor_queries:
@@ -410,8 +393,8 @@ class PostgresqlQuirks(BaseQuirks):
         This vendor query adds partitioned parents; columns and constraints are populated through
         the extractor's sub-extractors.
         """
-        from core.introspection._utils import get_row_value
         from core.sql_model.table import Table
+        from db.value_utils import get_row_value
 
         if not extractor.vendor_queries:
             return existing_tables
@@ -449,7 +432,7 @@ class PostgresqlQuirks(BaseQuirks):
         """PostgreSQL sequences may be ``CREATE TEMPORARY SEQUENCE`` —
         the vendor query projects ``relpersistence`` as ``is_temporary``
         with values ``"YES"`` / ``"NO"``."""
-        from core.introspection._utils import get_row_value
+        from db.value_utils import get_row_value
 
         return bool(get_row_value(row, "is_temporary") == "YES")
 

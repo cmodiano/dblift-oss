@@ -292,10 +292,7 @@ class PostgreSqlSchemaOperations(BaseSchemaOperations):
     def get_clean_preview(self, connection: Any, schema: str) -> CleanExecutionSummary:
         """Return the objects a PG clean would drop, without executing the DROPs.
 
-        BUG-03: ``clean --dry-run`` previously fell back to
-        ``SchemaIntrospector.get_tables()`` which hides dblift-internal tables.
-        Implementing this hook here makes dry-run mirror ``clean_schema``
-        exactly — no introspector fallback, no hidden objects.
+        Keep dry-run preview aligned with ``clean_schema`` exactly.
 
         Mirrors ``clean_schema`` enumeration: extensions, views, tables,
         sequences, functions/procedures, types/domains.

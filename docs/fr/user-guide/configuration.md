@@ -17,12 +17,9 @@ migrations:
   directory: "./migrations"  # Dossier unique (format legacy)
   recursive: true  # Rechercher dans les sous-dossiers (par défaut: true)
 
-# Configuration des snapshots
-snapshot_table: "dblift_schema_snapshots"  # Nom de la table pour stocker les snapshots
-max_snapshots: 1  # Nombre maximum de snapshots à conserver (par défaut: 1, le plus ancien est supprimé)
 ```
 
-> **Le champ `schema` est obligatoire** pour tous les dialectes sauf SQLite (qui utilise toujours `main`). Il n'y a pas de valeur par défaut implicite — vous devez le définir soit dans `dblift.yaml`, soit en ligne de commande via `--db-schema`. DBLift crée la table d'historique, la table de verrou et la table de snapshots à l'intérieur de ce schéma, donc une valeur absente ou incorrecte provoque des incohérences silencieuses entre schémas (par exemple, une table d'historique écrite dans un schéma mais relue dans un autre).
+> **Le champ `schema` est obligatoire** pour tous les dialectes sauf SQLite (qui utilise toujours `main`). Il n'y a pas de valeur par défaut implicite — vous devez le définir soit dans `dblift.yaml`, soit en ligne de commande via `--db-schema`. DBLift crée les tables de métadonnées gérées dans ce schéma, donc une valeur absente ou incorrecte provoque des incohérences silencieuses entre schémas.
 
 ## Plusieurs Dossiers de Migrations
 
@@ -133,8 +130,6 @@ Au lieu de mettre les mots de passe dans `dblift.yaml`, utilisez des variables d
 export DBLIFT_DB_URL="postgresql+psycopg://localhost:5432/madb"
 export DBLIFT_DB_USERNAME="monutilisateur"
 export DBLIFT_DB_PASSWORD="monmotdepasse"
-export DBLIFT_SNAPSHOT_TABLE="dblift_schema_snapshots"  # Optionnel : nom de table personnalisé
-export DBLIFT_MAX_SNAPSHOTS="5"  # Optionnel : conserver jusqu'à 5 snapshots (par défaut: 1)
 ```
 
 !!! warning "Meilleure Pratique de Sécurité"

@@ -109,7 +109,7 @@ class TestSnapshotLiveParity:
         """Same logical schema, different default-flag presence → identical render after canonicalization."""
         from core.sql_model.table_canonicalizer import TableCanonicalizer
 
-        snapshot_table = _orders_table()  # All flags None (snapshot JSON shape)
+        reference_table = _orders_table()  # All flags None (reference JSON shape)
 
         live_table = _orders_table()  # Same shape, but live introspection adds defaults
         for c in live_table.constraints:
@@ -119,10 +119,12 @@ class TestSnapshotLiveParity:
             c.is_validated = True
 
         canonicalizer = TableCanonicalizer()
-        canonicalizer.canonicalize(snapshot_table)
+        canonicalizer.canonicalize(reference_table)
         canonicalizer.canonicalize(live_table)
 
-        snap_sql = render_table_ddl(snapshot_table, dialect="postgresql", format_for_compare=True)
+        reference_sql = render_table_ddl(
+            reference_table, dialect="postgresql", format_for_compare=True
+        )
         live_sql = render_table_ddl(live_table, dialect="postgresql", format_for_compare=True)
 
-        assert snap_sql == live_sql
+        assert reference_sql == live_sql

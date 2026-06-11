@@ -292,7 +292,7 @@ class TestEventType:
         assert EventType.MIGRATION_FAILED.value == "migration.failed"
         assert EventType.VALIDATION_STARTED.value == "validation.started"
         assert EventType.VALIDATION_COMPLETED.value == "validation.completed"
-        assert EventType.SCHEMA_INTROSPECTION_STARTED.value == "schema.introspection.started"
+        assert EventType.SCHEMA_OBJECT_DETECTED.value == "schema.object.detected"
 
 
 @pytest.mark.unit

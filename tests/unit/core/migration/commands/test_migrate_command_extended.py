@@ -39,7 +39,6 @@ def _make_cmd(
     execution_engine=None,
     migration_helpers=None,
     validator=None,
-    snapshot_service=None,
     journal=None,
 ):
     """Build a MigrateCommand with minimal mocked collaborators."""
@@ -68,7 +67,6 @@ def _make_cmd(
         state_manager=_stm,
         migration_ui=MagicMock(),
         migration_rules=MagicMock(),
-        snapshot_service=snapshot_service,
         journal=journal,
     )
     return cmd
@@ -99,15 +97,6 @@ def _make_migration(
 
 
 class TestMigrateCommandConstruction(unittest.TestCase):
-    def test_snapshot_service_stored(self):
-        svc = MagicMock()
-        cmd = _make_cmd(snapshot_service=svc)
-        self.assertIs(cmd.snapshot_service, svc)
-
-    def test_snapshot_service_defaults_to_none(self):
-        cmd = _make_cmd()
-        self.assertIsNone(cmd.snapshot_service)
-
     def test_log_defaults_to_nulllog_when_none(self):
         from core.logger import NullLog
 

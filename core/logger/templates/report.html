@@ -500,7 +500,7 @@ table.t{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
       {% else %}
       <div class="banner ok">
         <div class="ic">{{ icon_check() }}</div>
-        <div><h4>No pending migrations</h4><p>The snapshot already matches the local migration set.</p></div>
+        <div><h4>No pending migrations</h4><p>The database state already matches the local migration set.</p></div>
       </div>
       {% endif %}
     </div>
@@ -710,35 +710,6 @@ table.t{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}
         </table>
       {% else %}
         <div class="banner ok" style="margin:14px"><div class="ic">{{ icon_check() }}</div><div><h4>Repair completed</h4><p>{{ cmd.message|default('No structured repair details available.') }}</p></div></div>
-      {% endif %}
-    </div>
-  {% endif %}
-
-  {# ========== INTROSPECTION ========== #}
-  {% if cmd.command_type in ['INTROSPECTION','INTROSPECT'] %}
-    {% set ins = cmd.introspection|default(cmd) %}
-    <div class="panel">
-      <div class="panel-h"><div class="title">{{ icon_db() }} Database introspection</div></div>
-      {% if ins.tables %}
-      <table class="t">
-        <thead><tr><th>Object</th><th>Type</th><th>Schema</th><th class="right">Rows</th><th class="right">Size</th></tr></thead>
-        <tbody>
-        {% for tbl in ins.tables %}
-          <tr>
-            <td class="mono">{{ tbl.name|default(tbl) }}</td>
-            <td><span class="objtype">{{ tbl.type|default('TABLE') }}</span></td>
-            <td class="mono dim">{{ tbl.schema|default('—') }}</td>
-            <td class="num">{% if tbl.row_count is defined %}{{ tbl.row_count }}{% else %}—{% endif %}</td>
-            <td class="num">{{ tbl.size|default('—') }}</td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <div class="banner info" style="margin:14px"><div class="ic">{{ icon_db() }}</div><div><h4>Introspection complete</h4><p>{{ cmd.message|default('See raw output below.') }}</p></div></div>
-      {% endif %}
-      {% if cmd.raw_output %}
-      <div style="padding:14px"><div class="codeblock"><pre>{{ cmd.raw_output|e }}</pre></div></div>
       {% endif %}
     </div>
   {% endif %}

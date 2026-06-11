@@ -12,8 +12,6 @@ class DbliftConfig:
     database: DatabaseConfig
     migrations: MigrationsConfig
     history_table: str = "dblift_schema_history"
-    snapshot_table: str = "dblift_schema_snapshots"
-    max_snapshots: int = 1
     log_level: str = "INFO"
     log_file: Optional[str] = None
     log_format: str = "text"
@@ -76,8 +74,6 @@ migrations:
   detect_encoding: false
 
 history_table: "dblift_schema_history"
-snapshot_table: "dblift_schema_snapshots"
-max_snapshots: 3
 
 logging:
   level: "INFO"
@@ -100,10 +96,8 @@ export DBLIFT_DB_TYPE="postgresql"
 export DBLIFT_MIGRATIONS_DIRECTORY="./migrations"
 export DBLIFT_MIGRATIONS_SCRIPT_ENCODING="utf-8"
 
-# History and snapshots
+# History
 export DBLIFT_HISTORY_TABLE="dblift_schema_history"
-export DBLIFT_SNAPSHOT_TABLE="dblift_schema_snapshots"
-export DBLIFT_MAX_SNAPSHOTS="5"
 
 # Logging
 export DBLIFT_LOG_LEVEL="DEBUG"

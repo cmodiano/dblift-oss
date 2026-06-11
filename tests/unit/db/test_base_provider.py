@@ -32,9 +32,6 @@ def _make_concrete(dialect="postgresql"):
         ):
             pass
 
-        def create_snapshot_table_if_not_exists(self, schema, table_name="t"):
-            pass
-
         def execute_query(self, sql, params=None, schema=None):
             return []
 
@@ -115,9 +112,6 @@ class TestBaseProviderInit(unittest.TestCase):
             def create_migration_history_table_if_not_exists(self, s, cs=False, tn="t"):
                 pass
 
-            def create_snapshot_table_if_not_exists(self, s, tn="t"):
-                pass
-
             def execute_query(self, sql, params=None, schema=None):
                 return []
 
@@ -190,9 +184,6 @@ class TestBaseProviderInit(unittest.TestCase):
                 pass
 
             def create_migration_history_table_if_not_exists(self, s, cs=False, tn="t"):
-                pass
-
-            def create_snapshot_table_if_not_exists(self, s, tn="t"):
                 pass
 
             def execute_query(self, sql, params=None, schema=None):

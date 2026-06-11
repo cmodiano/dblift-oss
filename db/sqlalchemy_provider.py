@@ -1,7 +1,7 @@
 """Native provider base backed by SQLAlchemy Core.
 
 Implements the provider public surface used by ExecutionEngine,
-history/locking/snapshot managers, and plugins. Returns native Python
+history managers, locking managers, and plugins. Returns native Python
 types directly.
 
 Dialect-specific operations (schema management, migration history, locking)
