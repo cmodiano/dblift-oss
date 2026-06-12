@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
 from db.base_quirks import BaseQuirks
 
@@ -173,46 +173,6 @@ class CosmosdbQuirks(BaseQuirks):
     ) -> "Optional[object]":
         """Schema-less — emit a no-op comment rather than an ALTER for collation changes."""
         return self._cosmosdb_noop(formatted_table, formatted_column, "collation", dialect)
-
-    # Story 27-3: CosmosDB DROP operations require the Azure SDK, not SQL execution.
-    def requires_sdk_for_drop(self) -> bool:
-        """True — Cosmos containers cannot be dropped via the native driver; the SDK is required."""
-        return True
-
-    # Story 27-3: annotation injected into generated scripts for SDK operations.
-    def sdk_operation_hint_prefix(self) -> "Optional[str]":
-        """``"-- [COSMOSDB SDK OPERATION]"`` — annotates SDK-routed statements in scripts."""
-        return "-- [COSMOSDB SDK OPERATION]"
-
-    def build_sdk_drop_operation(self, statement: object) -> "Optional[Dict[str, Any]]":
-        """Build a CosmosDB delete_container SDK operation for a DROP statement."""
-        sql = getattr(statement, "sql", "") or ""
-        if "DROP CONTAINER" in sql.upper():
-            container_name = getattr(statement, "object_name", None) or ""
-            return {
-                "operation": "delete_container",
-                "container_name": container_name,
-                "python_code": f"database.delete_container(container='{container_name}')",
-                "warning": "This will DELETE ALL DATA in the container",
-            }
-        return None
-
-    def generate_sdk_script(self, sdk_statements: "List[Any]") -> "Optional[str]":
-        """Generate a CosmosDB Python SDK script block for sdk_statements."""
-        from db.plugins.cosmosdb.sdk_translator import CosmosDbSdkTranslator
-
-        dummy_translator = CosmosDbSdkTranslator(connection_manager=None)
-        python_script = dummy_translator.generate_python_script(sdk_statements)
-        header = (
-            "\n\n"
-            "-- ========================================\n"
-            "-- COSMOSDB SDK OPERATIONS (Python)\n"
-            "-- ========================================\n"
-            "-- The following operations require Azure SDK and cannot be executed via SQL API\n"
-            "-- Use the Python script below or execute via Azure Portal\n"
-            "\n"
-        )
-        return header + python_script
 
     def type_equivalents(self) -> "Dict[str, str]":
         """CosmosDB has no relational type aliases — JSON documents store untyped values."""

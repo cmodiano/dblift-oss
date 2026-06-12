@@ -1024,21 +1024,6 @@ class DbliftConfig:
 
         return result
 
-    @classmethod
-    def from_args(cls, args: Any) -> "DbliftConfig":
-        """Create a DbliftConfig instance from argparse.Namespace or dict-like args.
-        Args:
-            args: argparse.Namespace or dict with CLI arguments
-        Returns:
-            DbliftConfig instance
-        """
-        # Convert Namespace to dict if needed
-        if hasattr(args, "__dict__"):
-            args_dict = vars(args)
-        else:
-            args_dict = dict(args)
-        return cls.from_all_sources(args_dict)
-
     @staticmethod
     def _load_yaml_file(path: Union[str, Path]) -> Dict[str, Any]:
         with open(path, "r") as f:

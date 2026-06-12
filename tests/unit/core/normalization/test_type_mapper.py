@@ -88,12 +88,13 @@ class TestCanonicalTypeMapper:
 
     def test_version_specific_mappings(self):
         """Test version-specific type mappings."""
-        from core.normalization.type_mappings import VERSION_SPECIFIC_MAPPINGS
+        from core.normalization.type_mappings import get_version_specific_mappings
 
-        assert VERSION_SPECIFIC_MAPPINGS
-        assert ("postgresql", "9.4+") in VERSION_SPECIFIC_MAPPINGS
-        assert ("mysql", "5.7+") in VERSION_SPECIFIC_MAPPINGS
-        assert ("mariadb", "10.2+") in VERSION_SPECIFIC_MAPPINGS
+        mappings = get_version_specific_mappings()
+        assert mappings
+        assert ("postgresql", "9.4+") in mappings
+        assert ("mysql", "5.7+") in mappings
+        assert ("mariadb", "10.2+") in mappings
 
         mapper = CanonicalTypeMapper()
 

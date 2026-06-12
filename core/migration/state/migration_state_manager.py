@@ -12,12 +12,7 @@ from core.migration.migration import VERSIONED_SCRIPT_TYPES, Migration, Migratio
 from core.migration.rules.migration_rules import MigrationRules
 from core.migration.scripting.migration_script_manager import MigrationScriptManager
 from core.migration.state.migration_data_service import MigrationDataService
-from core.migration.state.migration_display_state import (
-    MigrationDisplayState,  # re-export for compatibility
-)
-from core.migration.state.migration_formatter import (
-    MigrationFormatter,  # backwards-compat public API
-)
+from core.migration.state.migration_display_state import MigrationDisplayState
 from core.migration.state.migration_state import (
     ChecksumChange,
     MigrationEntry,
@@ -58,14 +53,13 @@ class MigrationStateManager:
         script_manager: MigrationScriptManager,
         migration_rules: MigrationRules,
     ) -> None:
-        """Wire the history/script/rules collaborators and instantiate the state and formatter helpers."""
+        """Wire the history/script/rules collaborators and instantiate the state helper."""
         self.logger = logger
         self.history_manager = history_manager
         self.script_manager = script_manager
         self.migration_rules = migration_rules
 
         self.state_service = MigrationStateService(logger)
-        self.formatter = MigrationFormatter(logger)
 
     # ------------------------------------------------------------------
     # Public API
@@ -188,43 +182,6 @@ class MigrationStateManager:
 
         self.logger.debug("Migration state snapshot generated")
         return state
-
-    # ------------------------------------------------------------------
-    # Legacy formatting helpers (kept for compatibility with older callers)
-    # ------------------------------------------------------------------
-    def format_state(self, state: str) -> str:
-        """Return a display-friendly capitalised form of a state name (``""`` for falsy input)."""
-        return (state or "").lower().capitalize()
-
-    def format_category(self, category: str) -> str:
-        """Capitalise only the first letter of ``category`` (preserves embedded casing)."""
-        if not category:
-            return ""
-        return category[0].upper() + category[1:].lower()
-
-    def format_version(self, version: Optional[str]) -> str:
-        """Render a version string in display form (underscores replaced with dots)."""
-        if not version:
-            return ""
-        return str(version).replace("_", ".")
-
-    def get_category_and_display_type(self, m_type: str) -> Tuple[str, str]:
-        """Return ``(category, display_type)`` for ``m_type`` (enums coerced to upper-case strings)."""
-        # m_type may be an enum; coerce to string before uppercasing
-        display_type = str(m_type or "UNKNOWN").upper()
-        return self.format_category(display_type), display_type
-
-    def format_as_table(self, migration_data: List[Dict[str, Any]]) -> str:
-        """Delegate to :class:`MigrationFormatter` to render ``migration_data`` as a CLI table."""
-        return self.formatter.format_as_table(migration_data)
-
-    def format_as_json(self, migration_data: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Delegate to :class:`MigrationFormatter` to render ``migration_data`` as a JSON-ready dict."""
-        return self.formatter.format_as_json(migration_data)
-
-    def format_as_html(self, migration_data: List[Dict[str, Any]]) -> str:
-        """Delegate to :class:`MigrationFormatter` to render ``migration_data`` as an HTML fragment."""
-        return self.formatter.format_as_html(migration_data)
 
     # ------------------------------------------------------------------
     # Internal helpers

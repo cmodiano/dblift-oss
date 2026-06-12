@@ -177,63 +177,6 @@ class ConfigBuilder:
         except ValueError:
             return None
 
-    @staticmethod
-    def build_from_dict(config_dict: Dict[str, Any]) -> BaseDatabaseConfig:
-        """Build database configuration from dictionary.
-
-        Args:
-            config_dict: Dictionary containing configuration values
-
-        Returns:
-            Database configuration object
-
-        Raises:
-            ConfigurationError: If required fields are missing or invalid
-        """
-        if "type" not in config_dict:
-            raise ConfigurationError("Database type is required in configuration")
-
-        try:
-            return BaseDatabaseConfig.create(config_dict)
-        except ValueError as e:
-            raise ConfigurationError(f"Failed to create database configuration: {e}") from e
-
-    @staticmethod
-    def validate_required_fields(config: BaseDatabaseConfig) -> None:
-        """Validate that required configuration fields are present.
-
-        Args:
-            config: Database configuration to validate
-
-        Raises:
-            ConfigurationError: If required fields are missing
-        """
-        if not config.url:
-            raise ConfigurationError("Database URL is required")
-
-        # Check if username/password are in URL or as separate fields
-        from core.utils.database_url_parser import DatabaseUrlParser
-
-        url_username = DatabaseUrlParser.parse_username(config.url)
-        url_password = DatabaseUrlParser.parse_password(config.url)
-
-        if not config.username and not url_username:
-            raise ConfigurationError("Database username is required")
-
-        if not config.password and not url_password:
-            raise ConfigurationError("Database password is required")
-
-        from db.provider_registry import ProviderRegistry
-
-        quirks = ProviderRegistry.get_quirks((config.type or "").lower())
-        if not config.schema:
-            derived_schema = quirks.derive_schema_name(config)
-            if derived_schema:
-                config.schema = derived_schema
-
-        if quirks.schema_required and not config.schema:
-            raise ConfigurationError("Database schema is required")
-
     @classmethod
     def build(
         cls, file_path: Optional[Union[str, Path]] = None, env_overrides: bool = True, **kwargs: Any
@@ -368,34 +311,6 @@ class ConfigBuilder:
         return cls.from_dict(config_data)
 
     @classmethod
-    def from_file(cls, path: Optional[Union[str, Path]] = None) -> DbliftConfig:
-        """Load config from file.
-
-        Args:
-            path: Path to config file (uses default if None)
-
-        Returns:
-            DbliftConfig instance
-
-        Raises:
-            FileNotFoundError: If config file does not exist
-        """
-        if path is None:
-            # Try default locations
-            default_paths = ["dblift.yaml", "dblift.yml", ".dblift.yaml"]
-            for default_path in default_paths:
-                if Path(default_path).exists():
-                    path = default_path
-                    break
-
-        if path is None:
-            raise ConfigurationError(
-                "No configuration file found. Pass a config path or provide database settings."
-            )
-
-        return DbliftConfig.from_file(path)
-
-    @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> DbliftConfig:
         """Build config from dictionary.
 
@@ -414,52 +329,3 @@ class ConfigBuilder:
             ... })
         """
         return DbliftConfig.from_dict(config_dict)
-
-    @classmethod
-    def from_env(cls) -> DbliftConfig:
-        """Build config from environment variables.
-
-        Returns:
-            DbliftConfig instance (default if no env vars set)
-
-        Example:
-            >>> # Set environment variables
-            >>> os.environ["DBLIFT_DB_URL"] = "postgresql+psycopg://localhost/mydb"
-            >>> os.environ["DBLIFT_DB_SCHEMA"] = "public"
-            >>> config = ConfigBuilder.from_env()
-        """
-        env_dict = DbliftConfig.from_env_dict()
-        if env_dict:
-            return DbliftConfig.from_dict(env_dict)
-        raise ConfigurationError(
-            "No environment configuration found. Set DBLIFT_DB_URL or DBLIFT_DB_TYPE."
-        )
-
-    @classmethod
-    def merge(cls, *configs: DbliftConfig) -> DbliftConfig:
-        """Merge multiple configs (later overrides earlier).
-
-        Args:
-            *configs: Config instances to merge
-
-        Returns:
-            Merged DbliftConfig instance
-
-        Example:
-            >>> base = ConfigBuilder.from_file("base.yaml")
-            >>> override = ConfigBuilder.from_dict({"database": {"schema": "custom"}})
-            >>> merged = ConfigBuilder.merge(base, override)
-        """
-        if not configs:
-            raise ConfigurationError("At least one configuration is required to merge")
-
-        # Start with first config
-        result = configs[0]
-
-        # Merge each subsequent config
-        for config in configs[1:]:
-            # Convert to dict and merge
-            config_dict = config.to_dict()
-            result.merge(config_dict)
-
-        return result

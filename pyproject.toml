@@ -219,11 +219,10 @@ strict_equality = true
 
 # PR-F1: extend the strict zone to the rest of ``api/``. Same flag set as
 # above except ``no_implicit_reexport`` — enforcing it on these two
-# modules would require touching ``core.migration.commands.export_schema_command``
-# and ``core.logger.results`` to add explicit ``__all__`` re-exports, which
-# is scope creep beyond the ``api/`` package. When Phase F+ extends the
-# strict zone into ``core/``, those re-exports become a one-shot fix and
-# this carve-out can be removed.
+# modules would require touching ``core.logger.results`` to add explicit
+# ``__all__`` re-exports, which is scope creep beyond the ``api/`` package.
+# When Phase F+ extends the strict zone into ``core/``, those re-exports
+# become a one-shot fix and this carve-out can be removed.
 [[tool.mypy.overrides]]
 module = [
     "api._client_operations",
@@ -286,7 +285,6 @@ module = [
     "cli.handlers.info",
     "cli._command_handlers",
     "cli.db_utils",
-    "cli.export_schema_command",
     "cli._parser_setup",
     "cli._config_helpers",
     "cli.main",
@@ -423,13 +421,13 @@ no_implicit_optional = true
 warn_unused_ignores = true
 strict_equality = true
 
-# PR-H5: strict core/migration executor + commands — 7 modules spanning
+# PR-H5: strict core/migration executor + commands — 6 modules spanning
 # the migration execution engine and the command layer.  Fixes included
 # stale ``# type: ignore`` comments removed and
 # ``_parse_sql_statements`` ``placeholder_service`` param annotated as
 # ``Optional[PlaceholderService]``, bare ``List`` → ``List[Migration]``
 # on six private helpers, untyped ``ctx_or_config`` / ``journal`` /
-# ``placeholder_service`` params in ``DiffCommand`` / ``MigrateCommand``
+# ``placeholder_service`` params in ``MigrateCommand``
 # typed as ``Optional[Union[BaseCommandContext, DbliftConfig]]`` / the
 # appropriate TYPE_CHECKING-guarded types, ``_migration_type_name``
 # annotated as ``(object) -> str``, and ``_seen_versions: dict`` →
@@ -438,7 +436,6 @@ strict_equality = true
 module = [
     "core.migration.executor.execution_engine",
     "core.migration.commands.baseline_command",
-    "core.migration.commands.diff_command",
     "core.migration.commands.import_flyway_command",
     "core.migration.commands.info_command",
     "core.migration.commands.migrate_command",
@@ -692,15 +689,8 @@ module = [
     "core.migration.ui.migration_ui",
     "core.migration.ui.table_renderer",
     "core.migration.commands",
-    "core.migration.commands._diff_object_specs",
-    "core.migration.commands._diff_output",
-    "core.migration.commands._export_helpers",
-    "core.migration.commands._export_metadata",
-    "core.migration.commands._managed_object_filter",
-    "core.migration.commands._schema_export_types",
     "core.migration.commands.base_command",
     "core.migration.commands.clean_command",
-    "core.migration.commands.export_schema_command",
     "core.migration.commands.repair_command",
 ]
 disallow_any_generics = true

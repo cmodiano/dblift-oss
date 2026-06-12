@@ -124,49 +124,6 @@ class BaseQuirks:
         """
         return self.default_schema_name
 
-    def requires_sdk_for_drop(self) -> bool:
-        """Return True if DROP statements require SDK execution rather than SQL.
-
-        CosmosDB containers cannot be dropped through SQL execution; the Azure
-        SDK must be used instead. All other dialects return False.
-        """
-        return False
-
-    def sdk_operation_hint_prefix(self) -> "Optional[str]":
-        """Return the comment prefix to inject before SDK-executed statements, or None.
-
-        Used by ``script_formatter`` to annotate CosmosDB SDK operations in
-        generated SQL scripts. Default: None (no annotation).
-        """
-        return None
-
-    def build_sdk_drop_operation(self, statement: object) -> "Optional[dict[str, Any]]":
-        """Build the SDK operation dict for a DROP statement, or None.
-
-        Called by ``generate_sql_script`` for each DROP statement when
-        ``requires_sdk_for_drop()`` is True. The returned dict is stored as
-        ``statement.sdk_operation`` and later passed to ``generate_sdk_script``.
-
-        ``statement`` is a ``SqlStatement``; access attributes via ``getattr``.
-        Return ``None`` to leave ``sdk_operation`` unset (no-op for this
-        statement).
-
-        Default: None (no SDK operation).
-        """
-        return None
-
-    def generate_sdk_script(self, sdk_statements: "list[Any]") -> "Optional[str]":
-        """Generate a dialect-specific SDK script block for ``sdk_statements``.
-
-        Called by ``generate_sql_script`` after SQL formatting when there are
-        statements with ``requires_sdk=True``. Return the full text to append
-        to the generated script (including headers/comments), or ``None`` to
-        skip appending.
-
-        Default: None (no SDK script appended).
-        """
-        return None
-
     def unwrap_default_value(self, default_str: str, column: object) -> str:
         """Strip dialect-specific wrapping from a DEFAULT value string.
 
@@ -700,43 +657,6 @@ class BaseQuirks:
         """
         return None
 
-    #: Vendor-specific table-name prefixes that identify objects
-    #: created by the engine to support its own materialized-view
-    #: machinery (Oracle: ``MLOG$``, ``MVIEW$_``, ``SNAP$``, ``AQ$``,
-    #: ``DR$`` …). Tables whose names start with any of these prefixes
-    #: are filtered out of user-facing introspection results, and a
-    #: non-empty tuple also tells :class:`TableExtractor` that it must
-    #: preload materialized-view names so it can drop them from the
-    #: vendor table listing. Default: empty tuple (no filtering).
-    materialized_view_support_table_prefixes: Tuple[str, ...] = ()
-
-    def enrich_table_extra(self, extractor: Any, schema: str, table_name: str, table: Any) -> None:
-        """Apply dialect-specific table enrichment that needs extra catalog queries.
-
-        Default: no-op. PostgreSQL overrides to capture row-security
-        flags, single-table inheritance parents, and row-level security
-        policies. The *extractor* gives the hook access to
-        ``provider.query_executor``, ``connection``, ``vendor_queries``,
-        ``get_row_value`` / ``parse_json_array`` helpers, and the
-        ``track_warning`` sink.
-        """
-        return None
-
-    def supplement_table_list(
-        self, extractor: Any, schema: str, existing_tables: "list[Any]"
-    ) -> "list[Any]":
-        """Add tables that the dialect's base table query missed.
-
-        Default: returns *existing_tables* unchanged. PostgreSQL
-        overrides to append declarative-partitioned tables (``relkind
-        = 'p'``) — the generic table query doesn't report them as ``TABLE``,
-        so a vendor query is needed. The hook is responsible for
-        populating columns and constraints on any new tables it
-        creates by calling ``extractor.column_extractor`` /
-        ``extractor.constraint_extractor`` when those are available.
-        """
-        return existing_tables
-
     def is_temporary_sequence(self, row: Dict[str, Any]) -> bool:
         """Return ``True`` if the catalog *row* describes a temporary sequence.
 
@@ -1176,11 +1096,6 @@ class BaseQuirks:
 
     #: Materialized views include ``WITH DATA`` / ``WITH NO DATA`` in CREATE DDL.
     view_materialized_uses_with_data: bool = False
-
-    #: PostgreSQL ``UNLOGGED`` materialized views and view-level
-    #: ``security_definer`` / ``security_invoker`` attributes (used during
-    #: comparison to decide whether to diff these attributes).
-    view_supports_unlogged_and_security: bool = False
 
     # ------------------------------------------------------------------
     # Trigger comparison hooks (story 26-6 Wave A).

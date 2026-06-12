@@ -141,7 +141,6 @@ class DBLiftClient:
     def validate(self, **options) -> ValidationResult
     def clean(self, **options) -> CleanResult
     def repair(self, **options) -> RepairResult
-    def export_schema(self, **options) -> ExportResult
 ```
 
 ### Key Responsibilities

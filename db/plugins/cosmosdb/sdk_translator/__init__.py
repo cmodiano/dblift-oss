@@ -3,15 +3,12 @@
 Public API — same as the original cosmosdb_sdk_translator.py module.
 
     from db.plugins.cosmosdb.sdk_translator import CosmosDbSdkTranslator
-    from db.plugins.cosmosdb.sdk_translator import MigrationPlan, MigrationPlanStep
 
 Sub-modules
 -----------
-_models.py      : MigrationPlanStep, MigrationPlan dataclasses
 _translators.py : _CosmosDbTranslatorMixin — all _translate_* and parser helper methods
 _executors.py   : _CosmosDbExecutorMixin  — execute_sdk_operation and _execute_* methods
-_plan.py        : _CosmosDbPlanMixin      — plan generation, undo script, formatting
-_translator.py  : CosmosDbSdkTranslator  — main class composing the three mixins
+_translator.py  : CosmosDbSdkTranslator  — main class composing the two mixins
 
 Supported Pseudo-SQL Syntax:
 ----------------------------
@@ -35,11 +32,8 @@ TTL Management:
     SET TTL ON CONTAINER <name> TO OFF
 """
 
-from db.plugins.cosmosdb.sdk_translator._models import MigrationPlan, MigrationPlanStep
 from db.plugins.cosmosdb.sdk_translator._translator import CosmosDbSdkTranslator
 
 __all__ = [
     "CosmosDbSdkTranslator",
-    "MigrationPlan",
-    "MigrationPlanStep",
 ]
