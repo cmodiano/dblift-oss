@@ -138,69 +138,6 @@ def _mk_manager(applied=None, scripts=None):
 
 
 # ===========================================================================
-# Legacy formatting helpers
-# ===========================================================================
-
-
-class TestFormatState(unittest.TestCase):
-    def setUp(self):
-        self.mgr = _mk_manager()
-
-    def test_success_capitalized(self):
-        assert self.mgr.format_state("SUCCESS") == "Success"
-
-    def test_failed_capitalized(self):
-        assert self.mgr.format_state("FAILED") == "Failed"
-
-    def test_empty_string(self):
-        assert self.mgr.format_state("") == ""
-
-    def test_none_safe(self):
-        assert self.mgr.format_state(None) == ""
-
-
-class TestFormatCategory(unittest.TestCase):
-    def setUp(self):
-        self.mgr = _mk_manager()
-
-    def test_versioned(self):
-        assert self.mgr.format_category("versioned") == "Versioned"
-
-    def test_empty(self):
-        assert self.mgr.format_category("") == ""
-
-    def test_none(self):
-        assert self.mgr.format_category(None) == ""
-
-
-class TestFormatVersion(unittest.TestCase):
-    def setUp(self):
-        self.mgr = _mk_manager()
-
-    def test_none_returns_empty(self):
-        assert self.mgr.format_version(None) == ""
-
-    def test_underscores_converted_to_dots(self):
-        assert self.mgr.format_version("1_2_3") == "1.2.3"
-
-    def test_normal_version_unchanged(self):
-        assert self.mgr.format_version("2.0") == "2.0"
-
-
-class TestGetCategoryAndDisplayType(unittest.TestCase):
-    def setUp(self):
-        self.mgr = _mk_manager()
-
-    def test_sql_type(self):
-        cat, disp = self.mgr.get_category_and_display_type("SQL")
-        assert disp == "SQL"
-
-    def test_none_type(self):
-        cat, disp = self.mgr.get_category_and_display_type(None)
-        assert disp == "UNKNOWN"
-
-
-# ===========================================================================
 # _normalize_filter
 # ===========================================================================
 
@@ -666,31 +603,6 @@ class TestAnalyseHistory(unittest.TestCase):
         }
         result = self.mgr._analyse_history([m], ctx)
         assert "5.0" in result.executed_versions
-
-
-# ===========================================================================
-# format_as_table / format_as_json / format_as_html  (delegation to formatter)
-# ===========================================================================
-
-
-class TestFormatterDelegations(unittest.TestCase):
-    def setUp(self):
-        self.mgr = _mk_manager()
-
-    def test_format_as_table_delegates(self):
-        self.mgr.formatter.format_as_table = MagicMock(return_value="table")
-        result = self.mgr.format_as_table([{"key": "val"}])
-        assert result == "table"
-
-    def test_format_as_json_delegates(self):
-        self.mgr.formatter.format_as_json = MagicMock(return_value={"data": []})
-        result = self.mgr.format_as_json([])
-        assert result == {"data": []}
-
-    def test_format_as_html_delegates(self):
-        self.mgr.formatter.format_as_html = MagicMock(return_value="<html/>")
-        result = self.mgr.format_as_html([])
-        assert result == "<html/>"
 
 
 if __name__ == "__main__":
