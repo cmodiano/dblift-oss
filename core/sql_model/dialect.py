@@ -26,16 +26,9 @@ if TYPE_CHECKING:
     # Lazy module-level constants resolved via ``__getattr__`` (PEP 562).
     # Declare them here so mypy infers ``FrozenSet[str]`` instead of ``Any?``
     # at import sites. Without these stubs, mypy's cache occasionally widens
-    # the inferred type to ``Any | None``, breaking ``x in CATALOG_DIALECTS``.
-    CATALOG_DIALECTS: FrozenSet[str]
-    CATALOG_SCHEMA_DIALECTS: FrozenSet[str]
-    NULL_CATALOG_DIALECTS: FrozenSet[str]
-    CONCURRENT_INDEX_DIALECTS: FrozenSet[str]
-    ONLINE_INDEX_DIALECTS: FrozenSet[str]
-    NOSQL_DIALECTS: FrozenSet[str]
+    # the inferred type to ``Any | None``, breaking ``x in SCHEMA_OPTIONAL_DIALECTS``.
     SCHEMA_OPTIONAL_DIALECTS: FrozenSet[str]
     CASCADE_DROP_DIALECTS: FrozenSet[str]
-    BACKTICK_DIALECTS: FrozenSet[str]
 
 # ---------------------------------------------------------------------------
 # SIMP-37 Phase 0 — DialectGroup frozensets
@@ -50,15 +43,8 @@ if TYPE_CHECKING:
 # the bottom of this module resolves each well-known set on first
 # access. Listed here for ``grep``-ability:
 #
-#   CATALOG_DIALECTS              -> quirks.metadata_catalog_mode == "catalog"
-#   CATALOG_SCHEMA_DIALECTS       -> ... == "catalog+schema"
-#   NULL_CATALOG_DIALECTS         -> ... == "schema_only"
-#   CONCURRENT_INDEX_DIALECTS     -> quirks.supports_concurrent_index
-#   ONLINE_INDEX_DIALECTS         -> quirks.supports_online_index
-#   NOSQL_DIALECTS                -> quirks.is_nosql
 #   SCHEMA_OPTIONAL_DIALECTS      -> not quirks.schema_required
 #   CASCADE_DROP_DIALECTS         -> quirks.drop_table_default_cascade
-#   BACKTICK_DIALECTS             -> quirks.quote_open == "`"
 
 
 # ---------------------------------------------------------------------------
@@ -219,15 +205,8 @@ def _dialects_where(predicate: Callable[[Any], bool]) -> FrozenSet[str]:
 
 
 _LAZY_DIALECT_SETS = {
-    "CATALOG_DIALECTS": lambda q: q.metadata_catalog_mode == "catalog",
-    "CATALOG_SCHEMA_DIALECTS": lambda q: q.metadata_catalog_mode == "catalog+schema",
-    "NULL_CATALOG_DIALECTS": lambda q: q.metadata_catalog_mode == "schema_only",
-    "CONCURRENT_INDEX_DIALECTS": lambda q: q.supports_concurrent_index,
-    "ONLINE_INDEX_DIALECTS": lambda q: q.supports_online_index,
-    "NOSQL_DIALECTS": lambda q: q.is_nosql,
     "SCHEMA_OPTIONAL_DIALECTS": lambda q: not q.schema_required,
     "CASCADE_DROP_DIALECTS": lambda q: q.drop_table_default_cascade,
-    "BACKTICK_DIALECTS": lambda q: q.quote_open == "`",
 }
 
 # Cache of resolved sets. Filled on first access; auto-invalidated when
@@ -403,7 +382,7 @@ class DialectEnum(str, Enum):
             dialect: SQL dialect string (any case; None treated as default).
             identifier: Raw identifier to quote (no escaping of internal
                 special characters — callers that need escaping keep their
-                own implementation, e.g. SafetyChecker).
+                own implementation).
 
         Returns:
             Quoted identifier string.

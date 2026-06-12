@@ -569,14 +569,6 @@ class Table(SqlObject):
         """
         return [c for c in self.constraints if c.constraint_type.value == "CHECK"]
 
-    def generate_alter_table_check_constraints(self) -> List[str]:
-        """Return no generated ALTER TABLE statements."""
-        return []
-
-    def generate_alter_table_self_referencing_foreign_keys(self) -> List[str]:
-        """Return no generated ALTER TABLE statements."""
-        return []
-
     @property
     def create_statement(self) -> str:
         """Generate a basic CREATE TABLE statement."""
