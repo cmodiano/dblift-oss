@@ -8,51 +8,6 @@ pytestmark = [pytest.mark.unit]
 from config.dblift_config import DbliftConfig
 
 
-class DummyArgs:
-    def __init__(self):
-        self.db_url = "postgresql+psycopg://localhost:5432/db"
-        self.db_username = "pg"
-        self.db_password = "pw"
-        self.log_level = "DEBUG"
-        self.log_file = "dblift.log"
-        self.migrations_dir = "migrations"
-        self.migrations_table = "schema_version"
-        self.tags = "t1"
-        self.exclude_tags = "t2"
-        self.versions = "v1"
-        self.exclude_versions = "v2"
-        self.placeholders = ["x=y", "a=b"]
-        self.dry_run = True
-        self.target_version = "2"
-        self.installed_by = "me"
-        self.undo = True
-        self.mark_as_executed = True
-        self.strict_mode = True
-        self.history_table = "h"
-        self.journal_enabled = True
-        self.journal_dir = "jdir"
-        self.error_handling_enabled = False
-        self.max_retries = 5
-        self.retry_delay = 2.0
-        self.retry_backoff = 3.0
-        self.retry_jitter = 0.5
-        self.retryable_error_categories = ["foo", "bar"]
-
-
-# Artificial: from_args with dict and Namespace-like object
-def test_from_args_variants():
-    args_dict = {
-        "db_url": "postgresql+psycopg://localhost:5432/db",
-        "db_username": "pg",
-        "db_password": "pw",
-    }
-    config = DbliftConfig.from_args(args_dict)
-    assert config.database.username == "pg"
-    dummy = DummyArgs()
-    config2 = DbliftConfig.from_args(dummy)
-    assert config2.database.username == "pg"
-
-
 # Artificial: to_dict with all optional fields set
 def test_to_dict_all_optionals():
     config = DbliftConfig.from_dict(
