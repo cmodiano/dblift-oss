@@ -9,13 +9,12 @@ from typing import Any, Dict, List, Optional, cast
 
 from core.state.sql_statement import SqlStatement
 from db.plugins.cosmosdb.sdk_translator._executors import _CosmosDbExecutorMixin
-from db.plugins.cosmosdb.sdk_translator._plan import _CosmosDbPlanMixin
 from db.plugins.cosmosdb.sdk_translator._translators import _CosmosDbTranslatorMixin
 
 logger = logging.getLogger(__name__)
 
 
-class CosmosDbSdkTranslator(_CosmosDbTranslatorMixin, _CosmosDbExecutorMixin, _CosmosDbPlanMixin):
+class CosmosDbSdkTranslator(_CosmosDbTranslatorMixin, _CosmosDbExecutorMixin):
     """
     Translates pseudo-SQL statements to Azure SDK operations for CosmosDB.
 

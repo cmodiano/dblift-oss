@@ -63,19 +63,6 @@ class OracleQuirks(BaseQuirks):
     index_supports_tablespace = True
     # Trigger DDL (story 26-5).
     trigger_terminator = "\n/"
-    # Engine-internal materialized-view support objects to skip during
-    # table introspection. Non-empty also signals TableExtractor to
-    # preload MV names so it can filter them from the table list.
-    materialized_view_support_table_prefixes: Tuple[str, ...] = (
-        "MLOG$",
-        "RUPD$",
-        "MVIEW$_",
-        "MVW$_",
-        "I_SNAP$",
-        "SNAP$",
-        "AQ$",
-        "DR$",
-    )
 
     def wrap_trigger_body(self, body: str) -> str:
         """Oracle: wrap body in a valid PL/SQL block.
