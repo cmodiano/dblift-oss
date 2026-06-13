@@ -103,6 +103,7 @@ nav:
     - development/contributing.md
     - development/adding-database-support.md
   - Release:
+    - release/oss-enterprise-release.md
     - release/offline-delivery.md
   - Operations:
     - operations/recovery/index.md

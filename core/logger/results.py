@@ -658,12 +658,12 @@ class DiffResult(OperationResult):
             self.warning_count = 0
             self.info_count = 0
 
-            # Count by severity
-            from core.comparison.diff_models import DiffSeverity
-
-            if schema_diff.severity == DiffSeverity.ERROR:
+            # Count by severity without importing the removed diff package in OSS.
+            severity = getattr(schema_diff, "severity", None)
+            severity_value = str(getattr(severity, "value", severity)).lower()
+            if severity_value == "error":
                 self.error_count = self.total_differences
-            elif schema_diff.severity == DiffSeverity.WARNING:
+            elif severity_value == "warning":
                 self.warning_count = self.total_differences
             else:
                 self.info_count = self.total_differences
@@ -818,9 +818,8 @@ class PlanResult(OperationResult):
             return False
         if not self.plan_errors:
             return False
-        from core.migration.planning.models import SQL_VALIDATION_FAILURE_MESSAGE
-
-        return all(error == SQL_VALIDATION_FAILURE_MESSAGE for error in self.plan_errors)
+        failure_message = "validate-sql failed for planned migrations"
+        return all(error == failure_message for error in self.plan_errors)
 
     def refresh_success(self) -> None:
         """Refresh success after mutating plan errors or drift lists."""

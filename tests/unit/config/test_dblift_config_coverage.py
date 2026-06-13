@@ -262,37 +262,6 @@ def test_load_config_validate_sql_db2_dialect_uses_native_placeholder_config():
 
 
 @pytest.mark.unit
-def test_from_dict_secret_uri_as_database_url_does_not_raise(monkeypatch):
-    """database.url: vault://... must not raise 'Invalid legacy URL' when resolve_secrets=False."""
-    config = DbliftConfig.from_dict(
-        {"database": {"url": "vault://secret/data/prod/db#url", "schema": "public"}},
-        resolve_secrets=False,
-    )
-    assert config is not None
-    assert config.database is not None
-
-
-@pytest.mark.unit
-def test_from_dict_typed_secret_uri_as_database_url_does_not_raise():
-    """database.type set + database.url: vault://... must not be parsed as native."""
-    config = DbliftConfig.from_dict(
-        {
-            "database": {
-                "type": "postgresql",
-                "url": "vault://secret/data/prod/db#url",
-                "schema": "public",
-            }
-        },
-        resolve_secrets=False,
-    )
-    assert config is not None
-    assert config.database is not None
-    assert config.database.url == "vault://secret/data/prod/db#url"
-    assert getattr(config.database, "host", None) is None
-    assert getattr(config.database, "database", None) is None
-
-
-@pytest.mark.unit
 def test_from_dict_oracle_host_database_uses_database_as_service_name():
     config = DbliftConfig.from_dict(
         {
@@ -467,13 +436,3 @@ database:
             assert config.retry_backoff == 3.0
         assert config.retry_jitter == 0.5
         assert config.retryable_error_categories == ["foo", "bar"]
-
-
-@pytest.mark.unit
-def test_from_args_dict_secret_uri_url_skips_jdbc_inference():
-    """--db-url vault://... must not trigger JDBC type inference in from_args_dict."""
-    result = DbliftConfig.from_args_dict({"db_url": "vault://secret/data/prod/db#url"})
-    db = result.get("database", {})
-    assert db.get("url") == "vault://secret/data/prod/db#url"
-    # No type should be inferred from a secret URI
-    assert db.get("type") is None

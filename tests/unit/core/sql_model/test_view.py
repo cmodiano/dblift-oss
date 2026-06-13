@@ -87,26 +87,6 @@ class TestView:
         assert "AS" in result
         assert "SELECT id, name FROM users" in result
 
-    def test_create_statement_oracle_dialect(self):
-        """Test CREATE VIEW statement for Oracle dialect."""
-        view = View(name="test_view", query="SELECT * FROM users", dialect="oracle")
-
-        result = view.create_statement
-
-        assert "CREATE OR REPLACE VIEW" in result
-        assert "test_view" in result
-        assert "AS" in result
-        assert "SELECT * FROM users" in result
-
-    def test_create_statement_oracle_case_insensitive(self):
-        """Test CREATE VIEW statement for Oracle dialect (case insensitive)."""
-        view = View(name="test_view", query="SELECT * FROM users", dialect="ORACLE")
-
-        result = view.create_statement
-
-        assert "CREATE OR REPLACE VIEW" in result
-        assert "test_view" in result
-
     def test_create_statement_materialized_view_basic(self):
         """Test CREATE MATERIALIZED VIEW statement."""
         view = View(name="test_mv", query="SELECT * FROM users", materialized=True)
@@ -116,58 +96,6 @@ class TestView:
         assert "CREATE MATERIALIZED VIEW test_mv" in result
         assert "AS" in result
         assert "SELECT * FROM users" in result
-
-    def test_create_statement_materialized_view_oracle(self):
-        """Test CREATE MATERIALIZED VIEW statement for Oracle."""
-        view = View(
-            name="test_mv", query="SELECT * FROM users", materialized=True, dialect="oracle"
-        )
-
-        result = view.create_statement
-
-        assert "CREATE MATERIALIZED VIEW" in result
-        assert "OR REPLACE" not in result
-        assert "test_mv" in result
-        assert "AS" in result
-        assert "SELECT * FROM users" in result
-        assert "BUILD IMMEDIATE" in result
-
-    def test_create_statement_materialized_view_postgres(self):
-        """Test CREATE MATERIALIZED VIEW statement for PostgreSQL."""
-        view = View(
-            name="test_mv", query="SELECT * FROM users", materialized=True, dialect="postgres"
-        )
-
-        result = view.create_statement
-
-        # Story 26-5: ``postgres`` alias now resolves through plugin
-        # quirks → identifiers are quoted with ``"``. Previously the
-        # alias slipped past the literal-list and returned unquoted.
-        assert 'CREATE MATERIALIZED VIEW "test_mv"' in result
-        assert "AS" in result
-        assert "SELECT * FROM users" in result
-        assert "WITH DATA" in result
-
-    def test_create_statement_complex_example(self):
-        """Test CREATE VIEW statement with all features."""
-        view = View(
-            name="user_summary",
-            schema="reporting",
-            query="SELECT u.id, u.name, COUNT(o.id) as order_count\nFROM users u\nLEFT JOIN orders o ON u.id = o.user_id\nGROUP BY u.id, u.name",
-            columns=["user_id", "user_name", "total_orders"],
-            dialect="oracle",
-        )
-
-        result = view.create_statement
-
-        assert "CREATE OR REPLACE VIEW" in result
-        assert "reporting" in result
-        assert "user_summary" in result
-        assert "user_id" in result
-        assert "user_name" in result
-        assert "total_orders" in result
-        assert "AS" in result
-        assert "SELECT u.id, u.name, COUNT(o.id) as order_count" in result
 
     def test_create_statement_no_query(self):
         """Test CREATE VIEW statement when no query is provided."""

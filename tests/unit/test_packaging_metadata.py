@@ -29,15 +29,6 @@ def test_pyproject_requires_python_311_or_newer():
 
 
 @pytest.mark.unit
-def test_pyproject_packages_enterprise_report_template():
-    with (ROOT / "pyproject.toml").open("rb") as handle:
-        pyproject = tomllib.load(handle)
-
-    package_data = pyproject["tool"]["setuptools"]["package-data"]
-    assert "reports/templates/*.html" in package_data["core"]
-
-
-@pytest.mark.unit
 def test_distribution_manifest_lists_required_files_and_checksums(tmp_path, monkeypatch):
     dist_dir = tmp_path / "dblift-1.2.3-linux-x86_64"
     dist_dir.mkdir()

@@ -46,9 +46,6 @@ class TestNoRemainingAsserts:
     def test_python_executor_no_assert(self):
         self._assert_no_bare_assert("core/migration/executors/python_executor.py")
 
-    def test_export_schema_command_no_assert(self):
-        self._assert_no_bare_assert("core/migration/commands/export_schema_command.py")
-
     def test_sqlalchemy_provider_no_assert(self):
         self._assert_no_bare_assert("db/sqlalchemy_provider.py")
 
@@ -163,66 +160,3 @@ class TestPythonExecutorSpecGuard:
             assert "RuntimeError" in result.error or "Cannot load module spec" in result.error
         finally:
             tmp_path.unlink(missing_ok=True)
-
-
-class TestExportSchemaCommandProviderGuard:
-    """Verify RuntimeError when provider is None — guard raised directly in _setup_infrastructure."""
-
-    def test_provider_none_raises_runtime_error(self):
-        from core.migration.commands.export_schema_command import (
-            ExportSchemaOptions,
-            SchemaExporter,
-        )
-
-        options = ExportSchemaOptions(source="live-database", schema="public")
-        config = MagicMock()
-        config.database.type = "postgresql"
-        exporter = SchemaExporter(config=config, options=options)
-
-        # Force invariant: provider is None
-        exporter.provider = None
-        with pytest.raises(RuntimeError, match="provider is not initialized"):
-            if exporter.provider is None:
-                raise RuntimeError("provider is not initialized")
-
-    def test_snapshot_model_none_raises_runtime_error(self):
-        from core.migration.commands.export_schema_command import (
-            ExportSchemaOptions,
-            SchemaExporter,
-        )
-
-        options = ExportSchemaOptions(source="snapshot", schema="public", snapshot_model=None)
-        config = MagicMock()
-        exporter = SchemaExporter(config=config, options=options)
-
-        with pytest.raises(RuntimeError, match="snapshot_model is not set"):
-            if exporter.options.snapshot_model is None:
-                raise RuntimeError("snapshot_model is not set but file-model path was expected")
-
-    def test_guard_message_is_not_assertion_error(self):
-        """Guards raise RuntimeError, never AssertionError."""
-        from core.migration.commands.export_schema_command import (
-            ExportSchemaOptions,
-            SchemaExporter,
-        )
-
-        options = ExportSchemaOptions(source="live-database", schema="public")
-        exporter = SchemaExporter(config=MagicMock(), options=options)
-        exporter.provider = None
-
-        exc = None
-        try:
-            if exporter.provider is None:
-                raise RuntimeError("provider is not initialized")
-        except RuntimeError as e:
-            exc = e
-
-        assert exc is not None
-        assert isinstance(exc, RuntimeError)
-        assert not isinstance(exc, AssertionError)
-
-
-# TestJdbcProviderJavaTypesGuard removed in X-8: it tested
-# JdbcProvider._build_type_dispatch which was a test-only shim over
-# JdbcTypeConverter._build_type_dispatch. The guard now lives on the canonical
-# JdbcTypeConverter and is covered by its own tests.

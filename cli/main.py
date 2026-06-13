@@ -54,8 +54,6 @@ from cli._output import CommandOutput, from_args
 from cli._parser_setup import (  # noqa: F401
     _add_baseline_options,
     _add_diff_and_target_options,
-    _add_validate_sql_options,
-    _setup_export_schema_options,
     create_parser,
     parse_with_selective_errors,
 )
@@ -324,10 +322,7 @@ def _dispatch_command(ctx: _CliContext, command_output: CommandOutput) -> int:
     )
 
     # Standalone offline commands only need DbliftConfig (dialect, validation rules).
-    validate_sql_only = len(ctx.commands) == 1 and ctx.commands[0] == "validate-sql"
-    plan_only = len(ctx.commands) == 1 and ctx.commands[0] == "plan"
-    preflight_only = len(ctx.commands) == 1 and ctx.commands[0] == "preflight"
-    offline_only = validate_sql_only or plan_only or preflight_only
+    offline_only = False
     client: Union[DBLiftClient, ValidateSqlConfigClient]
     if offline_only:
         client = ValidateSqlConfigClient(config=ctx.config)
@@ -359,10 +354,8 @@ def _dispatch_command(ctx: _CliContext, command_output: CommandOutput) -> int:
         )
         schema_name = getattr(ctx.config.database, "schema", None)
         formatter = TextFormatter()
-        formatter.license_info = ctx.license_info
         main_header = formatter.format_header(schema_name, database_name)
 
-        from cli import export_schema_command, snapshot_command
         from core.migration.commands import base_command
 
         if main_header:
@@ -373,18 +366,6 @@ def _dispatch_command(ctx: _CliContext, command_output: CommandOutput) -> int:
         # in base_command does not re-emit it (it also has no format awareness).
         if main_header:
             base_command._console_main_header_printed = True  # type: ignore[attr-defined]
-            export_schema_command._console_main_header_printed = True  # type: ignore[attr-defined]
-            snapshot_command._console_main_header_printed = True  # type: ignore[attr-defined]
-            # Also suppress the header in the core command modules, which have their
-            # own independent module-level flag that would otherwise cause a duplicate.
-            try:
-                from core.migration.commands import export_schema_command as _core_esc
-                from core.migration.commands import snapshot_command as _core_sc
-
-                _core_esc._console_main_header_printed = True  # type: ignore[attr-defined]
-                _core_sc._console_main_header_printed = True  # type: ignore[attr-defined]
-            except ImportError:
-                pass
 
         for cmd_index, command in enumerate(ctx.commands):
             if len(ctx.commands) > 1 and cmd_index > 0:

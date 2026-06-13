@@ -140,45 +140,6 @@ class TestProviderGetDatabaseUrl:
 class TestValidateSqlClientInit:
     """Regression: standalone validate-sql uses ValidateSqlConfigClient, not full DBLiftClient."""
 
-    def test_main_uses_config_only_path_for_validate_sql(self):
-        """BUG-VALIDATE-SQL-01: main() must set validate_sql_only and use ValidateSqlConfigClient."""
-        import inspect
-
-        import cli.main as main_module
-
-        source = inspect.getsource(main_module)
-        assert "ValidateSqlConfigClient" in source
-        assert "validate_sql_only" in source
-        assert (
-            'not in ["validate-sql"]' not in source
-        ), "BUG-VALIDATE-SQL-01: do not revert to string-based client skip; use config-only client"
-
-    def test_validate_sql_handler_accesses_client_config(self):
-        """BUG-VALIDATE-SQL-01: validate-sql handler accesses ctx.client.config.
-
-        After PR #351 (action #9a) the orchestrator was decomposed into 5 named
-        phases — ctx.client.config now lives in _resolve_dialect and
-        _build_validation_config rather than the top-level entry function.
-        The regression intent is preserved: any helper in the
-        cli.handlers.validate_sql module must still pull dialect/config
-        from the client.
-        """
-        import inspect
-
-        import cli.handlers.validate_sql as handler_module
-
-        source = inspect.getsource(handler_module)
-        assert (
-            "ctx.client.config" in source
-        ), "validate-sql handler needs ctx.client.config for dialect detection"
-
-
-# ════════════════════════════════════════════════════════════
-# BUG-UNDO-01: generate_undo_script must return result, not raise
-# ════════════════════════════════════════════════════════════
-class TestUndoScriptErrorHandling:
-    """Regression: predictable errors from generate_undo_script (result vs re-raise)."""
-
     @staticmethod
     def _make_mock_provider():
         provider = Mock()

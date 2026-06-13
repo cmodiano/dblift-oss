@@ -132,7 +132,6 @@ PARENT_FLAG_CASES = [
     ("--log-format", "json", "log_format", "json"),
     ("--log-dir", "/tmp/logs", "log_dir", "/tmp/logs"),
     ("--log-file", "run.log", "log_file", "run.log"),
-    ("--license-key", "eyJa.bB.cC", "license_key", "eyJa.bB.cC"),
     ("--dry-run", None, "dry_run", True),
     # B8-BUG-01: --recursive/--no-recursive are mutually-exclusive top-level
     # flags backed by ``store_const`` → ``recursive_flag``. Each value must
@@ -389,8 +388,7 @@ def test_every_top_level_flag_is_covered_or_exempted():
 
     Catches the regression pattern where a new top-level flag ships without
     an accompanying test case, silently losing coverage of the BUG-01/02
-    class of argparse-wiring bugs. See 1.3.1 BUG-07 (``--license-key``
-    namespace fallback) for a concrete historical example.
+    class of argparse-wiring bugs. See the historical parent-flag overwrite regressions for concrete examples.
     """
     covered = {case[0] for case in PARENT_FLAG_CASES}
     known = covered | EXEMPT_FROM_PARENT_FLAG_CASES

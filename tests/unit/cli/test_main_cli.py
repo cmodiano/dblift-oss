@@ -23,67 +23,6 @@ with patch.dict(
     from cli.main import create_parser, main
 
 
-def test_oss_command_does_not_require_license(monkeypatch):
-    from cli import main as cli_main
-
-    called = {"gate": False}
-
-    def fail_gate(ctx):
-        called["gate"] = True
-        raise AssertionError("license gate should not run for OSS command")
-
-    monkeypatch.setattr(cli_main, "_gate_license", fail_gate)
-    monkeypatch.setattr(cli_main, "_dispatch_command", lambda ctx, output: 0)
-    monkeypatch.setattr(cli_main, "_setup_logging_and_output", lambda ctx: object())
-    monkeypatch.setattr(
-        cli_main,
-        "_parse_argv_and_load_config",
-        lambda argv: cli_main._CliContext(
-            commands=["info"],
-            global_arguments=[],
-            subcommand_args=[],
-            args=object(),
-            parser=object(),
-            log=object(),
-            config=object(),
-        ),
-    )
-
-    cli_main.main()
-
-    assert called["gate"] is False
-
-
-def test_cli_license_key_is_stored_without_global_validation(monkeypatch):
-    from cli import main as cli_main
-
-    stored_tokens = []
-
-    monkeypatch.setattr("core.licensing._guard._set_token", stored_tokens.append)
-
-    cli_main._apply_cli_license_token(SimpleNamespace(license_key="jwt-from-cli"))
-
-    assert stored_tokens == ["jwt-from-cli"]
-
-
-def test_parse_phase_stores_cli_license_key_for_later_guards(monkeypatch):
-    from cli import main as cli_main
-
-    stored_tokens = []
-
-    monkeypatch.setattr("core.licensing._guard._set_token", stored_tokens.append)
-    monkeypatch.setattr(cli_main, "_load_and_merge_config", lambda args, log: object())
-    monkeypatch.setattr(
-        cli_main, "_validate_db_config", lambda args, config, parser, commands: None
-    )
-    monkeypatch.setattr(cli_main, "_validate_log_format_for_cli", lambda args, parser: None)
-
-    ctx = cli_main._parse_argv_and_load_config(["--license-key", "jwt-from-cli", "info"])
-
-    assert ctx.commands == ["info"]
-    assert stored_tokens == ["jwt-from-cli"]
-
-
 def test_terminal_extension_dispatches_before_argparse_validation(monkeypatch):
     from cli import main as cli_main
 

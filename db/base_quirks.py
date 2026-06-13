@@ -19,8 +19,6 @@ from core.dialect_boundary import DialectQuirks
 
 if TYPE_CHECKING:
     from core.introspection.base_introspector import BaseIntrospector
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
 
 
 class BaseQuirks:
@@ -670,12 +668,12 @@ class BaseQuirks:
     # DdlQuirks (story 26-3)
     # ------------------------------------------------------------------
 
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
-        """Default: no dialect-specific DDL generator (falls back to ``SqlGenerator``)."""
+    def ddl_generator_class(self) -> None:
+        """OSS builds do not ship SQL generator implementations."""
         return None
 
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
-        """Default: no dialect-specific ALTER generator (factory raises)."""
+    def alter_generator_class(self) -> None:
+        """OSS builds do not ship ALTER generator implementations."""
         return None
 
     def parser_class(self, parser_type: str) -> Optional[type]:

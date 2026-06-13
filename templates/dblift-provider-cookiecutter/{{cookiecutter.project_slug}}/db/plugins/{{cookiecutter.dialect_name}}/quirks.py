@@ -7,13 +7,9 @@ for the full hook catalogue.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Type
+from typing import Any, Optional, Type
 
 from db.base_quirks import BaseQuirks
-
-if TYPE_CHECKING:
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
 
 
 class {{cookiecutter.dialect_name.capitalize()}}Quirks(BaseQuirks):
@@ -39,12 +35,11 @@ class {{cookiecutter.dialect_name.capitalize()}}Quirks(BaseQuirks):
     def __init__(self, dialect_name: str = "{{cookiecutter.dialect_name}}") -> None:
         super().__init__(dialect_name=dialect_name)
 
-    # --- Generator hooks (return None to use BasicTableDdlGenerator fallback)
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
+    # --- Generator hooks (return None to use no OSS generator)
+    def ddl_generator_class(self) -> None:
+        """OSS builds do not ship SQL generator implementations."""
         return None
 
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
+    def alter_generator_class(self) -> None:
+        """OSS builds do not ship ALTER generator implementations."""
         return None
-
-    # Add any other hooks you need (render_*, parser_class, etc.).
-    # See full list + docstrings in db/base_quirks.py.

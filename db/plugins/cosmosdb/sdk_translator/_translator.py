@@ -7,7 +7,7 @@ translation and execution mixins into a single coherent API.
 import logging
 from typing import Any, Dict, List, Optional, cast
 
-from core.sql_generator.sql_statement import SqlStatement
+from core.state.sql_statement import SqlStatement
 from db.plugins.cosmosdb.sdk_translator._executors import _CosmosDbExecutorMixin
 from db.plugins.cosmosdb.sdk_translator._script_generation import _CosmosDbScriptGenerationMixin
 from db.plugins.cosmosdb.sdk_translator._translators import _CosmosDbTranslatorMixin

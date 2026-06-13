@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,10 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 # (`requires_license` in capability_matrix.py refers to database vendor
 # editions, not dblift licensing.)
 FORBIDDEN_CODE_TERMS = re.compile(
-    r"\bproprietary\b|"
-    r"\bpremium\b|"
-    r"license key|"
-    r"dblift_license",
+    r"\bproprietary\b|" r"\bpremium\b|" r"license key|" r"dblift_license",
     re.IGNORECASE,
 )
 # User-facing docs stay fully clean of enterprise/licensing language. README.md
@@ -106,6 +104,25 @@ def test_oss_keeps_all_first_party_database_provider_entry_points() -> None:
 
     for provider in EXPECTED_PROVIDER_ENTRY_POINTS:
         assert re.search(rf"^{provider}\s*=", pyproject, re.MULTILINE), provider
+
+
+def test_oss_license_metadata_is_apache_2() -> None:
+    license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    docs_index = (ROOT / "docs/index.md").read_text(encoding="utf-8")
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        pyproject = tomllib.load(handle)
+
+    assert license_text.startswith("Apache License\nVersion 2.0, January 2004\n")
+    assert (
+        "License :: OSI Approved :: Apache Software License" in pyproject["project"]["classifiers"]
+    )
+    assert "License-Apache--2.0" in readme
+    assert "Apache License, Version 2.0" in readme
+    assert "License-Apache--2.0" in docs_index
+    assert "MIT License" not in license_text
+    assert "License-MIT" not in readme
+    assert "License-MIT" not in docs_index
 
 
 def test_public_docs_only_advertise_oss_cli_commands() -> None:

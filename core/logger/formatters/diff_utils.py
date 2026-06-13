@@ -8,14 +8,19 @@ types preserved end-to-end.
 import difflib
 from typing import Any, Dict, Optional, Tuple
 
-from core.sql_generator.table_ddl_render import render_table_ddl
-
 # Story 26-5: presentation-layer fallback default. The diff formatters
 # render DDL on a best-effort basis; an unset dialect collapses to a
 # generic ANSI-ish PostgreSQL shape.
 _DEFAULT_PRESENTATION_DIALECT = (
     "postgresql"  # lint: allow-dialect-string: presentation default fallback
 )
+
+
+def _render_table_diff_placeholder(table: Any, table_name: str, side: str) -> str:
+    raw_ddl = getattr(table, "raw_ddl", None)
+    if raw_ddl:
+        return str(raw_ddl)
+    return f"-- Table {table_name} ({side})"
 
 
 def generate_unified_diff(
@@ -343,15 +348,13 @@ def generate_table_diff_sql(
     # Prefer the dialect carried by the Table refs (set by snapshot loader and
     # live introspector). Fall back to the caller-supplied dialect only when
     # neither Table ref has it set.
-    resolved = getattr(expected, "dialect", None) or getattr(actual, "dialect", None) or dialect
-
     table_name = getattr(table_diff, "table_name", None) or "<unknown>"
     if expected is not None:
-        before_sql = render_table_ddl(expected, dialect=resolved, format_for_compare=True)
+        before_sql = _render_table_diff_placeholder(expected, table_name, "expected")
     else:
         before_sql = f"-- Table {table_name} not present on expected side"
     if actual is not None:
-        after_sql = render_table_ddl(actual, dialect=resolved, format_for_compare=True)
+        after_sql = _render_table_diff_placeholder(actual, table_name, "actual")
     else:
         after_sql = f"-- Table {table_name} not present on actual side"
     return before_sql, after_sql

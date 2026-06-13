@@ -1,4 +1,0 @@
-cli
-config
-core
-db

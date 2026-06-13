@@ -16,7 +16,7 @@ _logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     pass
 
-from core.comparison.type_normalizer import DataTypeNormalizer
+from core.normalization.data_type_normalizer import DataTypeNormalizer
 from core.normalization.type_constants import CANONICAL_TO_VARIANTS
 from core.normalization.type_mappings import (
     TYPE_ALIASES,

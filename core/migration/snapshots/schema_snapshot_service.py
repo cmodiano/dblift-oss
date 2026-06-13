@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union, cast
+from typing import Any, Dict, List, Optional, Set, Union
 
 from config import DbliftConfig
 from core.introspection import IntrospectorFactory
@@ -278,15 +278,6 @@ class SchemaSnapshotService:
         introspector = IntrospectorFactory.create(provider=self.provider, log=self.log)
 
         try:
-            # Always enable result tracking for introspection quality validation
-            introspection_result = None
-            if hasattr(introspector, "enable_result_tracking"):
-                introspection_result = introspector.enable_result_tracking()
-            else:
-                # Log warning if result tracking is not available
-                self.log.warning(
-                    "Introspector does not support result tracking - quality metrics will not be available"
-                )
 
             tables_raw = self._safe_introspect(introspector.get_tables, schema_name)
             tables, table_keys = self._filter_tables(tables_raw, schema_name)
@@ -343,51 +334,7 @@ class SchemaSnapshotService:
             linked_servers = self._call_optional(introspector, "get_linked_servers")
             modules = self._call_optional(introspector, "get_modules", schema_name)
 
-            # Run validation if introspection result is available
-            validation_metadata = {}
-            if introspection_result:
-                from core.validation.introspection_validator import IntrospectionValidator
-
-                validator = IntrospectionValidator(introspector)
-                validation_output = validator.validate_introspection(
-                    tables=tables,
-                    indexes=indexes,
-                    views=views,
-                    schema=schema_name or "",
-                    introspection_result=introspection_result,
-                )
-
-                validation_metadata = {
-                    "introspection_quality": {
-                        "completeness_score": introspection_result.get_completeness_score(),
-                        "confidence_level": introspection_result.get_confidence_level(),
-                        "error_count": len(introspection_result.errors),
-                        "warning_count": len(introspection_result.warnings),
-                        "object_statuses": [
-                            {
-                                "object_type": status.object_type,
-                                "object_name": status.object_name,
-                                "schema": status.schema,
-                                "captured": status.captured,
-                            }
-                            for status in introspection_result.object_statuses
-                        ],
-                    },
-                    "validation": {
-                        "overall_passed": validation_output["overall_status"]["passed"],
-                        "confidence": validation_output["overall_status"].get("confidence", {}),
-                        "total_errors": validation_output["overall_status"]["total_errors"],
-                        "total_warnings": validation_output["overall_status"]["total_warnings"],
-                    },
-                }
-
-                # Log quality metrics if there are issues
-                if introspection_result.errors or introspection_result.warnings:
-                    error_msg = f"Snapshot capture had {len(introspection_result.errors)} errors and {len(introspection_result.warnings)} warnings"
-                    self.log.warning(error_msg)
-
-                # Don't log initial validation summary - we'll log the final one after accuracy validation
-                # This avoids confusion with two different scores
+            validation_metadata: Dict[str, Any] = {}
 
             metadata: Dict[str, Any] = {
                 "dialect": dialect,
@@ -416,16 +363,6 @@ class SchemaSnapshotService:
                 linked_servers=linked_servers,
                 modules=modules,
                 metadata=metadata,
-            )
-
-            # Validate snapshot against live database for accuracy
-            self._validate_snapshot_accuracy(
-                payload,
-                introspector,
-                schema_name or "",
-                live_tables=tables,
-                live_views=views,
-                live_indexes=indexes,
             )
 
             return payload
@@ -575,123 +512,8 @@ class SchemaSnapshotService:
         live_views: List[Any],
         live_indexes: List[Any],
     ) -> None:
-        """Validate captured snapshot against live database for accuracy.
-
-        Compares the already-introspected live data with the captured snapshot
-        to calculate real accuracy scores. Updates metadata and logs warnings
-        if accuracy or confidence is not HIGH.
-
-        Args:
-            payload: The captured snapshot payload
-            introspector: Introspector instance (used by validators)
-            schema_name: Schema name
-            live_tables: Already-introspected and filtered tables
-            live_views: Already-introspected and filtered views
-            live_indexes: Already-introspected and filtered indexes
-        """
-        try:
-            self.log.debug("Validating snapshot accuracy against live database...")
-
-            # Prepare captured and live objects for comparison
-            captured_objects = {
-                "tables": payload.tables,
-                "views": payload.views,
-                "indexes": payload.indexes,
-            }
-            live_objects = {
-                "tables": live_tables,
-                "views": live_views,
-                "indexes": live_indexes,
-            }
-
-            # Run accuracy validation
-            from core.validation.accuracy_validator import AccuracyValidator
-            from core.validation.state_validator import StateValidator
-
-            # AccuracyValidator/StateValidator are core validators; the wrapper
-            # IntrospectionValidator lives in core.validation.introspection_validator.
-            accuracy_validator = AccuracyValidator(introspector)  # type: ignore[no-untyped-call]
-            accuracy_validator.validate_all(
-                cast(Dict[str, List[Any]], captured_objects),
-                live_objects,
-                schema_name,
-            )
-
-            # Recalculate confidence with real accuracy score
-
-            state_validator = StateValidator(introspector)  # type: ignore[no-untyped-call]
-            validation_results = state_validator.validate_schema(
-                tables=payload.tables,
-                indexes=payload.indexes,
-                views=payload.views,
-                schema=schema_name,
-                live_objects=live_objects,
-            )
-
-            # Get overall status with updated confidence
-            overall_status = state_validator.get_overall_status(validation_results)
-
-            # Update validation metadata with real accuracy scores
-            validation_metadata = payload.metadata.get("validation", {})
-            confidence = overall_status.get("confidence", {})
-            validation_metadata.update(
-                {
-                    "overall_passed": overall_status["passed"],
-                    "confidence": confidence,
-                    "total_errors": overall_status["total_errors"],
-                    "total_warnings": overall_status["total_warnings"],
-                }
-            )
-
-            payload.metadata["validation"] = validation_metadata
-
-            # Only log validation summary if there are issues (accuracy < 100% or confidence < HIGH)
-            accuracy_score = confidence.get("breakdown", {}).get("accuracy", {}).get("score", 0.5)
-            confidence_level = confidence.get("confidence_level", "UNKNOWN")
-            overall_score = confidence.get("overall_score", 0.0)
-
-            # Only show validation results if there are problems
-            if accuracy_score < 1.0 or confidence_level != "HIGH":
-                self.log.warning("")
-                self.log.warning("=" * 80)
-                self.log.warning("SNAPSHOT VALIDATION WARNINGS")
-                self.log.warning("=" * 80)
-                self.log.warning(f"Accuracy: {accuracy_score:.1%}")
-                self.log.warning(f"Confidence: {confidence_level} ({overall_score:.1%})")
-                self.log.warning(
-                    f"Overall Status: {'PASSED' if overall_status['passed'] else 'FAILED'}"
-                )
-
-                # Show breakdown (see BUG-06: the `error_rate` quality score is displayed as
-                # "Success_Rate" to avoid the misleading "100.0% error rate" reading).
-                breakdown = confidence.get("breakdown", {})
-                if breakdown:
-                    label_overrides = {"error_rate": "Success_Rate"}
-                    self.log.warning("Score Breakdown:")
-                    for component, details in breakdown.items():
-                        score = details.get("score", 0)
-                        label = label_overrides.get(component, component.title())
-                        self.log.warning(f"  {label}: {score:.1%}")
-
-                # Log specific warnings
-                if accuracy_score < 1.0:
-                    self.log.warning(
-                        f"⚠️  Snapshot accuracy is {accuracy_score:.1%} (not 100%). "
-                        "Some differences detected between captured and live database."
-                    )
-
-                if confidence_level != "HIGH":
-                    self.log.warning(
-                        f"⚠️  Snapshot confidence is {confidence_level} ({overall_score:.1%}), "
-                        f"not HIGH (>=95%). Consider reviewing the snapshot quality."
-                    )
-
-                self.log.warning("=" * 80)
-
-        except Exception as e:
-            # Don't fail snapshot creation if validation fails
-            self.log.warning(f"Could not validate snapshot accuracy against live database: {e}")
-            self.log.debug(f"Accuracy validation error details: {e}")
+        """OSS builds do not ship snapshot accuracy validators."""
+        return None
 
     def _filter_tables(
         self, tables: List[Any], default_schema: Optional[str]

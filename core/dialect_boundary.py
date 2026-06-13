@@ -55,11 +55,7 @@ override only the deltas.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Protocol, Type, runtime_checkable
-
-if TYPE_CHECKING:
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
+from typing import Any, Optional, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -68,14 +64,13 @@ class DdlQuirks(Protocol):
 
     First hooks (story 26-3 first slice): the DDL generator class and
     the ALTER generator class for this dialect. Returning ``None``
-    means the framework falls back to the dialect-agnostic
-    :class:`core.sql_generator.sql_generator.SqlGenerator`.
+    means no dialect-specific SQL renderer is available in OSS.
     """
 
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
+    def ddl_generator_class(self) -> Optional[type[Any]]:
         """Return the dialect-specific DDL generator class, or ``None``."""
 
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
+    def alter_generator_class(self) -> Optional[type[Any]]:
         """Return the dialect-specific ALTER generator class, or ``None``."""
 
     def render_drop_for_object(

@@ -53,12 +53,10 @@ cosmosdb = "db.plugins.cosmosdb.plugin:PLUGIN"
 # CLI command parser extensions (third-party or enterprise can add subcommands
 # by loading a function that receives the top-level ArgumentParser).
 [project.entry-points."dblift.commands"]
-builtin = "cli.extensions:register_builtin_command_extensions"
 
 # Command handler functions (return dict of name -> handler). Used for
 # the core dispatch of most commands. Enterprise registers additional ones here.
 [project.entry-points."dblift.command_handlers"]
-builtin = "cli.extensions:load_builtin_command_handlers"
 
 # Terminal / takeover commands (full process control, return int exit code).
 [project.entry-points."dblift.terminal_commands"]
@@ -290,12 +288,9 @@ module = [
     "core.sql_parser.hybrid_parser",
     "core.sql_parser.enhanced_regex_parser",
     "core.sql_parser.unified_regex_parser",
-    "core.sql_generator.formatter",
-    "core.sql_generator.sql_generator",
     "core.sql_validator.linting.performance_analyzer",
     "core.normalization",
     "core.normalization.identifier_normalizer",
-    "core.validation.result",
     "core.sql_model.view_options",
     "cli.handlers._shared",
     "cli.handlers.info",
@@ -426,37 +421,6 @@ strict_equality = true
 # Same flag set as the api/* carve-outs above.
 [[tool.mypy.overrides]]
 module = [
-    "core.comparison",
-    "core.comparison._default_normalizer",
-    "core.comparison._diff_base",
-    "core.comparison._diff_index",
-    "core.comparison._diff_routine",
-    "core.comparison._diff_schema",
-    "core.comparison._diff_simple",
-    "core.comparison._diff_table",
-    "core.comparison._diff_view",
-    "core.comparison._table_property_comparator",
-    "core.comparison.comparator",
-    "core.comparison.comparison_utils",
-    "core.comparison.database_link_comparator",
-    "core.comparison.diff_models",
-    "core.comparison.diff_reporter",
-    "core.comparison.event_comparator",
-    "core.comparison.extension_comparator",
-    "core.comparison.foreign_data_wrapper_comparator",
-    "core.comparison.foreign_server_comparator",
-    "core.comparison.function_comparator",
-    "core.comparison.index_comparator",
-    "core.comparison.linked_server_comparator",
-    "core.comparison.package_comparator",
-    "core.comparison.procedure_comparator",
-    "core.comparison.sequence_comparator",
-    "core.comparison.synonym_comparator",
-    "core.comparison.table_comparator",
-    "core.comparison.trigger_comparator",
-    "core.comparison.type_normalizer",
-    "core.comparison.user_defined_type_comparator",
-    "core.comparison.view_comparator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -527,7 +491,6 @@ strict_equality = true
 module = [
     "core.migration.executor.execution_engine",
     "core.migration.commands.baseline_command",
-    "core.migration.commands.diff_command",
     "core.migration.commands.import_flyway_command",
     "core.migration.commands.info_command",
     "core.migration.commands.migrate_command",
@@ -651,8 +614,6 @@ module = [
     "db.plugins.sqlite.parser",
     "db.plugins.sqlite.parser.parser_config",
     "db.plugins.sqlite.parser.sqlite_regex_parser",
-    "db.plugins.sqlite.generator.alter_generator",
-    "db.plugins.sqlite.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -704,8 +665,6 @@ module = [
     "db.plugins.postgresql.parser.postgresql_regex_parser",
     "db.plugins.postgresql.parser.postgresql_statement_parser",
     "db.plugins.postgresql.parser.postgresql_tokenizer",
-    "db.plugins.postgresql.generator.alter_generator",
-    "db.plugins.postgresql.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -736,8 +695,6 @@ module = [
     "db.plugins.mysql.parser.mysql_regex_parser",
     "db.plugins.mysql.parser.mysql_statement_parser",
     "db.plugins.mysql.parser.mysql_tokenizer",
-    "db.plugins.mysql.generator.alter_generator",
-    "db.plugins.mysql.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -777,8 +734,6 @@ module = [
     "db.plugins.oracle.parser._plsql_block",
     "db.plugins.oracle.parser._sqlplus",
     "db.plugins.oracle.parser._statement_splitter",
-    "db.plugins.oracle.generator.alter_generator",
-    "db.plugins.oracle.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -811,8 +766,6 @@ module = [
     "db.plugins.sqlserver.parser.sqlserver_statement_parser",
     "db.plugins.sqlserver.parser.sqlserver_tokenizer",
     "db.plugins.sqlserver.parser.tsql_batch_separator",
-    "db.plugins.sqlserver.generator.alter_generator",
-    "db.plugins.sqlserver.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -845,8 +798,6 @@ module = [
     "db.plugins.db2.db2.schema_operations",
     "db.plugins.db2.parser.parser_config",
     "db.plugins.db2.parser.db2_regex_parser",
-    "db.plugins.db2.generator.alter_generator",
-    "db.plugins.db2.generator.ddl_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -882,7 +833,6 @@ module = [
     "db.plugins.cosmosdb.sdk_translator._executors",
     "db.plugins.cosmosdb.parser",
     "db.plugins.cosmosdb.parser.cosmosdb_regex_parser",
-    "db.plugins.cosmosdb.generator.alter_generator",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -901,15 +851,11 @@ module = [
     "cli.handlers",
     "cli.handlers.baseline",
     "cli.handlers.clean",
-    "cli.handlers.diff",
-    "cli.handlers.export_schema",
     "cli.handlers.import_flyway",
     "cli.handlers.migrate",
     "cli.handlers.repair",
-    "cli.handlers.snapshot",
     "cli.handlers.undo",
     "cli.handlers.validate",
-    "cli.handlers.validate_sql",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true
@@ -1009,18 +955,9 @@ module = [
     "core.migration.ui.migration_ui",
     "core.migration.ui.table_renderer",
     "core.migration.commands",
-    "core.migration.commands._diff_object_specs",
-    "core.migration.commands._diff_output",
-    "core.migration.commands._diff_snapshot",
-    "core.migration.commands._export_helpers",
-    "core.migration.commands._export_metadata",
-    "core.migration.commands._managed_object_filter",
-    "core.migration.commands._schema_export_types",
     "core.migration.commands.base_command",
     "core.migration.commands.clean_command",
-    "core.migration.commands.export_schema_command",
     "core.migration.commands.repair_command",
-    "core.migration.commands.snapshot_command",
 ]
 disallow_any_generics = true
 disallow_subclassing_any = true

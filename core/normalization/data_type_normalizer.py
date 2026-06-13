@@ -1,7 +1,7 @@
-"""Data Type Normalization for Cross-Dialect Comparison.
+"""Data Type Normalization for Cross-Dialect Canonicalization.
 
 This module provides data type normalization to handle dialect-specific type
-equivalences and variations when comparing SQL objects from different sources.
+equivalences and variations when canonicalizing SQL object metadata.
 
 Key Features:
 - Normalize type names (INT → INTEGER, VARCHAR2 → VARCHAR)

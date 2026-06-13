@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 from db.base_quirks import BaseQuirks
 
 _PK_CLUSTERED_RE = re.compile(r"(PRIMARY\s+KEY)\s+(CLUSTERED|NONCLUSTERED)", re.IGNORECASE)
 _UNIQUE_CLUSTERED_RE = re.compile(r"(UNIQUE)\s+(CLUSTERED|NONCLUSTERED)", re.IGNORECASE)
-
-if TYPE_CHECKING:
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
 
 
 class SqlserverQuirks(BaseQuirks):
@@ -172,17 +168,13 @@ class SqlserverQuirks(BaseQuirks):
             f"model_data NVARCHAR(MAX) NOT NULL)"
         )
 
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
-        """Return the SQL Server-specific :class:`SQLServerSqlGenerator` (lazy import)."""
-        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
+    def ddl_generator_class(self) -> None:
+        """OSS builds do not ship SQL generator implementations."""
+        return None
 
-        return SQLServerSqlGenerator
-
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
-        """Return the SQL Server-specific :class:`SQLServerAlterGenerator` (lazy import)."""
-        from db.plugins.sqlserver.generator.alter_generator import SQLServerAlterGenerator
-
-        return SQLServerAlterGenerator
+    def alter_generator_class(self) -> None:
+        """OSS builds do not ship ALTER generator implementations."""
+        return None
 
     def vendor_queries_class(self) -> "Optional[Type[Any]]":
         """Return the SQL Server :class:`SQLServerMetadataQueries` bundle (lazy import)."""
@@ -252,7 +244,7 @@ class SqlserverQuirks(BaseQuirks):
         Setting NOT NULL emits a pre-check counting NULL rows so the migration
         fails cleanly when existing data would violate the constraint.
         """
-        from core.sql_generator.sql_statement import SqlStatement
+        from core.state.sql_statement import SqlStatement
 
         nullable_diff = getattr(col_diff, "nullable_diff", None)
         if nullable_diff is None:
@@ -281,7 +273,7 @@ class SqlserverQuirks(BaseQuirks):
         self, col_diff: object, formatted_table: str, formatted_column: str, dialect: str
     ) -> "Optional[object]":
         """``ALTER TABLE … ALTER COLUMN <col> <type>`` — T-SQL column-type change."""
-        from core.sql_generator.sql_statement import SqlStatement
+        from core.state.sql_statement import SqlStatement
 
         data_type_diff = getattr(col_diff, "data_type_diff", None)
         if data_type_diff is None:

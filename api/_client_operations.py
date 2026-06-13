@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Union
 from api.events import EventType
 from core.logger.results import GenerateUndoScriptResult
 
+
 def _heuristic_statement_count_from_sql(sql_text: str) -> int:
     """Count lines that look like standalone SQL statements (heuristic)."""
     return sum(
@@ -18,7 +19,7 @@ def _heuristic_statement_count_from_sql(sql_text: str) -> int:
 
 
 def _apply_sql_script_warning_scan(
-    result: Union[GenerateSqlFromDiffResult, GenerateUndoScriptResult],
+    result: GenerateUndoScriptResult,
     sql_text: str,
 ) -> None:
     """Set manual-review flag and collect per-line warnings from generated SQL text."""
@@ -255,5 +256,3 @@ def _undo_script_error_result(
     result.set_error(error_message)
     result.complete()
     return result
-
-

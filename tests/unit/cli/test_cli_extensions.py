@@ -71,14 +71,3 @@ def test_load_terminal_commands_rejects_duplicate_commands():
             assert "Duplicate terminal command extension: license" in str(exc)
         else:
             raise AssertionError("duplicate terminal commands should be rejected")
-
-
-
-
-    entry_points = pyproject["project"]["entry-points"]
-    assert entry_points["dblift.commands"]["builtin"] == (
-        "cli.extensions:register_builtin_command_extensions"
-    )
-    assert entry_points["dblift.command_handlers"]["builtin"] == (
-        "cli.extensions:load_builtin_command_handlers"
-    )

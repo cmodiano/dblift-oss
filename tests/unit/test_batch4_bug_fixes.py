@@ -188,31 +188,6 @@ class TestBug08SqlServerIndexedViews(unittest.TestCase):
         self.assertIn("clustered_index_name", sql)
         self.assertIn("clustered_index_columns", sql)
 
-    def test_sqlserver_generator_emits_clustered_index_for_indexed_view(self) -> None:
-        from core.sql_model.view import View
-        from db.plugins.sqlserver.generator.ddl_generator import SQLServerSqlGenerator
-
-        view = View(
-            name="SalesSummary",
-            schema="dbo",
-            query="SELECT region, SUM(amount) AS total FROM sales GROUP BY region",
-            materialized=True,
-            dialect="sqlserver",
-        )
-        view.clustered_index_name = "IX_SalesSummary_Region"  # type: ignore[attr-defined]
-        view.clustered_index_columns = ["region"]  # type: ignore[attr-defined]
-
-        stmt = SQLServerSqlGenerator().generate_ddl([view], target_dialect="sqlserver")
-        self.assertIn("CREATE UNIQUE CLUSTERED INDEX", stmt)
-        self.assertIn("IX_SalesSummary_Region", stmt)
-        self.assertIn("region", stmt)
-        self.assertIn("GO", stmt)
-
-
-# ---------------------------------------------------------------------------
-# BUG-09: migration.script.* events actually fire
-# ---------------------------------------------------------------------------
-class TestBug09ScriptEventsEmitted(unittest.TestCase):
     def test_default_emitter_is_shared(self) -> None:
         from api.events import EventEmitter, get_default_emitter
 

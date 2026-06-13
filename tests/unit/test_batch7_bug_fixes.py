@@ -67,10 +67,6 @@ class TestBug01ScriptsDirKwargGuard(unittest.TestCase):
         c = self._make_client()
         self._assert_guard_raises(c.import_flyway, scripts_dir="/bad")
 
-    def test_diff_guards_scripts_dir(self) -> None:
-        c = self._make_client()
-        self._assert_guard_raises(c.diff, scripts_dir="/bad")
-
     def test_guard_is_noop_when_kwarg_absent(self) -> None:
         """Happy path: calls without ``scripts_dir`` must not raise."""
         c = self._make_client()
@@ -148,47 +144,6 @@ class TestBug03CosmosDbHealthcheckHttp(unittest.TestCase):
 # ---------------------------------------------------------------------------
 # B7-BUG-04: export-schema accepts ``database-stored`` alias
 # ---------------------------------------------------------------------------
-class TestBug04ExportSchemaDatabaseStoredAlias(unittest.TestCase):
-    def test_parser_choices_include_database_stored(self) -> None:
-        """argparse choices for export-schema --source must include the alias."""
-        src = Path("cli/_parser_setup.py").read_text()
-        # Extract the export_schema_parser --source block and assert both
-        # the canonical and alias values appear in its choices list.
-        import re
-
-        match = re.search(
-            r"export_schema_parser\.add_argument\(\s*\"--source\"," r".*?choices=(\[[^\]]+\])",
-            src,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(match, "export-schema --source choices not found")
-        choices_str = match.group(1)
-        self.assertIn("database-model", choices_str)
-        self.assertIn("database-stored", choices_str)
-
-    def test_handler_normalizes_database_stored_to_database_model(self) -> None:
-        """``_handle_export_schema`` should pass ``database-model`` to the
-        client even when argparse surfaces ``database-stored``."""
-        import warnings
-
-        from cli._command_handlers import _handle_export_schema
-
-        ctx = MagicMock()
-        ctx.args.source = "database-stored"
-        ctx.args.output = None
-        ctx.args.output_dir = None
-        ctx.client.export_schema.return_value = MagicMock(success=True)
-
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            _handle_export_schema(ctx)
-
-        kwargs = ctx.client.export_schema.call_args.kwargs
-        self.assertEqual(kwargs["source"], "database-model")
-        self.assertTrue(
-            any(issubclass(w.category, DeprecationWarning) for w in caught),
-            "expected DeprecationWarning for database-stored alias",
-        )
 
 
 # ---------------------------------------------------------------------------

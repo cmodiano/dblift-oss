@@ -164,39 +164,6 @@ def test_index_with_comment():
     assert index.comment == "Index on email column for fast lookups"
 
 
-def test_postgresql_partial_index_with_storage_options():
-    """Test that PostgreSQL partial index with storage options has correct clause order.
-
-    PostgreSQL requires WITH clause to come before WHERE clause:
-    CREATE INDEX ... WITH (options) WHERE condition
-    """
-    index = Index(
-        name="idx_active_users",
-        table_name="users",
-        columns=["email"],
-        condition="is_active = true",
-        fillfactor=90,
-        compression="lz4",
-        dialect="postgresql",
-    )
-
-    stmt = index.create_statement
-    # Verify both WITH and WHERE clauses are present
-    assert "WITH (" in stmt
-    assert "WHERE" in stmt
-    assert "fillfactor = 90" in stmt.lower() or "fillfactor=90" in stmt.lower()
-    assert "compression" in stmt.lower()
-    assert "is_active = true" in stmt
-
-    # Verify WITH comes before WHERE (critical for PostgreSQL syntax)
-    with_pos = stmt.find("WITH (")
-    where_pos = stmt.find("WHERE")
-    assert with_pos < where_pos, (
-        f"WITH clause must come before WHERE clause in PostgreSQL. "
-        f"WITH at position {with_pos}, WHERE at position {where_pos}. SQL: {stmt}"
-    )
-
-
 class TestIndexDropStatement:
     def test_postgresql_uses_if_exists(self):
         idx = Index(

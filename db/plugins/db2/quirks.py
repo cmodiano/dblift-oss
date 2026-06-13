@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 from db.base_quirks import BaseQuirks
-
-if TYPE_CHECKING:
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
 
 
 class Db2Quirks(BaseQuirks):
@@ -165,17 +161,13 @@ class Db2Quirks(BaseQuirks):
             log.warning(f"DB2: Could not query SYSCAT.TABLES: {find_err}")
         return strategies
 
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
-        """Return the Db2-specific :class:`DB2SqlGenerator` (lazy import)."""
-        from db.plugins.db2.generator.ddl_generator import DB2SqlGenerator
+    def ddl_generator_class(self) -> None:
+        """OSS builds do not ship SQL generator implementations."""
+        return None
 
-        return DB2SqlGenerator
-
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
-        """Return the Db2-specific :class:`DB2AlterGenerator` (lazy import)."""
-        from db.plugins.db2.generator.alter_generator import DB2AlterGenerator
-
-        return DB2AlterGenerator
+    def alter_generator_class(self) -> None:
+        """OSS builds do not ship ALTER generator implementations."""
+        return None
 
     def vendor_queries_class(self) -> "Optional[Type[Any]]":
         """Return the Db2 :class:`DB2MetadataQueries` bundle (lazy import)."""

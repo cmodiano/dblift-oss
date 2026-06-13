@@ -25,7 +25,7 @@ Pro and Enterprise features (`validate-sql`, `drift`, `export-schema`, `plan`, `
 DBLift helps you track and apply database changes systematically. Think of it as version control for your database schema - every change is tracked, can be rolled back, and works consistently across different environments.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 
 [![Matrix tests](https://github.com/cmodiano/dblift-oss/actions/workflows/matrix-tests.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/matrix-tests.yml)
 [![Unit Tests](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml)
@@ -826,7 +826,7 @@ A: Absolutely. Run `dblift validate` and `dblift migrate` in your pipeline using
 
 ## License
 
-DBLift is open-source software released under the MIT License. See the [LICENSE](LICENSE) file for details.
+DBLift is open-source software released under the Apache License, Version 2.0. See the [LICENSE](LICENSE) file for details.
 
 ---
 

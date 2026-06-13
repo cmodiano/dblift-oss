@@ -810,7 +810,7 @@ class DBLiftClient:
             )
             raise
 
-    @_with_client_emitter
+    @classmethod
     def from_config(
         cls,
         config: "DbliftConfig",

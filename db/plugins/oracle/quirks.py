@@ -3,13 +3,9 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 from db.base_quirks import BaseQuirks
-
-if TYPE_CHECKING:
-    from core.sql_generator.alter.base_alter_generator import BaseAlterGenerator
-    from core.sql_generator.base_generator import BaseSqlGenerator
 
 
 class OracleQuirks(BaseQuirks):
@@ -313,17 +309,13 @@ class OracleQuirks(BaseQuirks):
 
         read_dbms_output(connection, log)
 
-    def ddl_generator_class(self) -> Optional[Type["BaseSqlGenerator"]]:
-        """Return the Oracle-specific :class:`OracleSqlGenerator` (lazy import)."""
-        from db.plugins.oracle.generator.ddl_generator import OracleSqlGenerator
+    def ddl_generator_class(self) -> None:
+        """OSS builds do not ship SQL generator implementations."""
+        return None
 
-        return OracleSqlGenerator
-
-    def alter_generator_class(self) -> Optional[Type["BaseAlterGenerator"]]:
-        """Return the Oracle-specific :class:`OracleAlterGenerator` (lazy import)."""
-        from db.plugins.oracle.generator.alter_generator import OracleAlterGenerator
-
-        return OracleAlterGenerator
+    def alter_generator_class(self) -> None:
+        """OSS builds do not ship ALTER generator implementations."""
+        return None
 
     def vendor_queries_class(self) -> "Optional[Type[Any]]":
         """Return the Oracle :class:`OracleMetadataQueries` bundle (lazy import)."""
@@ -399,7 +391,7 @@ class OracleQuirks(BaseQuirks):
         Setting NOT NULL emits a pre-check counting NULL rows so a violating
         migration fails cleanly before the ALTER runs.
         """
-        from core.sql_generator.sql_statement import SqlStatement
+        from core.state.sql_statement import SqlStatement
 
         nullable_diff = getattr(col_diff, "nullable_diff", None)
         if nullable_diff is None:
@@ -428,7 +420,7 @@ class OracleQuirks(BaseQuirks):
         self, col_diff: object, formatted_table: str, formatted_column: str, dialect: str
     ) -> "Optional[object]":
         """``ALTER TABLE … MODIFY <col> DEFAULT <expr|NULL>`` — Oracle's DEFAULT change form."""
-        from core.sql_generator.sql_statement import SqlStatement
+        from core.state.sql_statement import SqlStatement
 
         default_diff = getattr(col_diff, "default_diff", None)
         if default_diff is None:
@@ -450,7 +442,7 @@ class OracleQuirks(BaseQuirks):
         self, col_diff: object, formatted_table: str, formatted_column: str, dialect: str
     ) -> "Optional[object]":
         """``ALTER TABLE … MODIFY <col> <type>`` — Oracle column-type change form."""
-        from core.sql_generator.sql_statement import SqlStatement
+        from core.state.sql_statement import SqlStatement
 
         data_type_diff = getattr(col_diff, "data_type_diff", None)
         if data_type_diff is None:

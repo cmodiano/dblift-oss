@@ -9,7 +9,7 @@
 DBLift helps you track and apply database changes systematically. Think of it as version control for your database schema - every change is tracked, can be rolled back, and works consistently across different environments.
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-Apache--2.0-blue)
 [![Tests](https://github.com/cmodiano/dblift/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/unit-tests.yml)
 [![Code Quality](https://github.com/cmodiano/dblift/actions/workflows/code-quality.yml/badge.svg)](https://github.com/cmodiano/dblift/actions/workflows/code-quality.yml)
 [![Coverage](https://codecov.io/gh/cmodiano/dblift/branch/main/graph/badge.svg)](https://codecov.io/gh/cmodiano/dblift/branch/main/graph/badge.svg) (Combined unit + integration tests)

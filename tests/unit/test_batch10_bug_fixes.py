@@ -262,44 +262,6 @@ class TestBug23SqlitePartialIndexWhere(unittest.TestCase):
         sql = "CREATE INDEX idx ON users(email)"
         self.assertIsNone(intro._parse_index_where_clause(sql))
 
-    def test_generator_emits_where_from_condition(self) -> None:
-        from core.sql_model.index import Index
-        from db.plugins.sqlite.generator.ddl_generator import SQLiteSqlGenerator
-
-        gen = SQLiteSqlGenerator.__new__(SQLiteSqlGenerator)
-        index = Index(
-            name="idx_active",
-            table_name="users",
-            columns=["email"],
-            unique=False,
-            condition="active = 1",
-            dialect="sqlite",
-        )
-        sql = gen._generate_index_create_statement(index)
-        self.assertIn("WHERE active = 1", sql)
-
-    def test_generator_omits_where_when_no_predicate(self) -> None:
-        from core.sql_model.index import Index
-        from db.plugins.sqlite.generator.ddl_generator import SQLiteSqlGenerator
-
-        gen = SQLiteSqlGenerator.__new__(SQLiteSqlGenerator)
-        index = Index(
-            name="idx_plain",
-            table_name="users",
-            columns=["email"],
-            unique=False,
-            dialect="sqlite",
-        )
-        sql = gen._generate_index_create_statement(index)
-        self.assertNotIn("WHERE", sql.upper())
-
-
-# ---------------------------------------------------------------------------
-# B10-BUG-24: CosmosDB clean drops internal containers instead of clearing rows
-# ---------------------------------------------------------------------------
-class TestBug24CosmosCleanInternalContainers(unittest.TestCase):
-    """Clean should remove every Cosmos container, including history."""
-
     def _make_ops(self):
         from db.plugins.cosmosdb.cosmosdb.schema_operations import (
             CosmosDbSchemaOperations,
