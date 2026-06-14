@@ -36,8 +36,8 @@ it.
       show_signature_annotations: true
       separate_signature: true
       members:
-        - on
-        - off
+        - "on"
+        - "off"
         - subscribe
         - unsubscribe
         - emit

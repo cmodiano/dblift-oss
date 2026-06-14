@@ -94,6 +94,11 @@ dev = [
     "radon>=6.0.1",
     "xenon>=0.9.1",
     "opentelemetry-sdk>=1.20",
+    # Needed to collect tests/unit/cli (license token signing) and
+    # tests/unit/integrations/django and tests/unit/db/plugins/postgresql.
+    "PyJWT>=2.12.0",
+    "Django>=4.2",
+    "psycopg[binary]>=3.1",
 ]
 postgresql = ["psycopg[binary]>=3.1"]
 mysql = ["PyMySQL>=1.1"]
