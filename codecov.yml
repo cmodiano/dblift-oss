@@ -55,8 +55,6 @@ coverage:
 # - integration-concurrency-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
 # - integration-introspection-{database} (postgresql, mysql, sqlserver, db2, oracle, cosmosdb)
 # - integration-validation
-# - integration-validation-sqlite
-# - integration-validation-cosmosdb
 flag_management:
   default_rules:
     carryforward: true
