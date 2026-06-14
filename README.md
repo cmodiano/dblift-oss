@@ -63,6 +63,48 @@ DBLift helps you track and apply database changes systematically. Think of it as
 
 ### Installation
 
+<!-- BEGIN: OSS README sync: python-install -->
+#### Python / pip install
+
+```python
+from sqlalchemy import create_engine
+from api import DBLiftClient
+
+engine = create_engine("postgresql+psycopg://user:pass@localhost/app")
+with DBLiftClient.from_sqlalchemy(engine, migrations_dir="migrations") as client:
+    client.migrate()
+```
+
+Async applications can run migrations without blocking the event loop with
+`AsyncDBLiftClient`. See [Async usage](docs/user-guide/async.md).
+
+## Django
+
+dblift provides Django management commands and a system check. See
+[Django integration](docs/user-guide/django.md).
+
+`pytest-dblift` quickstart:
+
+```bash
+pip install pytest-dblift
+```
+
+```python
+# tests/test_foo.py
+import pytest
+
+def test_something(dblift_migrated_db, dblift_client):
+    # dblift_migrated_db ensures migrations applied (function scope by default)
+    result = dblift_client.info()
+    assert result.pending_count == 0
+```
+
+| Install | Dialects |
+| --- | --- |
+| `pip install dblift[postgresql]` | PostgreSQL (OSS) |
+| `pip install dblift[oracle]` | Oracle (OSS; Pro/Enterprise features such as `plan` or paid `validate-sql` packs require `dblift-enterprise` on top) |
+<!-- END: OSS README sync: python-install -->
+
 **Step 1: Download DBLift**
 
 Visit the [releases page](https://github.com/cmodiano/dblift-oss/releases) and download the version for your operating system:
