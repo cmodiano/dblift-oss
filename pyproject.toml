@@ -93,6 +93,7 @@ dev = [
     "pip-audit>=2.7.3",
     "radon>=6.0.1",
     "xenon>=0.9.1",
+    "opentelemetry-sdk>=1.20",
 ]
 postgresql = ["psycopg[binary]>=3.1"]
 mysql = ["PyMySQL>=1.1"]
@@ -103,6 +104,7 @@ db2 = ["ibm_db>=3.2", "ibm_db_sa>=0.4"]
 fastapi = ["fastapi>=0.100"]
 flask = ["flask>=2.3"]
 django = ["Django>=4.2"]
+otel = ["opentelemetry-api>=1.20"]
 all = ["dblift[postgresql,mysql,mariadb,oracle,sqlserver,db2]"]
 
 [tool.setuptools]

@@ -85,6 +85,7 @@ nav:
     - user-guide/best-practices.md
     - user-guide/django.md
     - user-guide/async.md
+    - user-guide/opentelemetry.md
     - user-guide/ci-cd.md
     - user-guide/troubleshooting.md
   - API Reference:

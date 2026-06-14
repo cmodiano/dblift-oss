@@ -35,20 +35,8 @@ from core.migration.ui.migration_ui import MigrationUI
 from core.sql_validator.migration_validator import MigrationValidator
 from db.base_provider import BaseProvider
 
+from ._script_events import emit_script_event as _emit_script_event
 from .base_command import BaseCommand, BaseCommandContext
-
-
-def _emit_script_event(event: str, data: Dict[str, Any]) -> None:
-    """Emit a migration-script event on the process-wide default emitter.
-
-    Imported lazily so importing ``migrate_command`` does not pull in api-layer
-    modules (which also import this one for type-checking).
-    """
-    try:
-        from api.events import emit_event
-    except ImportError:
-        return
-    emit_event(event, data)
 
 
 class MigrateCommand(BaseCommand):

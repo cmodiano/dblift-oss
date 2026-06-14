@@ -16,6 +16,7 @@ from core.migration.migration import MigrationType
 from core.migration.version_utils import compare_versions, is_migration_success
 from db.provider_interfaces import TransactionalProvider
 
+from ._script_events import emit_script_event as _emit_script_event
 from .base_command import BaseCommand
 
 
@@ -364,6 +365,14 @@ class UndoCommand(BaseCommand):
                             break
 
                         start_time = time.time()
+                        _undo_script_data = {
+                            "script": migration.script_name,
+                            "version": migration.version,
+                            "description": f"Undo: {migration.description}",
+                            "type": "UNDO_PYTHON",
+                        }
+                        _emit_script_event("migration.script.started", _undo_script_data)
+
                         if self.journal:
                             self.journal.start_migration(
                                 migration.script_name,
@@ -423,6 +432,15 @@ class UndoCommand(BaseCommand):
                                     f"{migration.script_name}: {error_msg}"
                                 )
                                 result.set_error(f"Undo failed: {error_msg}")
+                            _emit_script_event(
+                                "migration.script.failed",
+                                {
+                                    "script": migration.script_name,
+                                    "version": migration.version,
+                                    "error": error_msg,
+                                    "execution_time": execution_time,
+                                },
+                            )
                             self._execute_callbacks(
                                 scripts_dir,
                                 "afterUndoError",
@@ -450,6 +468,16 @@ class UndoCommand(BaseCommand):
                                     f"{migration.script_name}: {commit_err}"
                                 )
                                 result.set_error(f"Undo commit failed: {commit_err}")
+                                if "_undo_script_data" in locals():
+                                    _emit_script_event(
+                                        "migration.script.failed",
+                                        {
+                                            "script": migration.script_name,
+                                            "version": migration.version,
+                                            "error": f"Undo commit failed: {commit_err}",
+                                            "execution_time": execution_time,
+                                        },
+                                    )
                                 self._execute_callbacks(
                                     scripts_dir,
                                     "afterUndoError",
@@ -469,6 +497,12 @@ class UndoCommand(BaseCommand):
                             checksum=migration.checksum,
                         )
                         result.add_undone_migration(migration_info)
+
+                        _emit_script_event(
+                            "migration.script.completed",
+                            {**_undo_script_data, "execution_time": execution_time},
+                        )
+
                         self.log.info(
                             f"Successfully undone Python migration {migration.script_name}"
                         )
@@ -537,8 +571,42 @@ class UndoCommand(BaseCommand):
                                 journal_started = False
                             break
 
+                    _undo_script_data = {
+                        "script": undo_migration.script_name,
+                        "version": migration.version,
+                        "description": f"Undo: {migration.description}",
+                        "type": "UNDO_SQL",
+                    }
+                    _emit_script_event("migration.script.started", _undo_script_data)
                     self.execution_engine.execute_migration(undo_migration, result)
                     execution_time = int((time.time() - start_time) * SECONDS_TO_MILLISECONDS)
+
+                    if result.error_message:
+                        if self.journal and journal_started:
+                            self.journal.end_migration(
+                                undo_migration.script_name,
+                                success=False,
+                                error_message=result.error_message,
+                                execution_time=execution_time,
+                            )
+                            journal_started = False
+                        _emit_script_event(
+                            "migration.script.failed",
+                            {
+                                "script": undo_migration.script_name,
+                                "version": migration.version,
+                                "error": result.error_message,
+                                "execution_time": execution_time,
+                            },
+                        )
+                        self._execute_callbacks(
+                            scripts_dir,
+                            "afterUndoError",
+                            use_recursive,
+                            use_additional_dirs,
+                            dir_recursive_map,
+                        )
+                        break
 
                     # End journal tracking for undo migration (use undo script name for journal)
                     if self.journal:
@@ -558,6 +626,11 @@ class UndoCommand(BaseCommand):
                         checksum=migration.checksum,
                     )
                     result.add_undone_migration(migration_info)
+
+                    _emit_script_event(
+                        "migration.script.completed",
+                        {**_undo_script_data, "execution_time": execution_time},
+                    )
 
                     # History recording is handled by the execution engine
                     result.undone_count += 1
@@ -590,6 +663,21 @@ class UndoCommand(BaseCommand):
                     execution_time = 0
                     if start_time is not None:
                         execution_time = int((time.time() - start_time) * SECONDS_TO_MILLISECONDS)
+
+                    if "_undo_script_data" in locals():
+                        _emit_script_event(
+                            "migration.script.failed",
+                            {
+                                "script": getattr(
+                                    locals().get("undo_migration"),
+                                    "script_name",
+                                    migration.script_name,
+                                ),
+                                "version": migration.version,
+                                "error": error_message,
+                                "execution_time": execution_time,
+                            },
+                        )
 
                     if self.journal and journal_started:
                         journal_script_name = (
