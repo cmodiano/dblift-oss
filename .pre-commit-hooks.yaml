@@ -1,0 +1,21 @@
+# Reusable pre-commit hooks for dblift (OSS).
+# Consumers reference this repo:
+#   repos:
+#     - repo: https://github.com/cmodiano/dblift-oss
+#       rev: v<tag>
+#       hooks:
+#         - id: dblift-validate
+# Both hooks require a configured dblift.yaml (or DBLIFT_DB_URL) and a reachable
+# database — dblift has no offline lint in OSS.
+- id: dblift-validate
+  name: dblift validate (checksums/order vs DB history)
+  entry: dblift validate
+  language: python
+  pass_filenames: false
+  files: ^migrations/.*\.sql$
+- id: dblift-info
+  name: dblift info (pending migrations)
+  entry: dblift info
+  language: python
+  pass_filenames: false
+  files: ^migrations/.*\.sql$

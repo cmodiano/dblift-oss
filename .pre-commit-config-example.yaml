@@ -1,47 +1,13 @@
-# Example pre-commit configuration for DBLift SQL validation
-# Copy this to .pre-commit-config.yaml and run: pre-commit install
+# Example pre-commit config for dblift (OSS).
+# Copy to .pre-commit-config.yaml and run: pre-commit install
+#
+# These hooks require a configured dblift.yaml (or DBLIFT_DB_URL) and a reachable
+# database (e.g. your local docker-compose DB). dblift has no offline lint in OSS.
+# SQL linting (`validate-sql`) requires dblift-enterprise.
 
 repos:
-  - repo: local
+  - repo: https://github.com/cmodiano/dblift-oss
+    rev: v1.8.0   # pin to a released tag
     hooks:
-      # Validate SQL files before commit
-      - id: validate-sql
-        name: Validate SQL migrations
-        entry: dblift validate-sql
-        args:
-          - --dialect=postgresql
-          - --rules-file=.dblift_rules.yaml
-          - --format=compact
-          - --severity-threshold=warning
-        language: system
-        types: [sql]
-        pass_filenames: true
-        # Only check files in migrations directory
-        files: ^migrations/.*\.sql$
-
-      # Performance analysis only (no business rules)
-      - id: validate-sql-performance
-        name: Check SQL performance issues
-        entry: dblift validate-sql
-        args:
-          - --dialect=postgresql
-          - --format=compact
-          - --no-performance=false
-          - --severity-threshold=error
-        language: system
-        types: [sql]
-        pass_filenames: true
-        files: ^migrations/.*\.sql$
-        # This hook only fails on errors, warnings are allowed
-        verbose: true
-
-# Alternative: Use pre-commit's built-in language support
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
-    hooks:
-      - id: prettier
-        types_or: [yaml, json]
-        files: \.dblift_rules\.yaml$
-
-# You can also run validation in CI/CD only by commenting out local hooks
-# and using the GitHub Action or GitLab CI examples instead
+      - id: dblift-validate
+      - id: dblift-info
