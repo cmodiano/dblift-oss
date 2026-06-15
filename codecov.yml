@@ -65,6 +65,14 @@ flag_management:
       - type: patch
         target: 80%
         threshold: 1%
+  individual_flags:
+    # These flags' jobs were removed (tested OSS-removed diff/sql-generator/
+    # comparison surface); stop carrying forward their stale reports so the
+    # deleted modules stop counting toward total coverage.
+    - name: integration-validation-sqlite
+      carryforward: false
+    - name: integration-validation-cosmosdb
+      carryforward: false
 
 # Ignore patterns (files that shouldn't affect coverage)
 ignore:
@@ -78,5 +86,11 @@ ignore:
   - "*.toml"
   - "*.ini"
   - ".github/"
+  # Removed from OSS surface (see commits 1f69ff6, 266e1ce) — exclude so
+  # stale carried-forward coverage for these no-longer-present modules
+  # doesn't drag down the total.
+  - "core/migration/commands/diff_command.py"
+  - "core/sql_generator/"
+  - "core/comparison/"
 
 slack_app: true
