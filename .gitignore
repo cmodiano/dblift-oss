@@ -1,0 +1,95 @@
+scripts/generate_license.py
+config/workflows.yaml
+
+# Generated JRE (built by CI per platform, never committed)
+jre/
+
+# Virtual Environment
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.cursor/
+.claude/
+.idea/
+.vscode/
+*.swp
+*.swo
+graphify-out/
+
+# Environment variables
+.env 
+
+# Paths
+_bmad/
+_bmad-output/
+logs/
+custom_logs/
+htmlcov/
+.pytest_cache/
+reports/
+
+# All log files (historical incident: test.log in custom_logs/ was
+# committed and contained strings that matched secret-scanner regexes)
+*.log
+
+# files
+.coverage*
+coverage.xml
+coverage-*.xml
+coverage.json
+coverage-*.json
+.DS_Store
+
+# pytest-testmon index — CI-managed via GitHub Actions cache (see
+# .github/workflows/unit-tests.yml + pr-patch-coverage.yml). Never commit:
+# a stale index makes the PR-time selective coverage gate misbehave.
+.testmondata
+.testmondata-journal
+
+# Database configuration files with credentials
+dblift-*.yaml
+node_modules/
+
+# Internal documentation (licensing, business plans, etc.)
+LICENSING_IMPLEMENTATION.md
+LICENSE_KEYS.md
+BUSINESS_*.md
+
+# Internal code review reports (working documents, not production artifacts)
+CODE_REVIEW_REPORT.md
+
+# MkDocs build output
+site/
+
+# Cython build artifacts (scoped to compiled directories)
+core/**/*.c
+cli/**/*.c
+*.pyd
+
+# License private key — NEVER commit
+*.pem
+.dblift_private_key*
+.worktrees/

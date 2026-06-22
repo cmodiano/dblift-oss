@@ -1,0 +1,117 @@
+# Docker Compose file for DBLift integration tests
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: dblift_sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+    ports:
+      - "1433:1433"
+    # 2022-latest images often ship sqlcmd under mssql-tools18 (-C trusts server cert for ODBC 18)
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$SA_PASSWORD" -Q "SELECT 1" -b -o /dev/null',
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
+
+  oracle:
+    image: gvenzl/oracle-xe:latest
+    container_name: dblift_oracle
+    environment:
+      - ORACLE_PASSWORD=oracle
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+      
+  mysql:
+    image: mysql:8.0
+    container_name: dblift_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=testdb
+      - MYSQL_ROOT_HOST=%
+    command: >
+      mysqld --log-bin-trust-function-creators=1
+      --default-authentication-plugin=mysql_native_password
+      --skip-name-resolve --bind-address=0.0.0.0
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+  postgresql:
+    image: postgres:15
+    container_name: dblift_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=testdb
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # DB2 container configuration - Note: Not compatible with macOS
+  db2:
+    image: icr.io/db2_community/db2:latest
+    container_name: dblift_db2
+    privileged: true
+    environment:
+      - LICENSE=accept
+      - DB2INSTANCE=db2inst1
+      - DB2INST1_PASSWORD=db2admin
+      - DBNAME=testdb
+      - BLU=false
+      - ENABLE_ORACLE_COMPATIBILITY=false
+    ports:
+      - "50000:50000"
+    healthcheck:
+      test: ["CMD", "db2", "connect", "to", "testdb"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s
+    # DB2 requires special handling and is not used in GitHub Actions due to licensing
+
+  cosmosdb:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+    container_name: dblift_cosmosdb
+    environment:
+      - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10
+      - AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true
+    ports:
+      - "8081:8081"
+      - "10251:10251"
+      - "10252:10252"
+      - "10253:10253"
+      - "10254:10254"
+    # BUG-03: vnext-preview emulator's TLS cert is not trusted by curl,
+    # so HTTPS probe fails with SSL packet-length error. The service itself
+    # works over plain HTTP on 8081.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    # Note: CosmosDB Emulator may not be available on all platforms (e.g., macOS ARM64)

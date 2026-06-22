@@ -1,0 +1,29 @@
+name: Complexity
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  complexity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install complexity tools
+        run: python -m pip install --upgrade pip radon xenon
+
+      - name: Report complexity
+        run: radon cc api/ cli/ config/ core/ db/ -s -a

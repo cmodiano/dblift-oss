@@ -1,0 +1,10 @@
+services:
+  mysql:
+    image: mysql:8.0.36
+    platform: linux/amd64
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: testdb
+      MYSQL_ROOT_HOST: "%"
+    ports: !override
+      - "3307:3306"

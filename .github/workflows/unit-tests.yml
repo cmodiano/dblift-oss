@@ -1,0 +1,43 @@
+name: Run Unit Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,postgresql,mysql,mariadb,oracle,sqlserver,db2,django]"
+
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/unit/ \
+            -n auto \
+            --dist=loadscope \
+            -p no:benchmark \
+            --timeout=120
