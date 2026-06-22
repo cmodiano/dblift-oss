@@ -47,7 +47,7 @@ from core.seams.event_listeners import attach_registered_listeners
 from db.base_provider import BaseProvider
 from db.provider_interfaces import ConnectionProvider, TransactionalProvider
 
-__all__ = ["DBLiftClient", "ExportSchemaOptions"]  # noqa: F822
+__all__ = ["DBLiftClient"]
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 

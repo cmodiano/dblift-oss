@@ -235,6 +235,23 @@ def test_import_flyway_accepts_source_table_override():
         ["baseline", "--baseline-version", "1"],
     ],
 )
+def test_snapshot_table_option_is_not_available_for_migration_lifecycle_commands(
+    subcmd_argv: List[str],
+):
+    parser = create_parser()
+
+    with pytest.raises(SystemExit):
+        parser.parse_args([*subcmd_argv, "--snapshot-table", "custom_snapshots"])
+
+
+@pytest.mark.parametrize(
+    "subcmd_argv",
+    [
+        ["migrate"],
+        ["undo"],
+        ["baseline", "--baseline-version", "1"],
+    ],
+)
 def test_history_table_option_is_available_where_snapshots_are_used(
     subcmd_argv: List[str],
 ):

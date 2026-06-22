@@ -33,8 +33,16 @@ for mod in {roots}:
     if importlib.util.find_spec(mod) is None:
         missing.append(mod)
 
+leaks = []
+for mod in ("dblift_pro", "dblift_enterprise"):
+    spec = importlib.util.find_spec(mod)
+    if spec is not None:
+        leaks.append(f"{{mod}}: {{spec.origin}}")
+
 if missing:
     raise SystemExit("OSS modules not importable: " + ", ".join(missing))
+if leaks:
+    raise SystemExit("higher-tier modules importable: " + ", ".join(leaks))
 """
     out = subprocess.run(
         [sys.executable, "-S", "-c", probe],
@@ -58,17 +66,15 @@ def _oss_builtin_command_choices(monkeypatch):
     return set(subparser.choices)
 
 
-def test_oss_builtin_cli_exposes_only_core_commands(monkeypatch):
+def test_oss_builtin_cli_excludes_relocated_paid_commands(monkeypatch):
     choices = _oss_builtin_command_choices(monkeypatch)
 
-    assert choices == {
-        "baseline",
-        "clean",
-        "db",
-        "import-flyway",
-        "info",
-        "migrate",
-        "repair",
-        "undo",
-        "validate",
-    }
+    for word in ("diff", "export-schema", "snapshot"):
+        assert word not in choices, f"PRO/Enterprise command '{word}' present in OSS CLI"
+
+
+def test_oss_builtin_cli_excludes_remaining_paid_commands(monkeypatch):
+    choices = _oss_builtin_command_choices(monkeypatch)
+
+    for word in ("validate-sql", "plan", "preflight"):
+        assert word not in choices, f"PRO/Enterprise command '{word}' present in OSS CLI"

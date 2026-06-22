@@ -11,8 +11,8 @@ provider plugins under db/plugins/*.
 
 from __future__ import annotations
 
-import tomllib
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -42,8 +42,16 @@ def test_oss_tests_do_not_name_non_oss_tiers():
     )
     offenders: list[str] = []
 
+    # test_oss_standalone.py deliberately names these packages to assert their
+    # *absence* from the OSS-only import path; that's the opposite of a leak.
+    exempt_names = {"test_oss_standalone.py"}
+
     for path in sorted((ROOT / "tests").rglob("*")):
-        if path == Path(__file__).resolve() or path.suffix not in {".py", ".txt"}:
+        if (
+            path == Path(__file__).resolve()
+            or path.name in exempt_names
+            or path.suffix not in {".py", ".txt"}
+        ):
             continue
         text = path.read_text(encoding="utf-8")
         for token in forbidden:

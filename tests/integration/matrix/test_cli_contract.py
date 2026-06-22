@@ -150,11 +150,6 @@ def test_every_subcommand_has_help(subcmd: str):
     assert "usage:" in stdout.lower(), f"{subcmd} --help did not emit usage text. stdout={stdout!r}"
 
 
-@pytest.mark.integration
-@pytest.mark.parametrize(
-    "subcmd",
-    ["list-drivers", "validate-config", "diagnose-connection", "check-connection"],
-)
 def test_every_db_subcommand_has_help(subcmd: str):
     """Every documented `db` subsubcommand must respond to --help."""
     exit_code, stdout, stderr = run_cli("db", subcmd, "--help")

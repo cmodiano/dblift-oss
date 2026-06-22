@@ -49,8 +49,8 @@ db2 = "db.plugins.db2.plugin:PLUGIN"
 sqlite = "db.plugins.sqlite.plugin:PLUGIN"
 cosmosdb = "db.plugins.cosmosdb.plugin:PLUGIN"
 
-# CLI command parser extensions (third-party packages can add subcommands by
-# loading a function that receives the top-level ArgumentParser).
+# CLI command parser extensions (third-party packages can add subcommands
+# by loading a function that receives the top-level ArgumentParser).
 [project.entry-points."dblift.commands"]
 
 # Command handler functions (return dict of name -> handler). Used for
@@ -238,8 +238,9 @@ no_implicit_reexport = true
 strict_equality = true
 
 # PR-F1: extend the strict zone to the rest of ``api/``. Same flag set as
-# above except ``no_implicit_reexport`` — enforcing it on these modules
-# would require touching ``core.logger.results`` to add explicit ``__all__`` re-exports, which
+# above except ``no_implicit_reexport`` — enforcing it on these two
+# modules would require touching ``core.logger.results`` to add explicit
+# ``__all__`` re-exports, which
 # is scope creep beyond the ``api/`` package. When Phase F+ extends the
 # strict zone into ``core/``, those re-exports become a one-shot fix and
 # this carve-out can be removed.

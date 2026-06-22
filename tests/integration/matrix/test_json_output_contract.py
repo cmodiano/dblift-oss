@@ -9,6 +9,11 @@ Bugs this guards against:
   * df143fb1 BUG-03 — ``checksum`` missing from ``migrations[*]`` entries.
   * a23a0a75 BUG-02 / d88f88a4 BUG-02 — duplicate "header" lines in output.
   * bb47769c BUG-06 — ``info`` did not support ``--format json`` at all.
+  * 217a5694 — ``validate-sql --format json`` was collaterally broken by
+    the info-banner-suppression fix (bugbot thread
+    #discussion_r3106139669). The fix was scoped back to the ``info``
+    command, but there was no test to pin the contract across commands.
+    Phase 1 PR-01 adds ``validate-sql`` coverage below.
 
 Doctrine: stdout is for machine-readable payload; stderr is for humans. A
 machine consumer must be able to run ``json.loads(result.stdout)`` without
@@ -148,7 +153,18 @@ def test_info_json_installed_on_is_string_not_datetime(tmp_path: Path):
             ), f"installed_on must be str, got {type(m['installed_on'])}: {m}"
 
 
-# --- Helpers ----------------------------------------------------------------
+# --- validate-sql --format json --------------------------------------------
+#
+# validate-sql takes SQL files and lints them. Its --format json output is
+# used by downstream tooling (CI reporters, IDE integrations). Same contract
+# as info: stdout must be parseable JSON, end to end.
+
+
+def _make_sql_file(tmp_path: Path, body: str = "SELECT * FROM users;") -> Path:
+    """Create a minimal SQL file for validate-sql. No DB required."""
+    sql_file = tmp_path / "sample.sql"
+    sql_file.write_text(body)
+    return sql_file
 
 
 def _extract_migrations_list(payload: Any) -> List[Dict[str, Any]]:

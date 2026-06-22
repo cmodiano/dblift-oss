@@ -1,8 +1,11 @@
+import sys
+from types import ModuleType
+
 from core.seams.introspection import attach_registered_introspection
 
 
 class _EntryPoint:
-    name = "sample"
+    name = "pro"
 
     def __init__(self, registrar):
         self._registrar = registrar
@@ -21,7 +24,6 @@ def test_attach_registered_introspection_loads_entrypoints(monkeypatch):
         "core.seams.introspection.entry_points",
         lambda group: [_EntryPoint(registrar)] if group == "dblift.introspection" else [],
     )
-
     attach_registered_introspection()
 
     assert calls == ["registered"]

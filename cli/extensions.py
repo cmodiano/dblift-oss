@@ -1,8 +1,8 @@
 """CLI extension loading through installed package entry points."""
 
+import os
 from argparse import ArgumentParser
 from importlib import metadata
-import os
 from typing import Any, Callable, Dict
 
 COMMAND_ENTRY_POINT_GROUP = "dblift.commands"

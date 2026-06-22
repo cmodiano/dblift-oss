@@ -81,7 +81,7 @@ See [Async usage](docs/user-guide/async.md) for the full guide.
 | Install | Dialects |
 | --- | --- |
 | `pip install dblift[postgresql]` | PostgreSQL (OSS) |
-| `pip install dblift[oracle]` | Oracle |
+| `pip install dblift[oracle]` | Oracle (OSS) |
 
 `pytest-dblift` quickstart:
 
