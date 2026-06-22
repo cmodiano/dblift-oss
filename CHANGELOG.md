@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-06-22
+
+### Fixed
+
+- **Missing `packaging` dependency** — `migrate`/`validate` failed on a clean
+  install with `No module named 'packaging'`; it's now a declared dependency.
+
 ## [2.0.1] - 2026-06-22
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dblift"
-version = "2.0.1"
+version = "2.0.2"
 description = "A database migration tool that supports multiple databases with native Python drivers"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -17,8 +17,9 @@ dependencies = [
     "rich>=13.3.0",
     "Jinja2>=3.1.0",
     "sqlglot>=30.0.0",
+    "packaging>=23.0",
     "azure-cosmos>=4.5.0",
-    # Security floors — see docs/adr/0003-drop-python-3-8-support.md
+    # Security floor: Python 3.11 minimum (see CHANGELOG).
     "SQLAlchemy>=2.0.0",
 ]
 classifiers = [
@@ -153,7 +154,6 @@ known_first_party = ["api", "cli", "config", "core", "db"]
 
 [tool.mypy]
 # Lowest supported Python version; mypy type-checks against this version.
-# See docs/adr/0004-bump-minimum-python-to-3-11.md.
 python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
