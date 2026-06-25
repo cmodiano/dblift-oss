@@ -151,6 +151,44 @@ class TestTableRendererFormatMigrationTable(unittest.TestCase):
         assert "Total migrations: 3" in result
 
 
+class TestTableRendererPrintMigrationTable(unittest.TestCase):
+
+    def setUp(self):
+        self.renderer = TableRenderer(_make_log())
+
+    def test_narrow_terminal_keeps_description_column(self):
+        """A narrow stdout must not collapse the (only flexible) Description column.
+
+        Regression: with 8 no_wrap columns and Description as the sole wrappable
+        column, Rich shrank Description to zero width when the detected terminal
+        was narrower than the table, blanking the column.
+        """
+        import contextlib
+        import io
+        import os
+
+        data = [
+            {
+                "category": "Versioned",
+                "version": "1.0.0",
+                "description": "Initial schema",
+                "type": "SQL",
+                "installed_on": "2024-01-01 00:00:00",
+                "installed_by": "admin",
+                "state": "Success",
+                "undoable": False,
+                "execution_time": 12,
+            }
+        ]
+        buf = io.StringIO()
+        with patch.dict(os.environ, {"COLUMNS": "80"}):
+            with contextlib.redirect_stdout(buf):
+                self.renderer.print_migration_table(data)
+        out = buf.getvalue()
+        assert "Description" in out  # header not collapsed away
+        assert "Initial schema" in out  # cell value visible
+
+
 class TestTableRendererDisplayMigrationStatus(unittest.TestCase):
 
     def setUp(self):

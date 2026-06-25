@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-06-25
+
+### Fixed
+
+- **`info` Description column rendered empty on narrow terminals** — the
+  migration table printed to stdout with no explicit width, so on a narrow or
+  piped terminal Rich collapsed the only flexible column (Description) to zero
+  width, blanking it while the other (fixed-width) columns kept their space.
+  The render width is now floored to the table's natural width, so every column
+  stays visible; narrow terminals soft-wrap a complete table instead.
+
 ## [2.0.4] - 2026-06-25
 
 ### Removed
