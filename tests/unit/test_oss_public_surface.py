@@ -208,6 +208,8 @@ def test_readme_installation_sync_block_preserves_heading_hierarchy():
     block = readme[start:end]
 
     assert "\n## " not in block
+    assert "Synchronous client" not in block
+    assert "DBLiftClient" not in block
     assert "Django" not in block
     assert "\n## Django\n" in readme[end:]
     assert "[Django](#django)" in readme

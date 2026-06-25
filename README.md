@@ -53,6 +53,30 @@ DBLift helps you track and apply database changes systematically. Think of it as
 <!-- BEGIN: OSS README sync: python-install -->
 #### Python / pip install
 
+| Install | Dialects |
+| --- | --- |
+| `pip install dblift[postgresql]` | PostgreSQL (OSS) |
+| `pip install dblift[oracle]` | Oracle (OSS) |
+
+`pytest-dblift` quickstart:
+
+```bash
+pip install pytest-dblift
+```
+
+```python
+# tests/test_foo.py
+import pytest
+
+def test_something(dblift_migrated_db, dblift_client):
+    # dblift_migrated_db ensures migrations applied (function scope by default)
+    result = dblift_client.info()
+    assert result.pending_count == 0
+```
+<!-- END: OSS README sync: python-install -->
+
+#### Using the Python SDK
+
 **Synchronous client:**
 
 ```python
@@ -77,28 +101,6 @@ async with AsyncDBLiftClient.from_sqlalchemy(engine, migrations_dir="migrations"
 ```
 
 See [Async usage](docs/user-guide/async.md) for the full guide.
-
-| Install | Dialects |
-| --- | --- |
-| `pip install dblift[postgresql]` | PostgreSQL (OSS) |
-| `pip install dblift[oracle]` | Oracle (OSS) |
-
-`pytest-dblift` quickstart:
-
-```bash
-pip install pytest-dblift
-```
-
-```python
-# tests/test_foo.py
-import pytest
-
-def test_something(dblift_migrated_db, dblift_client):
-    # dblift_migrated_db ensures migrations applied (function scope by default)
-    result = dblift_client.info()
-    assert result.pending_count == 0
-```
-<!-- END: OSS README sync: python-install -->
 
 ### Your First Migration
 
