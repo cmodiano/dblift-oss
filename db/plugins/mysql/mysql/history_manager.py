@@ -1,0 +1,384 @@
+"""
+MySQL migration history manager.
+
+This module handles MySQL-specific migration history table operations including
+creation, recording migrations, retrieving applied migrations, and repair operations.
+"""
+
+from typing import Any, Dict, List, Optional
+
+from core.logger import Log
+from db.object_naming import get_normalized_object_name
+from db.plugins.base_history_manager import BaseHistoryManager
+
+
+class MySqlHistoryManager(BaseHistoryManager):
+    """Manages MySQL migration history operations."""
+
+    # MySQL stores identifiers as-is (case-sensitive on Linux, insensitive on Windows)
+    DEFAULT_HISTORY_TABLE = "dblift_schema_history"
+
+    def __init__(
+        self,
+        query_executor: Any,
+        schema_operations: Any,
+        config: Any,
+        log: Optional[Log] = None,
+    ) -> None:
+        """Initialize the history manager.
+
+        Args:
+            query_executor: Query executor instance
+            schema_operations: Schema operations instance
+            config: Configuration object (reserved; not used by this implementation)
+            log: Optional logger
+        """
+        super().__init__(query_executor, schema_operations, config, log)
+
+    def create_migration_history_table_if_not_exists(
+        self,
+        connection: Any,
+        schema: str,
+        create_schema: bool = False,
+        table_name: str = "dblift_schema_history",
+    ) -> None:
+        """Create the migration history table if it doesn't exist.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            create_schema: Whether to create database if it doesn't exist
+            table_name: Custom history table name
+        """
+        self.log.debug(f"Creating migration history table if not exists: {schema}")
+
+        try:
+            if create_schema:
+                self.schema_operations.create_schema_if_not_exists(connection, schema)
+
+            # Get database-specific case for dblift object
+            dblift_table_name = get_normalized_object_name(table_name, "mysql")
+
+            # Check if table exists
+            table_exists = self.query_executor.table_exists(connection, schema, dblift_table_name)
+            if table_exists:
+                if create_schema:
+                    self._check_baseline_safety(connection, schema, dblift_table_name)
+                self.log.debug(
+                    f"Migration history table {schema}.{dblift_table_name} already exists"
+                )
+                return
+
+            # Create the table with MySQL-specific syntax and data types
+            qualified_table = self.query_executor.get_schema_qualified_name(
+                schema, dblift_table_name
+            )
+            create_sql = f"""
+            CREATE TABLE {qualified_table} (
+                installed_rank INT NOT NULL AUTO_INCREMENT,
+                version VARCHAR(50),
+                description VARCHAR(200) NOT NULL,
+                type VARCHAR(20) NOT NULL,
+                script VARCHAR(1000) NOT NULL,
+                checksum INT,
+                installed_by VARCHAR(100) NOT NULL,
+                installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                execution_time INT NOT NULL,
+                success BOOLEAN NOT NULL,
+                PRIMARY KEY (installed_rank)
+            ) ENGINE=InnoDB
+            """
+
+            self.query_executor.execute_statement(connection, create_sql)
+            self.log.debug(f"Migration history table created successfully in database {schema}")
+
+        except Exception as e:
+            error_msg = f"Error creating migration history table in database {schema}: {str(e)}"
+            self.log.error(error_msg)
+            raise
+
+    def record_migration(
+        self,
+        connection: Any,
+        schema: str,
+        migration_info: Dict[str, Any],
+        table_name: Optional[str] = None,
+    ) -> None:
+        """Record a migration in the history table.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            migration_info: Dictionary containing migration information
+            table_name: Custom history table name
+        """
+        raw_table = table_name or "dblift_schema_history"
+        table = get_normalized_object_name(raw_table, "mysql")
+
+        if not self.query_executor.table_exists(connection, schema, table):
+            self.create_migration_history_table_if_not_exists(connection, schema, True, raw_table)
+
+        try:
+            # MySQL uses AUTO_INCREMENT for installed_rank, no manual calculation needed
+            qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+            insert_sql = f"""
+            INSERT INTO {qualified_table} (
+                version, description, type, script,
+                checksum, installed_by, installed_on, execution_time, success
+            ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)
+            """
+
+            # MySQL supports native BOOLEAN type
+            success_value = bool(migration_info.get("success", True))
+
+            params = self._build_migration_params(migration_info, success_value)
+
+            self.query_executor.execute_statement(connection, insert_sql, params=params)
+
+            self.log.debug(
+                f"Migration recorded in database {schema}: {migration_info.get('script')}"
+            )
+        except Exception as e:
+            error_msg = f"Error recording migration in database {schema}: {str(e)}"
+            self.log.error(error_msg)
+            raise
+
+    def get_applied_migrations(
+        self, connection: Any, schema: str, table_name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get list of applied migrations from history table.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            table_name: Custom history table name
+
+        Returns:
+            List of dictionaries containing migration information
+        """
+        raw_table = table_name or "dblift_schema_history"
+        table = get_normalized_object_name(raw_table, "mysql")
+
+        if not self.query_executor.table_exists(connection, schema, table):
+            return []
+
+        qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+        query = f"""
+        SELECT script, installed_rank, version, description,
+               type, checksum, installed_by, installed_on,
+               execution_time, success
+        FROM {qualified_table}
+        ORDER BY installed_rank
+        """
+
+        try:
+            results: List[Dict[str, Any]] = self.query_executor.execute_query(connection, query)
+
+            # MySQL returns proper boolean values, but ensure consistency
+            for row in results:
+                if "success" in row and row["success"] is not None:
+                    row["success"] = bool(row["success"])
+
+            return results
+        except Exception as exc:
+            error_msg = f"Error getting applied migrations from database {schema}: {str(exc)}"
+            self.log.error(error_msg)
+            raise
+
+    def create_history_table(self, schema: str, table_name: str) -> str:
+        """Generate the SQL to create a migration history table.
+
+        Args:
+            schema: Database name
+            table_name: Table name
+
+        Returns:
+            str: SQL for creating the history table with MySQL-specific data types
+        """
+        dblift_table_name = get_normalized_object_name(table_name, "mysql")
+        qualified_table = self.query_executor.get_schema_qualified_name(schema, dblift_table_name)
+        return f"""
+        CREATE TABLE {qualified_table} (
+            installed_rank INT NOT NULL AUTO_INCREMENT,
+            version VARCHAR(50),
+            description VARCHAR(200) NOT NULL,
+            type VARCHAR(20) NOT NULL,
+            script VARCHAR(1000) NOT NULL,
+            checksum INT,
+            installed_by VARCHAR(100) NOT NULL,
+            installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            execution_time INT NOT NULL,
+            success BOOLEAN NOT NULL,
+            PRIMARY KEY (installed_rank)
+        ) ENGINE=InnoDB
+        """
+
+    def get_current_version(
+        self, connection: Any, schema: str, table_name: Optional[str] = None
+    ) -> Optional[str]:
+        """Get the current schema version from the history table.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            table_name: Custom history table name
+
+        Returns:
+            Current version string or None if no migrations applied
+        """
+        raw_table = table_name or "dblift_schema_history"
+        table = get_normalized_object_name(raw_table, "mysql")
+
+        if not self.query_executor.table_exists(connection, schema, table):
+            return None
+
+        try:
+            # Get the latest successful migration version
+            qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+            query = f"""
+            SELECT version
+            FROM {qualified_table}
+            WHERE success = TRUE AND type != 'DELETE'
+            ORDER BY installed_rank DESC
+            LIMIT 1
+            """
+
+            results: List[Dict[str, Any]] = self.query_executor.execute_query(connection, query)
+
+            if results and len(results) > 0:
+                return results[0].get("version")
+
+            return None
+
+        except Exception as e:
+            error_msg = f"Error getting current version from database {schema}: {str(e)}"
+            self.log.error(error_msg)
+            return None
+
+    def migration_exists(
+        self, connection: Any, schema: str, version: str, table_name: Optional[str] = None
+    ) -> bool:
+        """Check if a migration with the given version already exists.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            version: Migration version to check
+            table_name: Custom history table name
+
+        Returns:
+            True if migration exists, False otherwise
+        """
+        raw_table = table_name or "dblift_schema_history"
+        table = get_normalized_object_name(raw_table, "mysql")
+
+        if not self.query_executor.table_exists(connection, schema, table):
+            return False
+
+        try:
+            qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+            query = f"""
+            SELECT 1
+            FROM {qualified_table}
+            WHERE version = ?
+            LIMIT 1
+            """
+
+            results = self.query_executor.execute_query(connection, query, params=[version])
+            return len(results) > 0
+
+        except Exception as e:
+            error_msg = f"Error checking if migration exists in database {schema}: {str(e)}"
+            self.log.error(error_msg)
+            return False
+
+    def repair_history_table(
+        self, connection: Any, schema: str, table_name: Optional[str] = None
+    ) -> List[str]:
+        """Repair the migration history table by fixing any inconsistencies.
+
+        Args:
+            connection: Active database connection (provided by Provider)
+            schema: Database name
+            table_name: Custom history table name
+
+        Returns:
+            List of repair actions taken
+        """
+        raw_table = table_name or "dblift_schema_history"
+        table = get_normalized_object_name(raw_table, "mysql")
+        repair_actions: List[str] = []
+
+        if not self.query_executor.table_exists(connection, schema, table):
+            self.log.debug(f"History table {schema}.{table} does not exist, nothing to repair")
+            return repair_actions
+
+        try:
+            qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+            # Check for duplicate installed_rank values (shouldn't happen with AUTO_INCREMENT)
+            duplicate_ranks_query = f"""
+            SELECT installed_rank, COUNT(*) as count
+            FROM {qualified_table}
+            GROUP BY installed_rank
+            HAVING COUNT(*) > 1
+            """
+
+            duplicates = self.query_executor.execute_query(connection, duplicate_ranks_query)
+
+            if duplicates:
+                self.log.warning(f"Found {len(duplicates)} duplicate installed_rank values")
+
+                # Fix duplicates by updating ranks
+                for dup in duplicates:
+                    rank = dup.get("installed_rank")
+                    # Get all records with this rank
+                    qualified_table = self.query_executor.get_schema_qualified_name(schema, table)
+                    get_dups_query = f"""
+                    SELECT script, version
+                    FROM {qualified_table}
+                    WHERE installed_rank = ?
+                    ORDER BY script
+                    """
+
+                    dup_records = self.query_executor.execute_query(
+                        connection, get_dups_query, [rank]
+                    )
+
+                    # Keep the first one, update the others
+                    for i, record in enumerate(dup_records[1:], 1):
+                        # Find next available rank
+                        qualified_table = self.query_executor.get_schema_qualified_name(
+                            schema, table
+                        )
+                        max_rank_query = (
+                            f"SELECT MAX(installed_rank) as max_rank FROM {qualified_table}"
+                        )
+                        max_result = self.query_executor.execute_query(connection, max_rank_query)
+                        next_rank = (max_result[0].get("max_rank") or 0) + i
+
+                        update_rank_sql = f"""
+                        UPDATE {qualified_table}
+                        SET installed_rank = ?
+                        WHERE installed_rank = ? AND script = ? AND version = ?
+                        LIMIT 1
+                        """
+
+                        self.query_executor.execute_statement(
+                            connection,
+                            update_rank_sql,
+                            [next_rank, rank, record.get("script"), record.get("version")],
+                        )
+
+                        repair_actions.append(
+                            f"Updated duplicate rank {rank} to {next_rank} for {record.get('script')}"
+                        )
+
+            if repair_actions:
+                self.log.info(f"History table repair completed with {len(repair_actions)} actions")
+
+            return repair_actions
+
+        except Exception as e:
+            error_msg = f"Error repairing history table in database {schema}: {str(e)}"
+            self.log.error(error_msg)
+            raise

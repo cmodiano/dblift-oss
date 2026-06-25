@@ -1,0 +1,11 @@
+database:
+  password: oracle
+  type: oracle
+  url: oracle+oracledb://localhost:1521?service_name=XE
+  username: system
+logging:
+  file: dblift.log
+  level: INFO
+migrations:
+  directory: ./migrations
+  table: schema_version

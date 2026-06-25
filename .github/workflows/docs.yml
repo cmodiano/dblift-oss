@@ -1,0 +1,48 @@
+name: Documentation
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "*.md"
+      - "requirements-docs.txt"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-docs.txt
+
+      - name: Check documentation references
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          required = [
+              Path("docs/index.md"),
+              Path("docs/user-guide/getting-started.md"),
+              Path("docs/user-guide/commands.md"),
+              Path("docs/api-reference/api.md"),
+          ]
+          missing = [str(path) for path in required if not path.is_file()]
+          if missing:
+              raise SystemExit("Missing documentation files: " + ", ".join(missing))
+          PY
