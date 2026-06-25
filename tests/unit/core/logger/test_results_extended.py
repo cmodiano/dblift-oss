@@ -12,12 +12,10 @@ import pytest
 
 from core.logger.results import (
     CleanResult,
-    ExportSchemaResult,
     GenerateUndoScriptResult,
     MigrateResult,
     MigrationInfo,
     OperationResult,
-    SnapshotResult,
     UndoResult,
 )
 
@@ -130,66 +128,6 @@ class TestCleanResultExtended:
 
         details = result.get_object_details("  TABLE  ", "table1")
         assert details["schema"] == "test"
-
-
-@pytest.mark.unit
-class TestExportSchemaResult:
-    """Tests for ExportSchemaResult."""
-
-    def test_init_default(self):
-        """Test ExportSchemaResult default initialization."""
-        result = ExportSchemaResult()
-
-        assert result.success is True
-        assert result.error_message is None
-        assert result.output_files == []
-        assert result.objects_exported == {}
-        assert result.current_schema_version is None
-        assert result.filters_applied is None
-        assert result.output_options is None
-
-    def test_init_with_params(self):
-        """Test ExportSchemaResult initialization with parameters."""
-        result = ExportSchemaResult(
-            success=False,
-            error_message="Export failed",
-            output_files=["file1.sql", "file2.sql"],
-            objects_exported={"tables": 5, "views": 3},
-        )
-
-        assert result.success is False
-        assert result.error_message == "Export failed"
-        assert result.output_files == ["file1.sql", "file2.sql"]
-        assert result.objects_exported == {"tables": 5, "views": 3}
-
-
-@pytest.mark.unit
-class TestSnapshotResult:
-    """Tests for SnapshotResult."""
-
-    def test_init_default(self):
-        """Test SnapshotResult default initialization."""
-        result = SnapshotResult()
-
-        assert result.success is True
-        assert result.error_message is None
-        assert result.output_file is None
-        assert result.snapshot_id is None
-        assert result.captured_at is None
-
-    def test_init_with_params(self):
-        """Test SnapshotResult initialization with parameters."""
-        result = SnapshotResult(
-            success=True,
-            output_file="snapshot.json",
-            snapshot_id="snap123",
-            captured_at="2023-01-01T12:00:00",
-        )
-
-        assert result.success is True
-        assert result.output_file == "snapshot.json"
-        assert result.snapshot_id == "snap123"
-        assert result.captured_at == "2023-01-01T12:00:00"
 
 
 @pytest.mark.unit

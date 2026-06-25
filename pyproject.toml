@@ -19,6 +19,7 @@ dependencies = [
     "sqlglot>=30.0.0",
     "packaging>=23.0",
     "azure-cosmos>=4.5.0",
+    "azure-identity>=1.15.0",
     # Security floor: Python 3.11 minimum (see CHANGELOG).
     "SQLAlchemy>=2.0.0",
 ]

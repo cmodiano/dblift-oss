@@ -326,12 +326,6 @@ class BaseQuirks:
     #: ``database.schema`` during config hydration. Plugins can add aliases
     #: without teaching ``config/`` about dialect-specific spellings.
     native_url_schema_params: Tuple[str, ...] = ("currentSchema",)
-    #: Placeholder URL used by ``validate-sql --dialect <X>``
-    #: when no real database connection exists. The lint-only path
-    #: never opens a connection — but ``DbliftConfig.validate_complete_data``
-    #: still requires a syntactically-valid URL of the right shape.
-    #: ``None`` means the dialect can't be linted offline.
-    lint_placeholder_url: Optional[str] = None
 
     # ------------------------------------------------------------------
     # Procedure / function DDL hooks (story 26-5).

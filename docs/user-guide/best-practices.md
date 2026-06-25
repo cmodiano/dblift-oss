@@ -94,7 +94,6 @@ Most databases support transactions. DBLift automatically wraps migrations in tr
 Always validate migrations before applying:
 ```bash
 dblift validate
-dblift validate-sql
 ```
 
 This catches:

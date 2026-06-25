@@ -224,22 +224,16 @@ def _load_and_merge_config(args: argparse.Namespace, log: Any) -> Any:
         db_overrides["schema"] = args.database_schema
 
     if db_overrides:
-        # Resolve secret URIs in CLI overrides, but only for online commands.
-        # Offline commands (plan, validate-sql) skip secret resolution in load_config;
-        # the same bypass must apply here so they don't trigger provider calls.
-        command = getattr(args, "command", None)
-        commands_list = getattr(args, "commands_list", None) or ([command] if command else [])
-        is_offline = command in ("validate-sql", "plan") and len(commands_list) == 1
-        if not is_offline:
-            from config.secrets._resolver import resolve_secret_refs
+        # Resolve secret URIs in CLI overrides.
+        from config.secrets._resolver import resolve_secret_refs
 
-            try:
-                db_overrides = resolve_secret_refs({"database": db_overrides}, config.secrets).get(
-                    "database", db_overrides
-                )
-            except SecretsResolutionError as e:
-                print(f"Error: {e}", file=sys.stderr)
-                sys.exit(1)
+        try:
+            db_overrides = resolve_secret_refs({"database": db_overrides}, config.secrets).get(
+                "database", db_overrides
+            )
+        except SecretsResolutionError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
         config.database = ConfigBuilder.merge_database_overrides(config.database, db_overrides)
 
     if log:
@@ -300,12 +294,9 @@ def _validate_db_config(
         "clean",
         "validate",
         "info",
-        "diff",
         "repair",
         "import-flyway",
         "baseline",
-        "export-schema",
-        "snapshot",
     ]
     if args.command not in migration_commands:
         return

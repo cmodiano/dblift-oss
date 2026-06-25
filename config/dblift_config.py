@@ -10,7 +10,6 @@ import yaml
 from config.database_config import BaseDatabaseConfig
 from config.errors import ConfigurationError
 from config.secrets import SecretsConfig, resolve_secret_refs
-from config.validation_config import ValidationConfig
 
 ENV_PLACEHOLDER_PATTERN = re.compile(r"\$\{([^}:]+)(?::-(.*?))?\}")
 
@@ -26,56 +25,6 @@ _CONFIG_LOAD_EXC: Tuple[Type[Exception], ...] = (
     AttributeError,
     IndexError,
 )
-
-
-# ``validate-sql`` only needs a dialect-typed DbliftConfig; connection is never opened.
-# Placeholder database URLs satisfy :meth:`DbliftConfig.validate_complete_data` and are never
-# used to connect in the validate-sql code path.
-def _validate_sql_lint_filler(dialect: str) -> Dict[str, Any]:
-    """Minimal ``database:`` block for validate-sql (lint-only) when
-    no real DB is configured.
-
-    Story 26-11: dialect normalisation + placeholder URL come from the
-    plugin registry / quirks. The earlier hardcoded
-    ``_VALIDATE_SQL_DIALECT_TO_DB``, ``_VALIDATE_SQL_PLACEHOLDER_URL``,
-    and ``_VALIDATE_SQL_DB_TO_DIALECT`` dicts are gone; adding a new
-    dialect with offline-lint support = override
-    ``lint_placeholder_url`` in its plugin quirks.py.
-    """
-    from db.provider_registry import ProviderRegistry
-
-    db_type = ProviderRegistry.canonical_dialect_name((dialect or "").strip().lower())
-    if not db_type:
-        return {}
-    quirks = ProviderRegistry.get_quirks(db_type)
-    placeholder = quirks.lint_placeholder_url
-    if not placeholder:
-        return {}
-    return {
-        "database": {
-            "type": db_type,
-            "url": placeholder,
-            "username": "dblift_validate_sql",
-            "password": "dblift_validate_sql",
-        }
-    }
-
-
-def _validate_sql_effective_dialect(args: Any, config_data: Dict[str, Any]) -> Optional[str]:
-    """Resolve validate-sql dialect from CLI or config without defaulting."""
-    cli_dialect = getattr(args, "dialect", None)
-    if isinstance(cli_dialect, str) and cli_dialect.strip():
-        return cli_dialect.strip().lower()
-
-    database_config = config_data.get("database")
-    if isinstance(database_config, dict):
-        from db.provider_registry import ProviderRegistry
-
-        db_type = str(database_config.get("type") or "").strip().lower()
-        if db_type:
-            return ProviderRegistry.canonical_dialect_name(db_type) or db_type
-
-    return None
 
 
 def _placeholder_tokens(raw_placeholders: Any) -> List[str]:
@@ -170,30 +119,12 @@ def load_config(config_file_path: Optional[str], args: Optional[Any] = None) -> 
         if args_dict:
             config_data = DbliftConfig.merge_config_data(config_data, args_dict)
 
-    # ``validate-sql`` does not need a real database, but static linting does
-    # need an explicit SQL dialect or a database type from config.
-    if args and getattr(args, "command", None) == "validate-sql":
-        dialect = _validate_sql_effective_dialect(args, config_data)
-        if not dialect:
-            raise ConfigurationError(
-                "validate-sql requires --dialect for offline validation when no database type is configured."
-            )
-        filler = _validate_sql_lint_filler(dialect)
-        if filler:
-            config_data = DbliftConfig.merge_config_data(filler, config_data)
-
     if not config_data:
         raise ConfigurationError(
             "No configuration source provided. Pass --config, --db-url, or set DBLIFT_DB_URL."
         )
 
-    command = getattr(args, "command", None) if args else None
-    commands_list = getattr(args, "commands_list", None) if args else None
-    if commands_list is None and command:
-        commands_list = [command]
-    is_offline_cmd = bool(
-        command in ("validate-sql", "plan") and commands_list and len(commands_list) == 1
-    )
+    is_offline_cmd = False
     config = DbliftConfig.from_dict(config_data, resolve_secrets=not is_offline_cmd)
     if args:
         installed_by = getattr(args, "installed_by", None)
@@ -322,7 +253,6 @@ class DbliftConfig:
     database: BaseDatabaseConfig
     migrations: MigrationsConfig = field(default_factory=MigrationsConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
-    validation: ValidationConfig = field(default_factory=ValidationConfig)
     baseline_version: Optional[str] = None
     target_version: Optional[str] = None
     dry_run: bool = False
@@ -455,11 +385,6 @@ class DbliftConfig:
         if "log_dir" in other_config:
             self.log_dir = other_config.get("log_dir", self.log_dir)
 
-        if "validation" in other_config:
-            raw_val = other_config["validation"]
-            if raw_val is not None and isinstance(raw_val, dict):
-                self.validation = ValidationConfig.from_dict(raw_val)
-
         # Fields that must use ``key in other_config`` so falsy values (False, 0) are not dropped.
         for scalar_key in (
             "strict_mode",
@@ -507,8 +432,8 @@ class DbliftConfig:
         Args:
             data: Configuration dictionary
             resolve_secrets: When False, skip secret-URI resolution (used for
-                offline commands such as validate-sql that never open a DB connection
-                and must not require secret-manager credentials to be available).
+                offline commands that never open a DB connection and must not
+                require secret-manager credentials to be available).
 
         Returns:
             A DbliftConfig instance
@@ -562,7 +487,7 @@ class DbliftConfig:
                 # Non-secret unparseable URLs are left as-is so _apply_url_overrides
                 # raises a focused URL error immediately rather than producing a
                 # silently broken config.
-        # When secrets are not resolved (offline commands like plan/validate-sql),
+        # When secrets are not resolved (offline commands),
         # a secret URI in database.url must not be validated as a database URL — the
         # type may already be known from database.type but the URL is still raw.
         # This covers the case where database.type is set explicitly, which skips
@@ -663,7 +588,6 @@ class DbliftConfig:
                 detect_encoding=migrations_detect_encoding,
             ),
             logging=LoggingConfig(level=log_level, file=log_file, directory=log_directory),
-            validation=ValidationConfig.from_dict(data.get("validation", {})),
             baseline_version=data.get("baseline_version"),
             target_version=data.get("target_version"),
             dry_run=data.get("dry_run", False),

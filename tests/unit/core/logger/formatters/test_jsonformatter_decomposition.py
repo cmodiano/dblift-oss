@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from core.logger.formatters.jsonformatter import JsonFormatter
-from core.logger.results import CleanResult, DiffResult, MigrateResult, OperationResult
+from core.logger.results import CleanResult, MigrateResult, OperationResult
 
 
 def _make_result(success=True, error_message=None):
@@ -241,88 +241,6 @@ class TestFormatCleanMetadata:
 
 
 @pytest.mark.unit
-class TestFormatDiffMetadata:
-    """Tests for _format_diff_metadata()."""
-
-    def test_empty_for_non_diff_command(self):
-        formatter = JsonFormatter()
-        result = _make_result()
-        meta = formatter._format_diff_metadata(result, "MIGRATE")
-        assert meta == {}
-
-    def test_comparison_block_present(self):
-        formatter = JsonFormatter()
-        result = Mock(spec=DiffResult)
-        result.success = True
-        result.error_message = None
-        result.source_type = "snapshot"
-        result.target_type = "live"
-        result.total_differences = 3
-        result.error_count = 1
-        result.warning_count = 1
-        result.info_count = 1
-        result.missing_tables = ["t1"]
-        result.extra_tables = []
-        result.modified_tables = []
-        result.missing_user_defined_types = []
-        result.extra_user_defined_types = []
-        result.schema_diff = Mock()
-        result.schema_diff.modified_tables = []
-        result.schema_diff.modified_user_defined_types = []
-
-        meta = formatter._format_diff_metadata(result, "DIFF")
-        assert "comparison" in meta
-        assert meta["comparison"]["source_type"] == "snapshot"
-        assert meta["comparison"]["total_differences"] == 3
-
-    def test_summary_block_counts(self):
-        formatter = JsonFormatter()
-        result = Mock(spec=DiffResult)
-        result.success = True
-        result.error_message = None
-        result.source_type = "s"
-        result.target_type = "t"
-        result.total_differences = 0
-        result.error_count = 0
-        result.warning_count = 0
-        result.info_count = 0
-        result.missing_tables = ["t1", "t2"]
-        result.extra_tables = ["t3"]
-        result.modified_tables = []
-        result.missing_user_defined_types = []
-        result.extra_user_defined_types = []
-        result.schema_diff = Mock()
-        result.schema_diff.modified_tables = []
-        result.schema_diff.modified_user_defined_types = []
-
-        meta = formatter._format_diff_metadata(result, "DIFF")
-        assert meta["summary"]["missing_tables"] == 2
-        assert meta["summary"]["extra_tables"] == 1
-
-    def test_modified_tables_empty_list_when_none(self):
-        formatter = JsonFormatter()
-        result = Mock(spec=DiffResult)
-        result.success = True
-        result.error_message = None
-        result.source_type = "s"
-        result.target_type = "t"
-        result.total_differences = 0
-        result.error_count = 0
-        result.warning_count = 0
-        result.info_count = 0
-        result.missing_tables = []
-        result.extra_tables = []
-        result.modified_tables = []
-        result.missing_user_defined_types = []
-        result.extra_user_defined_types = []
-        result.schema_diff = None
-
-        meta = formatter._format_diff_metadata(result, "DIFF")
-        assert meta["modified_tables"] == []
-        assert meta["modified_user_defined_types"] == []
-
-
-@pytest.mark.unit
 class TestFormatMultiCommandMetadata:
     """Tests for _format_multi_command_metadata()."""
 
@@ -541,21 +459,6 @@ class TestFormatResultDelegation:
 
         with patch.object(
             formatter, "_format_clean_metadata", wraps=formatter._format_clean_metadata
-        ) as spy:
-            formatter.format_result(result, "public", "mydb", "INFO")
-            spy.assert_called_once_with(result, "INFO")
-
-    def test_format_result_calls_format_diff_metadata(self):
-        formatter = JsonFormatter()
-        result = _make_result()
-        result.warnings = []
-        del result.init_version
-        del result.from_version
-        del result.to_version
-        del result.journal
-
-        with patch.object(
-            formatter, "_format_diff_metadata", wraps=formatter._format_diff_metadata
         ) as spy:
             formatter.format_result(result, "public", "mydb", "INFO")
             spy.assert_called_once_with(result, "INFO")

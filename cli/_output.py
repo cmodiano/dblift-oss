@@ -13,8 +13,7 @@ dispatch in ``cli/main.py`` re-derive the same predicate:
     else:
         ctx.log.info(payload)          # routed through ConsoleLog
 
-That duplication has already caused two regressions (PR 158 banner fix
-+ PR-01 `validate-sql --format json` scope). ADR-0005 added the
+That duplication has already caused banner-routing regressions. ADR-0005 added the
 `MACHINE_READABLE_FORMATS` set as a single source of truth; this
 module does the same for the *routing* decision itself.
 

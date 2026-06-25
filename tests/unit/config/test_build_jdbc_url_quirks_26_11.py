@@ -30,12 +30,6 @@ class TestQuirksPropertiesPerDialect:
         quirks = ProviderRegistry.get_quirks("sqlserver")
         assert quirks.native_driver_display == "pymssql"
 
-    def test_postgresql_quirks_lint_placeholder_url(self):
-        from db.provider_registry import ProviderRegistry
-
-        quirks = ProviderRegistry.get_quirks("postgresql")
-        assert quirks.lint_placeholder_url.startswith("postgresql://")
-
     def test_db2_quirks_session_autocommit(self):
         from db.provider_registry import ProviderRegistry
 

@@ -206,62 +206,6 @@ def test_load_config_no_path_returns_defaults():
 
 
 @pytest.mark.unit
-def test_load_config_validate_sql_requires_dialect_without_database_type():
-    class Args:
-        command = "validate-sql"
-        dialect = None
-
-    with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ConfigurationError) as exc:
-            load_config("", Args())
-
-    message = str(exc.value)
-    assert "validate-sql requires --dialect" in message
-    assert "--db-url" not in message
-
-
-@pytest.mark.unit
-def test_load_config_validate_sql_dialect_uses_lint_placeholder_config():
-    class Args:
-        command = "validate-sql"
-        dialect = "postgresql"
-
-    with patch.dict(os.environ, {}, clear=True):
-        config = load_config("", Args())
-
-    assert config.database.type == "postgresql"
-    assert config.database.url == "postgresql://127.0.0.1:5432/dblift_validate_sql"
-
-
-@pytest.mark.unit
-def test_load_config_validate_sql_sqlite_dialect_uses_lint_placeholder_config():
-    class Args:
-        command = "validate-sql"
-        dialect = "sqlite"
-
-    with patch.dict(os.environ, {}, clear=True):
-        config = load_config("", Args())
-
-    assert config.database.type == "sqlite"
-    assert getattr(config.database, "path", None) == ":memory:"
-
-
-@pytest.mark.unit
-def test_load_config_validate_sql_db2_dialect_uses_native_placeholder_config():
-    class Args:
-        command = "validate-sql"
-        dialect = "db2"
-
-    with patch.dict(os.environ, {}, clear=True):
-        config = load_config("", Args())
-
-    assert config.database.type == "db2"
-    assert config.database.database == "dblift_validate_sql"
-    assert config.database.host == "127.0.0.1"
-    assert config.database.url == "ibm_db_sa://127.0.0.1:50000/dblift_validate_sql"
-
-
-@pytest.mark.unit
 def test_from_dict_oracle_host_database_uses_database_as_service_name():
     config = DbliftConfig.from_dict(
         {
@@ -310,25 +254,6 @@ def test_from_dict_db2_host_without_database_is_invalid_connection_identifier():
                 }
             }
         )
-
-
-@pytest.mark.unit
-def test_load_config_plan_skips_secret_resolution(monkeypatch):
-    """plan is an offline command — DbliftConfig.from_dict must be called with resolve_secrets=False."""
-
-    class Args:
-        command = "plan"
-
-    monkeypatch.setenv("DBLIFT_DB_URL", "postgresql+psycopg://user:pass@localhost:5432/db")
-    monkeypatch.setenv("DBLIFT_DB_SCHEMA", "public")
-
-    with patch(
-        "config.dblift_config.DbliftConfig.from_dict", wraps=DbliftConfig.from_dict
-    ) as mock_from_dict:
-        load_config("", Args())
-
-    _, kwargs = mock_from_dict.call_args
-    assert kwargs.get("resolve_secrets") is False
 
 
 @pytest.mark.unit
