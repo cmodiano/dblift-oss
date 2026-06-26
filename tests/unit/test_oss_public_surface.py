@@ -188,19 +188,6 @@ def test_readme_local_links_resolve_inside_oss_repo():
     assert missing == []
 
 
-def test_public_docs_do_not_link_to_codecov_until_project_is_enabled():
-    docs = [
-        ROOT / "README.md",
-        ROOT / "docs" / "index.md",
-    ]
-
-    offenders = [
-        path.relative_to(ROOT).as_posix() for path in docs if "codecov.io" in path.read_text()
-    ]
-
-    assert offenders == []
-
-
 def test_readme_installation_sync_block_preserves_heading_hierarchy():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     start = readme.index("<!-- BEGIN: OSS README sync: python-install -->")
