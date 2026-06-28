@@ -1,19 +1,26 @@
-# DBLift User Guide
+# DBLift — Database release safety for Python teams
 
 <p align="center">
   <img src="logo/dblift_logo.png" width="280" alt="DBLift Logo">
 </p>
 
-**Manage your database changes with confidence**
-
-DBLift helps you track and apply database changes systematically. Think of it as version control for your database schema - every change is tracked, can be rolled back, and works consistently across different environments.
-
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/License-Apache--2.0-blue)
-
 [![Unit Tests](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/cmodiano/dblift-oss/actions/workflows/unit-tests.yml)
 [![codecov](https://codecov.io/gh/cmodiano/dblift-oss/graph/badge.svg)](https://codecov.io/gh/cmodiano/dblift-oss)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-green)](SECURITY.md)
+
+Application code usually has tests, CI pipelines, and pull request review. Database changes often skip one or more of those stages. DBLift is a Python-native migration toolkit that shows you exactly what SQL will run before it runs — and keeps the full migration lifecycle inside your Python workflow. No JVM required.
+
+```bash
+pip install "dblift[postgresql]"
+
+dblift validate                        # check migration state
+dblift migrate --dry-run --show-sql    # preview exact SQL before it runs
+dblift migrate                         # apply when ready
+```
+
+> **OSS tier:** The commands above are free and open source (Apache 2.0). SQL syntax validation (`dblift validate-sql`) and schema drift detection (`dblift diff`) are [Pro features](https://dblift.com/pricing).
 
 ---
 
@@ -918,6 +925,19 @@ dblift db diagnose-connection
 dblift is a pip package with no system dependencies — CI is `pip install` plus a
 command. See [CI/CD recipes](docs/user-guide/ci-cd.md) for copy-paste GitHub
 Actions, GitLab CI, and pre-commit configurations (OSS `validate` / `info`).
+
+## What Pro adds
+
+The OSS tier covers the full migration lifecycle: apply, preview, validate state,
+roll back, and import from Flyway. When review risk grows, the Pro tier adds:
+
+| Feature | Command | What it does |
+|---|---|---|
+| SQL syntax validation | `dblift validate-sql` | Validates SQL against your target database dialect before any migration runs. Emits GitHub Actions annotations. |
+| Schema drift detection | `dblift diff` | Compares live database state with what your migrations define. Surfaces objects that have drifted. |
+| Schema export | `dblift export-schema` | Exports the current schema to SQL migration files. Useful for brownfield onboarding. |
+
+[See pricing and Pro features →](https://dblift.com/pricing)
 
 ## API Reference
 
