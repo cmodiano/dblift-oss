@@ -34,15 +34,16 @@ jobs:
     env:
       DBLIFT_DB_URL: postgresql+psycopg://dblift:dblift@localhost:5432/dblift
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install "dblift[postgresql]"
-      - run: dblift migrate   # apply to the ephemeral CI database
-      - run: dblift validate  # checksums / order / applied-state integrity
-      - run: dblift info      # report pending migrations
+      - run: dblift migrate --dry-run --show-sql  # preview SQL — output visible in CI logs
+      - run: dblift migrate                        # apply to the ephemeral CI database
+      - run: dblift validate                       # checksums / order / applied-state integrity
+      - run: dblift info                           # report pending migrations
 ```
 
 ## GitLab CI
@@ -65,6 +66,7 @@ validate-migrations:
     - changes: [migrations/**/*]
   script:
     - pip install "dblift[postgresql]"
+    - dblift migrate --dry-run --show-sql  # preview SQL — output visible in CI logs
     - dblift migrate
     - dblift validate
     - dblift info
@@ -143,7 +145,7 @@ jobs:
     env:
       DBLIFT_DB_URL: postgresql+psycopg://dblift:dblift@localhost:5432/dblift
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
