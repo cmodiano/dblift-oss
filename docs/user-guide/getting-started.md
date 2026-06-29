@@ -153,7 +153,7 @@ The commands in this guide are all OSS (Apache 2.0). When your team needs strong
 
 | Feature | Command | What it does |
 |---|---|---|
-| SQL syntax validation | `dblift validate-sql` | Validates SQL against your target database dialect before any migration runs. Emits GitHub Actions annotations. |
+| Static SQL analysis | `dblift validate-sql` | Lints migration files with rule-based checks — catches issues before they reach the database. Built-in rule profiles (core, enterprise, strict). CI-friendly output formats (GitHub Actions, SARIF, GitLab). |
 | Schema drift detection | `dblift diff` | Detects drift between the live database and what your migrations define. |
 | Schema export | `dblift export-schema` | Exports the current schema to SQL migration files — useful for brownfield onboarding. |
 

@@ -20,7 +20,7 @@ dblift migrate --dry-run --show-sql    # preview exact SQL before it runs
 dblift migrate                         # apply when ready
 ```
 
-> **OSS tier:** The commands above are free and open source (Apache 2.0). SQL syntax validation (`dblift validate-sql`) and schema drift detection (`dblift diff`) are [Pro features](https://dblift.com/pricing).
+> **OSS tier:** The commands above are free and open source (Apache 2.0). Static SQL analysis (`dblift validate-sql`) and schema drift detection (`dblift diff`) are [Pro features](https://dblift.com/pricing).
 
 ---
 
@@ -933,7 +933,7 @@ roll back, and import from Flyway. When review risk grows, the Pro tier adds:
 
 | Feature | Command | What it does |
 |---|---|---|
-| SQL syntax validation | `dblift validate-sql` | Validates SQL against your target database dialect before any migration runs. Emits GitHub Actions annotations. |
+| Static SQL analysis | `dblift validate-sql` | Lints migration files with rule-based checks — catches issues before they reach the database. Built-in rule profiles (core, enterprise, strict). CI-friendly output formats (GitHub Actions, SARIF, GitLab). |
 | Schema drift detection | `dblift diff` | Compares live database state with what your migrations define. Surfaces objects that have drifted. |
 | Schema export | `dblift export-schema` | Exports the current schema to SQL migration files. Useful for brownfield onboarding. |
 
